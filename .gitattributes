@@ -4,6 +4,12 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 *.conf filter=lfs diff=lfs merge=lfs -text
 *.cpp filter=lfs diff=lfs merge=lfs -text
 *.hpp filter=lfs diff=lfs merge=lfs -text
+/app/ParamScanGen filter=lfs diff=lfs merge=lfs -text
+/app/ParamScanGen_pll filter=lfs diff=lfs merge=lfs -text
+/app/ParamScanHiggs filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+/app/testing filter=lfs diff=lfs merge=lfs -text
+*.o filter=lfs diff=lfs merge=lfs -text
 * !text !filter !merge !diff
 /app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_aa filter=lfs diff=lfs merge=lfs -text
