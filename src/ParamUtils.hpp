@@ -59,6 +59,7 @@ bool check_positivity(double lambda1, double lambda2,
 // Funciones para CSV
 void write_csv_header(std::ofstream &results, const std::vector<std::string> &columns);
 void write_csv_row(std::ofstream &results, const std::vector<double> &values);
+void write_csv_row(std::ofstream &results, const std::vector<std::string> &values);
 
 // Función para imprimir progreso
 void print_progress(double progress, double elapsed_time,
