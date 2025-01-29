@@ -1,10 +1,10 @@
 # Nombre del compilador
 CXX = g++
 
-# Flags de compilación (añade aquí -O2, -Wall, etc. según desees)
-CXXFLAGS = -I../2hdmc/src -fopenmp -std=c++11
+# Flags de compilación
+CXXFLAGS = -I../2hdmc/src -fopenmp -std=c++11 -O2 -Wall
 
-# Flags de enlazado. Ajusta si necesitas más libs.
+# Flags de enlazado. Ajusta si necesitas más libs (lapack, etc.) si fuera el caso.
 LDFLAGS = -L../2hdmc/lib -l2HDMC -lgsl -lgslcblas -lm
 
 # Directorios
@@ -12,31 +12,48 @@ SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = app
 
-# Archivos fuente principales (tus escaneos)
-# Puedes enumerar manualmente o usar wildcards.
-SRCS = $(SRC_DIR)/ParamScanGen.cpp \
-       $(SRC_DIR)/ParamScanGen_pll.cpp \
-       $(SRC_DIR)/ParamScanHiggs.cpp \
-       $(SRC_DIR)/ParamUtils.cpp
+# ============
+# Archivos fuente con main
+# Para cada uno, generaremos un ejecutable distinto.
+# ============
+MAIN_SRCS = \
+  ParamScanGen.cpp \
+  ParamScanGen_pll.cpp \
+  ParamScanHiggs.cpp \
+  testing.cpp
 
-# Genera la lista de .o sustituyendo src/ por obj/
-OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+# ============
+# Archivos fuente comunes (sin main):
+# Por ejemplo ParamUtils.cpp.
+# ============
+COMMON_SRCS = \
+  ParamUtils.cpp
 
-# Aquí defines los nombres de los ejecutables que quieres generar.
-# Puedes hacer uno por cada .cpp principal de tu "main".
-# Por ejemplo, si ParamScanGen.cpp y ParamScanGen_pll.cpp tienen su "main",
-# generamos 2 binarios. ParamScanHiggs.cpp generaría un tercero, etc.
-# A continuación, un ejemplo con 3 ejecutables:
-BINARIES = $(BIN_DIR)/ParamScanGen \
-           $(BIN_DIR)/ParamScanGen_pll \
-           $(BIN_DIR)/ParamScanHiggs
+# Generamos la lista completa de fuentes
+SRCS = $(MAIN_SRCS:%=$(SRC_DIR)/%) $(COMMON_SRCS:%=$(SRC_DIR)/%)
 
-# Regla "all" para compilar todo
+# Objetos correspondientes
+OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+
+# ============
+# Nombre de los binarios resultantes
+# Se asume que cada "main" produce uno de estos binarios:
+# Si el nombre del .cpp es 'ParamScanGen.cpp', el binario se llamará 'ParamScanGen'
+# ============
+BINARIES = \
+  $(BIN_DIR)/ParamScanGen \
+  $(BIN_DIR)/ParamScanGen_pll \
+  $(BIN_DIR)/ParamScanHiggs \
+  $(BIN_DIR)/testing
+
+# Regla principal
 all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
 
-# Regla genérica para compilar cada ejecutable enlazando los .o que necesita
-# Aquí hacemos un pequeño truco: cada ejecutable se asocia con su fuente .cpp principal.
-# De este modo, compila con todos los .o (incluidos ParamUtils.o, etc.).
+# ----
+# Reglas de enlace de cada ejecutable
+# Notar que cada ejecutable depende de su .o (con main) + todos los .o de la parte común.
+# ----
+
 $(BIN_DIR)/ParamScanGen: $(OBJ_DIR)/ParamScanGen.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
@@ -46,12 +63,14 @@ $(BIN_DIR)/ParamScanGen_pll: $(OBJ_DIR)/ParamScanGen_pll.o $(OBJ_DIR)/ParamUtils
 $(BIN_DIR)/ParamScanHiggs: $(OBJ_DIR)/ParamScanHiggs.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
+$(BIN_DIR)/testing: $(OBJ_DIR)/testing.o $(OBJ_DIR)/ParamUtils.o
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
 # Regla genérica para compilar .cpp -> .o
-# Crea el directorio obj/ si no existe y compila.
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Crea directorios si no existen
+# Crear directorios si no existen
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
@@ -62,7 +81,6 @@ $(OBJ_DIR):
 clean:
 	rm -rf $(OBJ_DIR)/*.o $(BINARIES)
 
-# "make cleanall" si también quisieras borrar app/ y data/ (opcional)
 cleanall: clean
 	rm -rf $(BIN_DIR)/*
 	rm -rf data/*

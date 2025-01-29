@@ -147,7 +147,8 @@ void perform_param_scan(const string &output_file, double step) {
                                 SM sm;
                                 model.set_SM(sm);
 
-                                bool pset = model.set_param_gen(lambda1, lambda2, lambda3, lambda4, lambda5, 0.0, 0.0, m12_squared, tan_beta);
+                                bool pset = model.set_param_gen(
+                                    lambda1, lambda2, lambda3, lambda4, lambda5, 0.0, 0.0, m12_squared, tan_beta);
 
                                 if (!pset) {
                                     continue;

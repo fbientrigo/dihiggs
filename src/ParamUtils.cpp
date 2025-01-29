@@ -18,12 +18,14 @@ Config readConfig(const string &filename)
     unordered_map<string, double> configMap;
     string key;
     double value;
-
+    //int count=0;
+    //cout << "Leyendo archivo config\n";
     // Leemos línea a línea: "key value"
-    while (file >> key >> value)
-    {
+    while (file >> key >> value) {
         configMap[key] = value;
+    //    count++;
     }
+    //cout << "Leidas " << count << " lineas del archivo de config.\n";
 
     // Cerramos el archivo
     file.close();
