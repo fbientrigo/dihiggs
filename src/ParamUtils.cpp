@@ -96,15 +96,16 @@ double computeTotalIterations(const Config &cfg)
                    static_cast<double>(it_lambda5) *
                    static_cast<double>(it_m12)     *
                    static_cast<double>(it_beta);
+    cout << "Total iterations: " << total << "\n";
     return total;
 }
 
 // Chequeo de positividad
 bool check_positivity(double lambda1, double lambda2,
                       double lambda3, double lambda4, double lambda5) {
-    if (lambda1 <= 0 || lambda2 <= 0) return false;
-    if (lambda3 <= -sqrt(lambda1 * lambda2)) return false;
-    if (lambda3 + lambda4 - fabs(lambda5) <= -sqrt(lambda1 * lambda2)) return false;
+    if (lambda1 < 0 || lambda2 < 0) return false;
+    if (lambda3 < -sqrt(lambda1 * lambda2)) return false;
+    if (lambda3 + lambda4 - fabs(lambda5) < -sqrt(lambda1 * lambda2)) return false;
     return true;
 }
 
@@ -120,15 +121,29 @@ void write_csv_header(std::ofstream &results, const std::vector<std::string> &co
 }
 
 // Escribir una fila al CSV
+// Versión para vectores de doubles
 void write_csv_row(std::ofstream &results, const std::vector<double> &values) {
     if (!results.is_open()) return;
+    results << std::fixed << std::setprecision(15);  // or whichever precision you prefer
+    for (size_t i = 0; i < values.size(); ++i) {
+        results << values[i];
+        if (i < values.size() - 1) results << ",";
+    }
+    results << std::endl;
+}
+
+// Versión para vectores de strings
+void write_csv_row(std::ofstream &results, const std::vector<std::string> &values) {
+    if (!results.is_open()) return;
+    
 
     for (size_t i = 0; i < values.size(); ++i) {
         results << values[i];
         if (i < values.size() - 1) results << ",";
     }
-    results << endl;
+    results << std::endl;
 }
+
 
 // Imprimir progreso
 void print_progress(double progress, double elapsed_time,

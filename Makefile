@@ -58,7 +58,7 @@ $(BIN_DIR)/ParamScanGen: $(OBJ_DIR)/ParamScanGen.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/ParamScanGen_pll: $(OBJ_DIR)/ParamScanGen_pll.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) $^ -o $@ $(LDFLAGS)
+	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/ParamScanHiggs: $(OBJ_DIR)/ParamScanHiggs.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
