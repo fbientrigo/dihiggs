@@ -1,192 +1,209 @@
 #include "THDM.h"
 #include "Constraints.h"
 #include "DecayTable.h"
-#include "ParamUtils.hpp"  // CSV & config utilities
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <chrono>
 #include <iomanip>
-#include <omp.h>  // OpenMP for parallelization
+#include <vector>
+#include <string>
+#include <chrono>
+#include <omp.h>
+#include <sstream> // Para manejar búferes de escritura
+#include <filesystem> // Para manejar archivos temporales
+
+/*
+ * ParamScanGen - Parameter Scan for the General Basis of the Two-Higgs Doublet Model (2HDM)
+ * 
+ * This program performs a parameter scan for the general basis of the 2HDM, varying the 
+ * parameters \( \lambda_1, \lambda_2, \lambda_3, \lambda_4, \lambda_5 \), \( m_{12}^2 \), 
+ * and \( \beta \) according to user-defined ranges. The constraints for positivity, unitarity, 
+ * and perturbativity are applied to filter valid parameter sets. The program calculates 
+ * decay widths, total widths, and branching ratios for \( H_2 \to \gamma \gamma \) using 2HDMC.
+ * 
+ * Parameters:
+ *  - Output file: CSV file to store the results of the scan.
+ *  - Step size: Step size for varying the parameters (optional, default = 1.0).
+ *
+ * Output:
+ *  The program outputs the parameter combinations and their corresponding physical observables, 
+ *  including decay widths and branching ratios, into the specified CSV file.
+ */
 
 using namespace std;
 using namespace std::chrono;
 
-struct ParamSet {
-    double lambda1;
-    double lambda2;
-    double lambda3;
-    double lambda4;
-    double lambda5;
-    double m12;
-    double beta;
-};
-
-double computeBRGammaGamma(const ParamSet &p) {
-    THDM model;
-    SM sm;
-    model.set_SM(sm);
-
-    double tb = std::tan(p.beta);
-
-    bool pset = model.set_param_gen(
-        p.lambda1, p.lambda2, p.lambda3, p.lambda4, p.lambda5,
-        0.0, 0.0,
-        p.m12,
-        tb
-    );
-    if (!pset) return -1.0;
-
-    Constraints check(model);
-    if (!check.check_positivity() || !check.check_unitarity() || !check.check_perturbativity()) {
-        return -1.0;
-    }
-
-    DecayTable table(model);
-    double w_hgaga = table.get_gamma_hgaga(2);
-    double w_htot  = table.get_gammatot_h(2);
-
-    if (std::isnan(w_hgaga) || std::isnan(w_htot) || w_htot <= 0.0) {
-        return -1.0;
-    }
-
-    return w_hgaga / w_htot;
+// Function to check positivity of the potential constraints
+bool check_positivity(double lambda1, double lambda2, double lambda3, double lambda4, double lambda5) {
+    if (lambda1 <= 0 || lambda2 <= 0) return false;
+    if (lambda3 <= -sqrt(lambda1 * lambda2)) return false;
+    if (lambda3 + lambda4 - abs(lambda5) <= -sqrt(lambda1 * lambda2)) return false;
+    return true;
 }
 
-// Global best parameter storage
-static ParamSet g_bestParams;
-static double   g_bestBR = -1.0;
-
-void perform_param_scan_withGD(const Config &cfg, const string &output_file) {
-    ofstream results(output_file);
-    if (!results.is_open()) {
-        cerr << "Failed to open output file: " << output_file << endl;
-        return;
+// Function to write header to CSV
+void write_csv_header(ofstream &results, const vector<string> &columns) {
+    for (size_t i = 0; i < columns.size(); ++i) {
+        results << columns[i];
+        if (i < columns.size() - 1) results << ",";
     }
+    results << endl;
+}
 
+// Function to perform parameter scan
+void perform_param_scan(const string &output_file, double step) {
+    namespace fs = std::filesystem;
+
+    // -------------------- Define CSV columns ------------------------
     vector<string> columns = {
-        "lambda1", "lambda2", "lambda3", "lambda4", "lambda5",
-        "m12_squared", "beta", "tan_beta",
-        "positivity_ok", "unitarity_ok", "perturbativity_ok",
-        "width_h2_bb", "width_h2_tautau", "width_h2_WW", "width_h2_ZZ", "width_hgaga",
-        "total_width_h2", "branching_ratio_hgaga"
+        "lambda1", "lambda2", "lambda3", "lambda4", "lambda5", "m12_squared", "beta", "tan_beta",
+        "width_hgaga", "total_width_h2", "branching_ratio_hgaga"
     };
 
-    write_csv_header(results, columns);
+    // Ranges for lambda parameters and other variables
+    double infty_neg = -50.0, infty_pos = 100.0;
+    double beta_min = 0.01, beta_max = M_PI / 2;
+    double beta_step = 0.5;
+    double lambda_min = 0.01, lambda_max = 16.0 * M_PI;
+    double lambda_345_min = -lambda_max;
+    double lambda_345_max = infty_pos;
 
-    // Compute number of steps for OpenMP
-    int steps_lambda5 = (cfg.lambda5_max - cfg.lambda5_min) / cfg.step_lambda5 + 1;
-    int steps_m12     = (cfg.m12_squared_max - cfg.m12_squared_min) / cfg.step_m12_squared + 1;
-    int steps_beta    = (cfg.beta_max - cfg.beta_min) / cfg.step_beta + 1;
-
-    double total_iterations = computeTotalIterations(cfg);
-    double current_iteration = 0.0;
     auto start_time = high_resolution_clock::now();
 
-    g_bestBR = -1.0;
+    // Precalcular los límites para cada bucle
+    int steps_lambda = static_cast<int>((lambda_max - lambda_min) / step) + 1;
+    int steps_lambda_345 = static_cast<int>((lambda_345_max - lambda_345_min) / step) + 1;
+    int steps_m12 = static_cast<int>((infty_pos - infty_neg) / step) + 1;
+    int steps_beta = static_cast<int>((beta_max - beta_min) / beta_step) + 1;
 
-    #pragma omp parallel
-    {
-        double local_bestBR = -1.0;
-        ParamSet local_bestParams;
-        vector<vector<double>> thread_local_rows;  // Buffer for batch writing
+    double completed_outer_loops = 0;
+    double total_outer_loops = steps_lambda * steps_lambda * steps_lambda_345 * steps_lambda_345;
 
-        #pragma omp for collapse(3) schedule(dynamic)
-        for (int i5 = 0; i5 < steps_lambda5; i5++) {
-            for (int i_m12 = 0; i_m12 < steps_m12; i_m12++) {
-                for (int i_beta = 0; i_beta < steps_beta; i_beta++) {
+    string temp_dir = "temp_results";
+    fs::create_directory(temp_dir);
 
-                    double lambda5 = cfg.lambda5_min + i5 * cfg.step_lambda5;
-                    double m12     = cfg.m12_squared_min + i_m12 * cfg.step_m12_squared;
-                    double beta    = cfg.beta_min + i_beta * cfg.step_beta;
+    for (int i1 = 0; i1 < steps_lambda; i1++) {
+        for (int i2 = 0; i2 < steps_lambda; i2++) {
+            for (int i3 = 0; i3 < steps_lambda_345; i3++) {
+                for (int i4 = 0; i4 < steps_lambda_345; i4++) {
 
-                    for (double lambda1 = cfg.lambda1_min; lambda1 <= cfg.lambda1_max; lambda1 += cfg.step_lambda1) {
-                        for (double lambda2 = cfg.lambda2_min; lambda2 <= cfg.lambda2_max; lambda2 += cfg.step_lambda2) {
-                            for (double lambda3 = cfg.lambda3_min; lambda3 <= cfg.lambda3_max; lambda3 += cfg.step_lambda3) {
-                                for (double lambda4 = cfg.lambda4_min; lambda4 <= cfg.lambda4_max; lambda4 += cfg.step_lambda4) {
+                    double lambda1 = lambda_min + i1 * step;
+                    double lambda2 = lambda_min + i2 * step;
+                    double lambda3 = lambda_345_min + i3 * step;
+                    double lambda4 = lambda_345_min + i4 * step;
+
+                    if (!check_positivity(lambda1, lambda2, lambda3, lambda4, 0.0)) {
+                        continue;
+                    }
+
+                    string temp_filename = temp_dir + "/temp_" + to_string(i1) + "_" + to_string(i2) + ".csv";
+
+                    #pragma omp parallel
+                    {
+                        stringstream local_buffer;
+
+                        #pragma omp for collapse(3) schedule(dynamic)
+                        for (int i5 = 0; i5 < steps_lambda_345; i5++) {
+                            for (int i_m12 = 0; i_m12 < steps_m12; i_m12++) {
+                                for (int i_beta = 0; i_beta < steps_beta; i_beta++) {
+                                    double lambda5 = lambda_345_min + i5 * step;
+                                    double m12_squared = infty_neg + i_m12 * step;
+                                    double beta = beta_min + i_beta * beta_step;
+                                    double tan_beta = tan(beta);
 
                                     THDM model;
                                     SM sm;
                                     model.set_SM(sm);
 
-                                    bool pset = model.set_param_gen(
-                                        lambda1, lambda2, lambda3, lambda4, lambda5,
-                                        0.0, 0.0, m12, std::tan(beta)
-                                    );
-                                    if (!pset) continue;
+                                    bool pset = model.set_param_gen(lambda1, lambda2, lambda3, lambda4, lambda5, 0.0, 0.0, m12_squared, tan_beta);
+
+                                    if (!pset) {
+                                        continue;
+                                    }
 
                                     Constraints check(model);
-                                    bool positivity_ok     = check.check_positivity();
-                                    bool unitarity_ok      = check.check_unitarity();
-                                    bool perturbativity_ok = check.check_perturbativity();
+                                    if (!check.check_positivity() || !check.check_unitarity() || !check.check_perturbativity()) {
+                                        continue;
+                                    }
 
                                     DecayTable table(model);
-                                    double w_h2_bb     = table.get_gamma_hdd(2, 3, 3);
-                                    double w_h2_tautau = table.get_gamma_hll(2, 3, 3);
-                                    double w_h2_WW     = table.get_gamma_hvv(2, 3);
-                                    double w_h2_ZZ     = table.get_gamma_hvv(2, 2);
-                                    double w_hgaga     = table.get_gamma_hgaga(2);
-                                    double w_total_h2  = table.get_gammatot_h(2);
+                                    double width_hgaga = table.get_gamma_hgaga(2);
+                                    double total_width_h2 = table.get_gammatot_h(2);
 
-                                    double br_hgaga = (w_total_h2 > 1e-12) ? (w_hgaga / w_total_h2) : 0.0;
-
-                                    vector<double> row = {
-                                        lambda1, lambda2, lambda3, lambda4, lambda5,
-                                        m12, beta, std::tan(beta),
-                                        positivity_ok ? 1.0 : 0.0, unitarity_ok ? 1.0 : 0.0, perturbativity_ok ? 1.0 : 0.0,
-                                        w_h2_bb, w_h2_tautau, w_h2_WW, w_h2_ZZ, w_hgaga,
-                                        w_total_h2, br_hgaga
-                                    };
-
-                                    thread_local_rows.push_back(row);
-
-                                    if (positivity_ok && unitarity_ok && w_total_h2 > 0.0 && !std::isnan(br_hgaga)) {
-                                        if (br_hgaga > local_bestBR) {
-                                            local_bestBR = br_hgaga;
-                                            local_bestParams = {lambda1, lambda2, lambda3, lambda4, lambda5, m12, beta};
-                                        }
+                                    if (std::isnan(width_hgaga) || std::isnan(total_width_h2) || total_width_h2 <= 0) {
+                                        continue;
                                     }
+
+                                    double branching_ratio_hgaga = width_hgaga / total_width_h2;
+
+                                    local_buffer << lambda1 << "," << lambda2 << "," << lambda3 << ","
+                                                 << lambda4 << "," << lambda5 << "," << m12_squared << ","
+                                                 << beta << "," << tan_beta << "," << width_hgaga << ","
+                                                 << total_width_h2 << "," << branching_ratio_hgaga << endl;
                                 }
+                            }
+                        }
+
+                        #pragma omp critical
+                        {
+                            ofstream temp_file(temp_filename, ios::app);
+                            if (temp_file.is_open()) {
+                                temp_file << local_buffer.str();
+                                temp_file.close();
+                            } else {
+                                cerr << "Failed to write to temporary file: " << temp_filename << endl;
                             }
                         }
                     }
 
                     #pragma omp critical
                     {
-                        for (const auto& row : thread_local_rows) {
-                            write_csv_row(results, row);
-                        }
-                        thread_local_rows.clear();
-
-                        if (local_bestBR > g_bestBR) {
-                            g_bestBR = local_bestBR;
-                            g_bestParams = local_bestParams;
-                        }
+                        completed_outer_loops++;
+                        double progress = (completed_outer_loops / total_outer_loops) * 100.0;
+                        auto current_time = high_resolution_clock::now();
+                        double elapsed_time = duration<double>(current_time - start_time).count();
+                        double remaining_time = (elapsed_time / completed_outer_loops) * (total_outer_loops - completed_outer_loops);
+                        cout << "Progress: " << fixed << setprecision(2) << progress << "% | Elapsed: " << elapsed_time << "s | Remaining: " << remaining_time << "s\r" << flush;
                     }
                 }
             }
         }
     }
 
+    // Consolidar archivos temporales
+    ofstream results(output_file);
+    write_csv_header(results, columns);
+
+    for (const auto &entry : fs::directory_iterator(temp_dir)) {
+        ifstream temp_file(entry.path());
+        results << temp_file.rdbuf();
+        temp_file.close();
+    }
+
     results.close();
-    cout << "\nGrid search completed. Results saved to " << output_file << endl;
+    fs::remove_all(temp_dir);
+
+    auto end_time = high_resolution_clock::now();
+    double elapsed_time = duration<double>(end_time - start_time).count();
+    cout << endl << "Parameter scan completed in " << elapsed_time << " seconds. Results saved to " << output_file << endl;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        cerr << "Usage: " << argv[0] << " <config_file> <output_csv>\n";
-        return 1;
+    if (argc < 2) {
+        cout << "Usage: ./ParamScan output_filename [step_size]\n";
+        return -1;
     }
 
-    string config_file = argv[1];
-    string output_file = argv[2];
-
-    try {
-        Config cfg = readConfig(config_file);
-        perform_param_scan_withGD(cfg, output_file);
-    } catch(const exception &e) {
-        cerr << "Error: " << e.what() << endl;
-        return 1;
+    string output_file = argv[1];
+    double step = 1.0;
+    if (argc > 2) {
+        try {
+            step = stod(argv[2]);
+        } catch (const exception &e) {
+            cerr << "Invalid step size provided. Using default step size of 1.0." << endl;
+        }
     }
+
+    perform_param_scan(output_file, step);
     return 0;
 }
