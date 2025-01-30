@@ -19,6 +19,7 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ag filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ah filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ai filter=lfs diff=lfs merge=lfs -text
+*.sh filter=lfs diff=lfs merge=lfs -text
 * !text !filter !merge !diff
 /app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/outphys/0207a_phys.csv filter=lfs diff=lfs merge=lfs -text
