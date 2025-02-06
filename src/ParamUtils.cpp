@@ -67,6 +67,58 @@ Config readConfig(const string &filename)
 }
 
 
+// ---------------------------------------------------------------------
+//  Lectura de parámetros "físicos": readPhysConfig
+// ---------------------------------------------------------------------
+ConfigPhys readPhysConfig(const std::string &filename)
+{
+    ifstream file(filename);
+    if (!file.is_open()) {
+        throw runtime_error("No se pudo abrir archivo de configuración física: " + filename);
+    }
+
+    unordered_map<string, double> configMap;
+    string key;
+    double value;
+    while (file >> key >> value) {
+        configMap[key] = value;
+    }
+    file.close();
+
+    ConfigPhys cfgp;
+    cfgp.lambda6_min      = configMap.at("lambda6_min");
+    cfgp.lambda6_max      = configMap.at("lambda6_max");
+    cfgp.step_lambda6     = configMap.at("step_lambda6");
+
+    cfgp.lambda7_min      = configMap.at("lambda7_min");
+    cfgp.lambda7_max      = configMap.at("lambda7_max");
+    cfgp.step_lambda7     = configMap.at("step_lambda7");
+
+    cfgp.m12_squared_min  = configMap.at("m12_squared_min");
+    cfgp.m12_squared_max  = configMap.at("m12_squared_max");
+    cfgp.step_m12_squared = configMap.at("step_m12_squared");
+
+    cfgp.alpha_min        = configMap.at("alpha_min");
+    cfgp.alpha_max        = configMap.at("alpha_max");
+    cfgp.step_alpha       = configMap.at("step_alpha");
+
+    cfgp.beta_min         = configMap.at("beta_min");
+    cfgp.beta_max         = configMap.at("beta_max");
+    cfgp.step_beta        = configMap.at("step_beta");
+
+    cfgp.mphi_min         = configMap.at("mphi_min");
+    cfgp.mphi_max         = configMap.at("mphi_max");
+    cfgp.step_mphi        = configMap.at("step_mphi");
+
+    cfgp.mA_min           = configMap.at("mA_min");
+    cfgp.mA_max           = configMap.at("mA_max");
+    cfgp.step_mA          = configMap.at("step_mA");
+
+    return cfgp;
+}
+
+
+
 // Función auxiliar para calcular el número de pasos (evita repetición de código)
 inline long stepsCount(double minVal, double maxVal, double step)
 {
@@ -96,6 +148,30 @@ double computeTotalIterations(const Config &cfg)
                    static_cast<double>(it_lambda5) *
                    static_cast<double>(it_m12)     *
                    static_cast<double>(it_beta);
+    cout << "Total iterations: " << total << "\n";
+    return total;
+}
+
+// ---------------------------------------------------------------------
+//  (Opcional) Cálculo de iteraciones totales (config física)
+// ---------------------------------------------------------------------
+double computeTotalIterationsPhys(const ConfigPhys &cfgp)
+{
+    long it_l6     = stepsCount(cfgp.lambda6_min,      cfgp.lambda6_max,      cfgp.step_lambda6);
+    long it_l7     = stepsCount(cfgp.lambda7_min,      cfgp.lambda7_max,      cfgp.step_lambda7);
+    long it_m12    = stepsCount(cfgp.m12_squared_min,  cfgp.m12_squared_max,  cfgp.step_m12_squared);
+    long it_alpha  = stepsCount(cfgp.alpha_min,        cfgp.alpha_max,        cfgp.step_alpha);
+    long it_beta   = stepsCount(cfgp.beta_min,         cfgp.beta_max,         cfgp.step_beta);
+    long it_mphi   = stepsCount(cfgp.mphi_min,         cfgp.mphi_max,         cfgp.step_mphi);
+    long it_mA     = stepsCount(cfgp.mA_min,           cfgp.mA_max,           cfgp.step_mA);
+
+    double total = static_cast<double>(it_l6)
+                 * static_cast<double>(it_l7)
+                 * static_cast<double>(it_m12)
+                 * static_cast<double>(it_alpha)
+                 * static_cast<double>(it_beta)
+                 * static_cast<double>(it_mphi)
+                 * static_cast<double>(it_mA);
     cout << "Total iterations: " << total << "\n";
     return total;
 }
