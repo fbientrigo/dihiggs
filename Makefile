@@ -17,7 +17,7 @@ BIN_DIR = app
 # Para cada uno, generaremos un ejecutable distinto.
 # ============
 MAIN_SRCS = \
-  ParamScanGen.cpp \
+  ParamScanPhys.cpp \
   ParamScanGen_pll.cpp \
   ParamScanHiggs.cpp \
   testing.cpp
@@ -41,7 +41,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 # Si el nombre del .cpp es 'ParamScanGen.cpp', el binario se llamará 'ParamScanGen'
 # ============
 BINARIES = \
-  $(BIN_DIR)/ParamScanGen \
+  $(BIN_DIR)/ParamScanPhys \
   $(BIN_DIR)/ParamScanGen_pll \
   $(BIN_DIR)/ParamScanHiggs \
   $(BIN_DIR)/testing
@@ -54,8 +54,8 @@ all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
 # Notar que cada ejecutable depende de su .o (con main) + todos los .o de la parte común.
 # ----
 
-$(BIN_DIR)/ParamScanGen: $(OBJ_DIR)/ParamScanGen.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) $^ -o $@ $(LDFLAGS)
+$(BIN_DIR)/ParamScanPhys: $(OBJ_DIR)/ParamScanPhys.o $(OBJ_DIR)/ParamUtils.o
+	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/ParamScanGen_pll: $(OBJ_DIR)/ParamScanGen_pll.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)

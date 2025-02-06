@@ -13,3 +13,10 @@ ftrigo@nasanote:~/dihiggs/app$ ./ParamScanGen_pll conf/coarse_parametros.conf ou
 Total iterations: 126360
 17.39 min 
 
+ftrigo@nasanote:~/dihiggs/app$ ./ParamScanGen_pll conf/0129a.conf out/0129a.csv
+Total iterations: 90720
+11.46 min
+
+ftrigo@nasanote:~/dihiggs/app$ ./ParamScanGen_pll conf/0129b.conf out/0129b.csv
+Total iterations: 921600
+Elapsed: 142.01 min
