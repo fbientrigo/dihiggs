@@ -41,9 +41,9 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 # Si el nombre del .cpp es 'ParamScanGen.cpp', el binario se llamará 'ParamScanGen'
 # ============
 BINARIES = \
-  $(BIN_DIR)/ParamScanPhys \
-  $(BIN_DIR)/ParamScanGen_pll \
-  $(BIN_DIR)/ParamScanHiggs \
+  $(BIN_DIR)/PhysParamScan \
+  $(BIN_DIR)/GenParamScan \
+  $(BIN_DIR)/HiggsParamScan \
   $(BIN_DIR)/testing
 
 # Regla principal
@@ -54,13 +54,13 @@ all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
 # Notar que cada ejecutable depende de su .o (con main) + todos los .o de la parte común.
 # ----
 
-$(BIN_DIR)/ParamScanPhys: $(OBJ_DIR)/ParamScanPhys.o $(OBJ_DIR)/ParamUtils.o
+$(BIN_DIR)/PhysParamScan: $(OBJ_DIR)/PhysParamScan.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
-$(BIN_DIR)/ParamScanGen_pll: $(OBJ_DIR)/ParamScanGen_pll.o $(OBJ_DIR)/ParamUtils.o
+$(BIN_DIR)/GenParamScan: $(OBJ_DIR)/GenParamScan.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
-$(BIN_DIR)/ParamScanHiggs: $(OBJ_DIR)/ParamScanHiggs.o $(OBJ_DIR)/ParamUtils.o
+$(BIN_DIR)/HiggsParamScan: $(OBJ_DIR)/HiggsParamScan.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
 $(BIN_DIR)/testing: $(OBJ_DIR)/testing.o $(OBJ_DIR)/ParamUtils.o
