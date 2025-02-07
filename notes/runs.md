@@ -20,3 +20,15 @@ Total iterations: 90720
 ftrigo@nasanote:~/dihiggs/app$ ./ParamScanGen_pll conf/0129b.conf out/0129b.csv
 Total iterations: 921600
 Elapsed: 142.01 min
+
+
+# Para el caso de Phys
+
+Nota: parece haber un bug en como se calcula el tiempo total, dado el step_0
+
+722400
+Progress: 0.66% | Elapsed: 58.09 min 
+
+237600
+Progress: 1.52% | Elapsed: 16.53 min
+
