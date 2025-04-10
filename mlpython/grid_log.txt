@@ -1,0 +1,32 @@
+Fecha y hora: 2025-03-23 19:03:44
+Configuración de parámetros utilizada:
+  alpha: min=-0.02, max=0.01, step=0.05
+  beta: min=1.540796, max=1.6007967, step=0.01510001
+  lambda6: min=-6, max=6, step=0.5
+  lambda7: min=-6, max=6, step=0.5
+  m12_squared: min=-6, max=6, step=0.05
+  mA: min=320.0, max=500.0, step=60.0
+  mphi: min=125, max=400, step=30.314
+Número de puntos en la grilla original: 30125000
+Número de puntos en la grilla complementaria (offset): 16588800
+----------------------------------------
+Fecha y hora: 2025-03-23 19:06:18
+Configuración de la grilla original:
+  alpha: min=-0.02, max=0.01, step=0.05
+  beta: min=1.540796, max=1.6007967, step=0.01510001
+  lambda6: min=-6, max=6, step=0.5
+  lambda7: min=-6, max=6, step=0.5
+  m12_squared: min=-6, max=6, step=0.05
+  mA: min=320.0, max=500.0, step=60.0
+  mphi: min=125, max=400, step=30.314
+Configuración de la grilla complementaria:
+  alpha: min=0.005000000000000001, max=-0.015000000000000001, step=0.05
+  beta: min=1.548346005, max=1.5932466950000002, step=0.01510001
+  lambda6: min=-5.75, max=5.75, step=0.5
+  lambda7: min=-5.75, max=5.75, step=0.5
+  m12_squared: min=-5.975, max=5.975, step=0.05
+  mA: min=350.0, max=470.0, step=60.0
+  mphi: min=140.157, max=384.843, step=30.314
+Número de puntos en la grilla original: 24100000
+Número de puntos en la grilla complementaria: 0
+----------------------------------------
