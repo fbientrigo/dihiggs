@@ -2,8 +2,12 @@ import subprocess
 import numpy as np
 import json
 
+# nota: por ahora es necesario regenerar un ejecutable cada vez
+# mas adelante es posible automatizar que el ejecutable quede dentro de lib/
+# si se hacen modificaciones con Make, pero prefiero concentrar energia de desarrollo
+EXECUTABLE_PATH = "/home/ftrigo/Dihiggs/dihiggs/app/Oracle"
 
-def run_oracle(params, executable_path="/home/ftrigo/DiHiggsWorking/dihiggs/app/Oracle"):
+def run_oracle(params, executable_path=EXECUTABLE_PATH):
     """
     Ejecuta el binario Oracle con una lista de parámetros.
     m_phi, mA, alpha, beta, lambda6, lambda7, m12
