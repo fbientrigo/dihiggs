@@ -1,0 +1,15 @@
+Resumen de Insights del Modelo Sustituto:
+
+m_phi: min = 125, max = 485
+mA: min = 320, max = 500
+alpha: min = -0.7, max = 0.7
+beta: min = 0.5, max = 1.373
+lambda6: min = -1, max = 1.137
+lambda7: min = -1, max = 1.137
+m12: min = -1, max = 1.171
+
+Desempeño del Modelo:
+  R²: 1.0000
+  RMSE: 0.0000
+
+Revisa los gráficos SHAP generados para identificar parámetros críticos y posibles subespacios de interés.
