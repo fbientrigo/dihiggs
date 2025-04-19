@@ -38,6 +38,10 @@ string calculatePoint(double m_phi, double mA, double alpha, double beta,
         return "{\"error\": \"Invalid parameter set.\"}";
     }
 
+    // Informacion de los lambdas
+    double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
+    model.get_param_gen( lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
+
     // Chequeos de estabilidad, unitariedad y perturbatividad
     Constraints check(model);
     bool positivity_ok     = check.check_positivity();
@@ -95,6 +99,16 @@ string calculatePoint(double m_phi, double mA, double alpha, double beta,
     ss << "  \"w_total_h2\": " << w_total_h2 << ",\n";
     ss << "  \"w_total_top\": " << w_total_top << ",\n";
     ss << "  \"branching_ratio_h2_gaga\": " << br_h2_gaga << "\n";
+    // ────── Volcar λ’s de la base genérica ──────
+    ss << ",\n  \"lambda1\": " << lam1
+       << ",\n  \"lambda2\": " << lam2
+       << ",\n  \"lambda3\": " << lam3
+       << ",\n  \"lambda4\": " << lam4
+       << ",\n  \"lambda5\": " << lam5
+       << ",\n  \"lambda6\": " << lam6_g
+       << ",\n  \"lambda7\": " << lam7_g
+       << ",\n  \"m12_2\": "   << m12_2_g;
+    // ────────────────────────────────────────────
     ss << "}";
     return ss.str();
 }

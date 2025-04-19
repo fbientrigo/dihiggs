@@ -7,14 +7,15 @@ import json
 # si se hacen modificaciones con Make, pero prefiero concentrar energia de desarrollo
 EXECUTABLE_PATH = "/home/ftrigo/Dihiggs/dihiggs/app/Oracle"
 
-def run_oracle(params, executable_path=EXECUTABLE_PATH):
+def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
     """
     Ejecuta el binario Oracle con una lista de parámetros.
     m_phi, mA, alpha, beta, lambda6, lambda7, m12
     
     """
     cmd = [executable_path] + list(map(str, params))
-    
+
+
     try:
         result = subprocess.run(
             cmd,
@@ -23,6 +24,9 @@ def run_oracle(params, executable_path=EXECUTABLE_PATH):
             text=True,
             check=True
         )
+
+        if debug:
+            return result
 
         # Intentamos parsear la salida como JSON
         try:
@@ -78,6 +82,13 @@ def safe_run_oracle(params):
         'w_total_h2': np.nan,
         'w_total_top': np.nan,
         'branching_ratio_h2_gaga': np.nan,
+        'lambda1': np.nan,
+        'lambda2': np.nan,
+        'lambda3': np.nan,
+        'lambda4': np.nan,
+        'lambda5': np.nan,
+        'lambda6': np.nan,
+        'lambda7': np.nan,
     }
 
     if "error" in output:
