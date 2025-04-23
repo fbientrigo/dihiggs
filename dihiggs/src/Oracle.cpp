@@ -132,14 +132,12 @@ int main(int argc, char* argv[]) {
     }
     
     int nParams = argc - startIndex;
-    cout << nParams;
     if (nParams < 7) {
         cerr << "Error: No se encontraron suficientes parámetros para formar un grupo de 7.\n";
         return 1;
     }
     
     int nPoints = nParams / 7;
-    cout << nPoints;
     if (nParams % 7 != 0) {
         cerr << "Error: El número de parámetros debe ser múltiplo de 7.\n";
         return 1;
