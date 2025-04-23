@@ -1,20 +1,57 @@
 import subprocess
 import numpy as np
 import json
+from pathlib import Path
 
-# nota: por ahora es necesario regenerar un ejecutable cada vez
-# mas adelante es posible automatizar que el ejecutable quede dentro de lib/
-# si se hacen modificaciones con Make, pero prefiero concentrar energia de desarrollo
-EXECUTABLE_PATH = "/home/ftrigo/Dihiggs/dihiggs/app/Oracle"
+# --------------------------------------------------
+# Configuración de ruta al ejecutable
+# --------------------------------------------------
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+EXECUTABLE_PATH = PROJECT_ROOT / 'dihiggs' / 'app' / 'Oracle'
+
+
+def run_oracle_batch(param_list, nthreads, executable_path=EXECUTABLE_PATH, debug=False):
+    """
+    Llama al binario en modo paralelo, entregándole nthreads
+    y un array de param_list (lista de listas de 7 floats).
+    Devuelve la lista de dicts resultantes.
+    """
+    flat_args = ["--nthreads", str(nthreads)]
+    for params in param_list:
+        assert len(params) == 7, "Cada conjunto de parámetros debe tener 7 valores"
+        flat_args += list(map(str, params))
+
+    cmd = [str(executable_path)] + flat_args
+    if debug:
+        print("▶ Ejecutando:", " ".join(cmd))
+
+    proc = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True
+    )
+
+    if debug:
+        print("⮕ returncode:", proc.returncode)
+        print("⮕ stderr:\n", proc.stderr.strip())
+        print("⮕ stdout (inicio):\n", proc.stdout[:200])
+
+    try:
+        outputs = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Salida mal formada de Oracle:\n{proc.stdout}")
+
+    return outputs
+
 
 def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
     """
-    Ejecuta el binario Oracle con una lista de parámetros.
-    m_phi, mA, alpha, beta, lambda6, lambda7, m12
-    
+    Ejecuta el binario Oracle con una lista de parámetros (7 floats) y devuelve el dict JSON.
     """
-    cmd = [executable_path] + list(map(str, params))
-
+    cmd = [str(executable_path)] + list(map(str, params))
 
     try:
         result = subprocess.run(
@@ -24,47 +61,28 @@ def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
             text=True,
             check=True
         )
-
         if debug:
-            return result
+            print("▶ Ejecutando:", " ".join(cmd))
+            print("⮕ stderr:\n", result.stderr)
+            print("⮕ stdout:\n", result.stdout)
 
-        # Intentamos parsear la salida como JSON
         try:
             output = json.loads(result.stdout.strip())
         except json.JSONDecodeError:
             output = {"output": result.stdout.strip()}
-        
         return output
 
     except subprocess.CalledProcessError as e:
-        return {
-            "error": "Execution failed",
-            "stderr": e.stderr.strip(),
-            "params": params
-        }
+        return {"error": "Execution failed", "stderr": e.stderr.strip(), "params": params}
     except Exception as e:
-        return {
-            "error": f"Unexpected error: {str(e)}",
-            "params": params
-        }
-
-
+        return {"error": f"Unexpected error: {str(e)}", "params": params}
 
 
 def safe_run_oracle(params):
     """
     Llama a run_oracle y devuelve salida uniforme con NaNs en caso de error.
-    
-    m_phi, mA, alpha, beta, lambda6, lambda7, m12
-
-    Parameters:
-        params (list): Lista de parámetros.
-
-    Returns:
-        dict: Diccionario con las claves esperadas y valores o NaNs.
     """
     output = run_oracle(params)
-
     expected_keys = {
         'positivity_ok': np.nan,
         'unitarity_ok': np.nan,
@@ -90,13 +108,46 @@ def safe_run_oracle(params):
         'lambda6': np.nan,
         'lambda7': np.nan,
     }
-
     if "error" in output:
         return {**expected_keys, "error": output["error"]}
-    
-    # Si todo salió bien, rellenar con lo recibido y mantener formato
     result = expected_keys.copy()
     for key in result:
-        result[key] = output.get(key, result[key])  # usa valor o NaN por defecto
-
+        result[key] = output.get(key, result[key])
     return result
+
+
+# --------------------------------------------------
+# Main para testing desde línea de comandos
+# --------------------------------------------------
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Test harness para Oracle Python wrapper"
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Prueba single
+    p1 = subparsers.add_parser("single", help="Test run_oracle con parámetros individuales")
+    p1.add_argument("params", nargs=7, type=float, help="7 parámetros para Oracle")
+    p1.add_argument("--debug", action="store_true")
+
+    # Prueba batch
+    p2 = subparsers.add_parser("batch", help="Test run_oracle_batch con lote de parámetros")
+    p2.add_argument("nthreads", type=int, help="Número de hilos OpenMP")
+    p2.add_argument("params", nargs='+', type=float, help="Lista plana de parámetros, múltiplo de 7")
+    p2.add_argument("--debug", action="store_true")
+
+    args = parser.parse_args()
+    if args.command == "single":
+        res = run_oracle(args.params, debug=args.debug)
+        print(json.dumps(res, indent=2))
+    elif args.command == "batch":
+        flat = args.params
+        if len(flat) % 7 != 0:
+            parser.error("El número de parámetros debe ser múltiplo de 7.")
+        batches = [flat[i:i+7] for i in range(0, len(flat), 7)]
+        res = run_oracle_batch(batches, args.nthreads, debug=True)
+        print(json.dumps(res, indent=2))
+    else:
+        parser.print_help()
