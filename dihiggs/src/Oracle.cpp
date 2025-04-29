@@ -19,13 +19,13 @@ using namespace std;
 using namespace std::chrono;
 
 // Función que calcula el punto y retorna un string JSON con los resultados.
-string calculatePoint(double m_phi, double mA, double alpha, double beta,
+string calculatePoint(double m_phi, double mA, double sin_ba, double tan_beta,
                         double lambda6, double lambda7, double m12) {
     // Parámetros fijos y derivados
     double m_h = 125.0;         // Higgs ligero (SM) fijo
     double m_Hp = mA;           // Se asume m_Hp = mA
-    double sin_ba = sin(beta - alpha);
-    double tan_beta = tan(beta);
+    //double sin_ba = sin(beta - alpha);
+    //double tan_beta = tan(beta);
 
     // Construir el modelo 2HDM
     THDM model;

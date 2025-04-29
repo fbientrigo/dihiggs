@@ -49,7 +49,13 @@ def run_oracle_batch(param_list, nthreads, executable_path=EXECUTABLE_PATH, debu
 
 def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
     """
+    [mphi, mA, sin_ba, tan_beta, lambda6, lambda7, m12_2]
+    
     Ejecuta el binario Oracle con una lista de parámetros (7 floats) y devuelve el dict JSON.
+    Los parametros:
+        double m_phi, double mA, double sin_ba, double tan_beta,
+                        double lambda6, double lambda7, double m12
+    donde m_12 es resumido para escribir m_(12)^2
     """
     cmd = [str(executable_path)] + list(map(str, params))
 
@@ -114,6 +120,113 @@ def safe_run_oracle(params):
     for key in result:
         result[key] = output.get(key, result[key])
     return result
+
+#===============
+#   Version avanzada
+#===============
+
+from typing import Callable, List, Dict
+from concurrent.futures import ThreadPoolExecutor
+
+
+class OracleExecutor:
+    """
+    Universal executor for Oracle-based models.
+    Accepts a model function that takes a parameter list and returns a dict.
+    Provides sequential and parallel execution methods with standardized output.
+
+    Attributes:
+        model_fn: Callable[[List[float]], Dict]  # function for single invocation
+        batch_fn: Callable[[List[List[float]], int], List[Dict]] # batch invocation
+        nthreads: int  # threads to use in batch_fn
+    """
+    def __init__(self,
+                 model_fn: Callable[[List[float]], Dict] = run_oracle,
+                 batch_fn: Callable[[List[List[float]], int], List[Dict]] = run_oracle_batch,
+                 nthreads: int = 4):
+        self.model_fn = model_fn
+        self.batch_fn = batch_fn
+        self.nthreads = nthreads
+
+    def run(self, params: List[float]) -> Dict:
+        """
+        Run single parameter set sequentially.
+        Returns a standardized dict with output or error.
+        """
+        try:
+            result = self.model_fn(params)
+            return self._standardize(result)
+        except Exception as e:
+            return self._error_dict(params, str(e))
+
+    def run_batch(self, param_list: List[List[float]]) -> List[Dict]:
+        """
+        Run multiple parameter sets in batch using the C++ parallel backend.
+        Each param set must be length 7.
+        """
+        try:
+            results = self.batch_fn(param_list, self.nthreads)
+        except Exception as e:
+            # on batch error, fallback to sequential
+            results = [self.run(p) for p in param_list]
+        return [self._standardize(r) for r in results]
+
+    def map(self, param_list: List[List[float]], use_threads: bool = False) -> List[Dict]:
+        """
+        Generic map: if use_threads=False uses batch backend, if True uses ThreadPoolExecutor
+        for individual threads.
+        """
+        if use_threads:
+            with ThreadPoolExecutor(max_workers=self.nthreads) as exe:
+                futures = [exe.submit(self.run, p) for p in param_list]
+                return [f.result() for f in futures]
+        else:
+            return self.run_batch(param_list)
+
+    def _standardize(self, output: Dict) -> Dict:
+        """
+        Ensure all expected keys present, even on error.
+        """
+        # expected_keys similar to safe_run_oracle
+        expected = {
+            'positivity_ok': None,
+            'unitarity_ok': None,
+            'perturbativity_ok': None,
+            'w_h2_bb': None,
+            'w_h2_tautau': None,
+            'w_h2_uu': None,
+            'w_h2_du': None,
+            'w_h2_ln': None,
+            'w_h2_vv': [None, None, None],
+            'w_h2_gaga': None,
+            'w_h2_Zga': None,
+            'w_h2_gg': None,
+            'w_h2_hh': None,
+            'w_total_h2': None,
+            'w_total_top': None,
+            'branching_ratio_h2_gaga': None,
+            'lambda1': None,
+            'lambda2': None,
+            'lambda3': None,
+            'lambda4': None,
+            'lambda5': None,
+            'lambda6': None,
+            'lambda7': None,
+        }
+        std = expected.copy()
+        # If error in output, preserve it
+        if 'error' in output:
+            std['error'] = output.get('error')
+        for k in expected:
+            std[k] = output.get(k, expected[k])
+        return std
+
+    def _error_dict(self, params: List[float], msg: str) -> Dict:
+        """
+        Build an error dictionary for a failed call.
+        """
+        return {'error': msg, 'params': params}
+
 
 
 # --------------------------------------------------
