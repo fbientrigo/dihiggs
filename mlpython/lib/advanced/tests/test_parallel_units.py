@@ -3,7 +3,7 @@ import logging
 import time
 
 # chequear los improts y modificar como ocurre el testing
-from parallel_utils import OracleExecutor
+from mlpython.lib.advanced.calling_utils import OracleExecutor
 
 # Configure root logger to output debug messages to console
 logging.basicConfig(level=logging.DEBUG,
