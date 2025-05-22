@@ -70,6 +70,11 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 *.pptx filter=lfs diff=lfs merge=lfs -text
 *.gitignore filter=lfs diff=lfs merge=lfs -text
 *.code-workspace filter=lfs diff=lfs merge=lfs -text
+*.parquet filter=lfs diff=lfs merge=lfs -text
+/mlpython/valid_points_lhe/Haa filter=lfs diff=lfs merge=lfs -text
+/mlpython/valid_points_lhe/Haz filter=lfs diff=lfs merge=lfs -text
+/mlpython/valid_points_lhe/Hbb filter=lfs diff=lfs merge=lfs -text
+/mlpython/valid_points_lhe/Hwidth filter=lfs diff=lfs merge=lfs -text
 * !text !filter !merge !diff
 /app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/outphys/0207a_phys.csv filter=lfs diff=lfs merge=lfs -text
