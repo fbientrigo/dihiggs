@@ -113,3 +113,27 @@ def random_combination(param_ranges, seed=None):
         sample["m12_squared"]
     ]
     return oracle_input
+
+
+# --- threading-----
+# lib/utils.py
+import time
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+
+def thread_map(func, inputs, max_workers=4):
+    """Mapear func(arg) sobre inputs en paralelo con hilos."""
+    results = [None] * len(inputs)
+    with ThreadPoolExecutor(max_workers=max_workers) as exe:
+        fut2i = {exe.submit(func, arg): i for i, arg in enumerate(inputs)}
+        for fut in as_completed(fut2i):
+            results[fut2i[fut]] = fut.result()
+    return results
+
+def process_map(func, inputs, max_workers=4):
+    """Mapear func(arg) sobre inputs en paralelo con procesos."""
+    results = [None] * len(inputs)
+    with ProcessPoolExecutor(max_workers=max_workers) as exe:
+        fut2i = {exe.submit(func, arg): i for i, arg in enumerate(inputs)}
+        for fut in as_completed(fut2i):
+            results[fut2i[fut]] = fut.result()
+    return results

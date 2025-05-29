@@ -4,6 +4,11 @@ import time
 from itertools import product
 from multiprocessing import Pool, cpu_count
 
+# TODO
+# en esta branch la logica de run_oracle debe cambiarse
+# alpha_range --> sin_ba_range
+# beta_range --> tan_beta range
+
 def explore_points(m_phi_range, mA_range, alpha_range, beta_range, lambda6_range, lambda7_range, m12_range):
     """
     Explora un grid de combinaciones de parámetros físicos y devuelve solo los casos físicamente válidos.
@@ -14,9 +19,9 @@ def explore_points(m_phi_range, mA_range, alpha_range, beta_range, lambda6_range
         Valores para el parámetro m_phi.
     mA_range : iterable
         Valores para el parámetro mA.
-    alpha_range : iterable
+    sin(beta-alpha)_range : iterable
         Valores para el parámetro alpha.
-    beta_range : iterable
+    tan(beta)_range : iterable
         Valores para el parámetro beta.
     lambda6_range : iterable
         Valores para el parámetro lambda6.
