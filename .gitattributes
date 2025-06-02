@@ -103,3 +103,9 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches_vary/merged_6.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_3.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_train/dataset_full.parquet filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_10.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_11.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_12.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_7.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_8.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_9.pkl filter=lfs diff=lfs merge=lfs -text
