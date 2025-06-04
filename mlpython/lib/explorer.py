@@ -110,7 +110,9 @@ import numpy as np
 import time
 from itertools import product
 from multiprocessing import Pool, cpu_count
-from lib.oracle import run_oracle
+from .oracle import run_oracle
+import numpy as np
+from scipy.stats import qmc
 
 def _evaluate_point(params):
     """
@@ -175,3 +177,242 @@ def explore_points_parallel(m_phi_range, mA_range, alpha_range, beta_range, lamb
     print(f"Exploración completada en {elapsed:.2f} segundos con {len(results)} puntos válidos.")
 
     return results
+
+vev = 246
+
+def generate_local_variations(
+    m_phi_base: float,
+    m_A_center: float,
+    m12_center: float,
+    batch_size: int,
+    eps_A: float,
+    eps_m12: float,
+    seed: int = None
+    ) -> np.ndarray:
+    """
+    Generate `batch_size` points where only m_A and m12_2 vary in a small Latin 
+    Hypercube around (m_A_center, m12_center), and all other 5 dims are fixed.
+
+    Returns an array of shape (batch_size, 7) with column order:
+      [m_phi, m_A, sin_ba, tan_beta, lambda6, lambda7, m12_2]
+    """
+
+    # 1) LatinHypercube in 2D (for m_A and m12)
+    sampler = qmc.LatinHypercube(d=2)
+    unit = sampler.random(n=batch_size)
+
+    # 2) Scale to [m_A_center±eps_A] × [m12_center±eps_m12]
+    bounds = np.array([
+        [m_A_center - eps_A, m_A_center + eps_A],
+        [m12_center - eps_m12, m12_center + eps_m12]
+    ])
+    scaled = qmc.scale(unit, bounds[:,0], bounds[:,1])  # shape (batch_size,2)
+
+    # 3) Build the full parameter array, hard-coding the other 5 dims:
+    P = np.empty((batch_size, 7), dtype=float)
+    P[:, 0] = m_phi_base           # m_phi
+    P[:, 1] = scaled[:, 0]         # m_A (varying)
+    P[:, 2] = 1.0                  # sin(beta - alpha), fixed
+    P[:, 3] = 10000.0              # tan(beta), fixed
+    P[:, 4] = 0.1                  # lambda_6, fixed
+    P[:, 5] = 0.0                  # lambda_7, fixed
+    P[:, 6] = scaled[:, 1]         # m12_2 (varying)
+
+    return P
+
+
+def get_parameters_from_points(
+    csv_path: str,
+    batch_size: int,
+    eps_A: float,
+    eps_m12: float,
+    seed: int = None
+    ) -> np.ndarray:
+    """
+    Reads `csv_path` containing base points with columns 'Mh2', 'Mh3', 'm12_2' and
+    for each row generates `batch_size` local variations via generate_local_variations.
+    Returns a combined array of shape (n_rows * batch_size, 7).
+    """
+    df = pd.read_csv(csv_path)
+    all_batches = []
+    for idx, row in df.iterrows():
+        m_phi_base   = row["Mh2"]    # heavy CP-even Higgs mass as m_phi
+        m_A_center   = row["Mh3"]    # CP-odd Higgs mass as m_A
+        m12_center   = row["m12_2"]
+        # derive unique seed per batch for reproducibility
+        batch_seed = None if seed is None else seed + idx
+        P = generate_local_variations(
+            m_phi_base, m_A_center, m12_center,
+            batch_size, eps_A, eps_m12, seed=batch_seed
+        )
+        all_batches.append(P)
+    # stack all batches into one array
+    return np.vstack(all_batches)
+
+
+
+
+def generate_local_variations_phi(
+    m_phi_center: float,
+    m12_center: float,
+    batch_size: int,
+    eps_phi: float,
+    eps_m12: float,
+    m_A_fixed: float = 300.0,
+    seed: int = None
+) -> np.ndarray:
+    """
+    Genera `batch_size` puntos variando m_phi y m12_2 en un Latin Hypercube
+    alrededor de (m_phi_center, m12_center).
+    m_A se fija a `m_A_fixed`. Las otras 4 dimensiones están hardcodeadas.
+    Retorna un array de forma (batch_size, 7) con columnas:
+    [m_phi, m_A, sin_ba, tan_beta, lambda6, lambda7, m12_2]
+    """
+    # 1) Muestreo LH en 2D para (m_phi, m12_2)
+    sampler = qmc.LatinHypercube(d=2)
+    unit = sampler.random(n=batch_size)
+
+    # 2) Escalado a [m_phi_center±eps_phi] × [m12_center±eps_m12]
+    bounds = np.array([
+        [m_phi_center - eps_phi, m_phi_center + eps_phi],
+        [m12_center  - eps_m12,  m12_center  + eps_m12]
+    ])
+    scaled = qmc.scale(unit, bounds[:,0], bounds[:,1])  # shape (batch_size,2)
+
+    # 3) Construir el array de parámetros
+    P = np.empty((batch_size, 7), dtype=float)
+    P[:, 0] = scaled[:, 0]       # m_phi (variado)
+    P[:, 1] = m_A_fixed           # m_A (fijo)
+    P[:, 2] = 1.0                 # sin(beta - alpha)
+    P[:, 3] = 10000.0             # tan(beta)
+    P[:, 4] = 0.1                 # lambda6
+    P[:, 5] = 0.0                 # lambda7
+    P[:, 6] = scaled[:, 1]       # m12_2 (variado)
+
+    return P
+
+def get_parameters_from_points_phi(
+    csv_path: str,
+    batch_size: int,
+    eps_phi: float,
+    eps_m12: float,
+    m_A_fixed: float = 300.0,
+    seed: int = None
+) -> np.ndarray:
+    """
+    Lee `csv_path` con columnas 'Mh2' (m_phi_center) y 'm12_2'.
+    Para cada fila genera un batch con `generate_local_variations_phi`.
+    """
+    import pandas as pd
+    df = pd.read_csv(csv_path)
+    all_batches = []
+    for idx, row in df.iterrows():
+        m_phi_center = row["Mh2"]
+        m12_center   = row["m12_2"]
+        batch_seed   = None if seed is None else seed + idx
+        P = generate_local_variations_phi(
+            m_phi_center,
+            m12_center,
+            batch_size,
+            eps_phi,
+            eps_m12,
+            m_A_fixed=m_A_fixed,
+            seed=batch_seed
+        )
+        # DEBUG: validación rápida
+        # assert np.all(P[:,1] == m_A_fixed), "m_A no está fijo a 300"
+        all_batches.append(P)
+
+    return np.vstack(all_batches)
+
+
+import os
+import glob
+import time
+import pickle
+import pandas as pd
+from typing import Literal
+from .oracle import OracleExecutor
+
+def multiple_runs(
+    csv_path: str,
+    N_repeat_runs: int,
+    batch_size: int,
+    eps_A: float,
+    eps_m12: float,
+    outdir: str,
+    executor: OracleExecutor,
+    variation_mode: Literal['mA', 'mPhi'] = 'mA',
+    eps_phi: float = None,
+    base_seed: int = 42
+):
+    """
+    Ejecuta varias corridas locales LH. Dependiendo de `variation_mode`:
+      - 'mA': varía (m_A, m12_2), fija m_phi (usa eps_A)
+      - 'mPhi': varía (m_phi, m12_2), fija m_A=300, usa eps_phi
+    """
+    # Validaciones básicas
+    if variation_mode == 'mPhi' and eps_phi is None:
+        raise ValueError("Para mode='mPhi' debes proporcionar eps_phi")
+    
+    df = pd.read_csv(csv_path)
+    n_runs = len(df)
+
+    # Estimación de tiempo
+    time_per_point = 415.7 / 15_000
+    total_points = N_repeat_runs * n_runs * batch_size
+    pred_mins = total_points * time_per_point / 60
+    print(f"Estimado: {pred_mins:.1f} min (~{pred_mins/60:.2f} h) para {total_points} puntos")
+
+    os.makedirs(outdir, exist_ok=True)
+
+    for epoch in range(N_repeat_runs):
+        for j, row in df.iterrows():
+            m_phi_base = float(row["Mh2"])
+            m_A_center = float(row["Mh3"])
+            m12_center = float(row["m12_2"])
+            # Semilla reproducible única
+            seed = base_seed + epoch * n_runs + j
+
+            # Seleccionar la función de variación según el modo
+            if variation_mode == 'mA':
+                param_list = generate_local_variations(
+                    m_phi_base=m_phi_base,
+                    m_A_center=m_A_center,
+                    m12_center=m12_center,
+                    batch_size=batch_size,
+                    eps_A=eps_A,
+                    eps_m12=eps_m12,
+                    seed=seed
+                )
+            else:  # 'mPhi'
+                param_list = generate_local_variations_phi(
+                    m_phi_center=m_phi_base,
+                    m12_center=m12_center,
+                    batch_size=batch_size,
+                    eps_phi=eps_phi,
+                    eps_m12=eps_m12,
+                    m_A_fixed=m_A_center,  # o un valor fijo, p.ej. 300
+                    seed=seed
+                )
+
+            # Índice de batch basado en archivos existentes
+            existing = sorted(glob.glob(os.path.join(outdir, "batch_*.pkl")))
+            batch_idx = len(existing) + 1
+
+            # Ejecución
+            t0 = time.perf_counter()
+            results = executor.map(param_list.tolist(), use_threads=True)
+            dt = time.perf_counter() - t0
+
+            # Guardar resultados
+            fname = f"batch_{batch_idx}_{int(m_phi_base)}.pkl"
+            fout = os.path.join(outdir, fname)
+            with open(fout, "wb") as f:
+                pickle.dump({"params": param_list, "results": results}, f)
+
+            print(f"[Run {j+1}/{n_runs}] batch {batch_idx} "
+                  f"mode={variation_mode} saved in {dt:.1f}s → {fout}")
+
+        print(f"[Epoch {epoch+1}/{N_repeat_runs}] completado")
+    print("Todas las corridas finalizadas.")
