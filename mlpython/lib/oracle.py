@@ -152,6 +152,8 @@ class OracleExecutor:
         """
         Run single parameter set sequentially.
         Returns a standardized dict with output or error.
+
+        [mphi, mA, sin_ba, tan_beta, lambda6, lambda7, m12_2]
         """
         try:
             result = self.model_fn(params)
@@ -163,6 +165,8 @@ class OracleExecutor:
         """
         Run multiple parameter sets in batch using the C++ parallel backend.
         Each param set must be length 7.
+
+        [mphi, mA, sin_ba, tan_beta, lambda6, lambda7, m12_2]
         """
         try:
             results = self.batch_fn(param_list, self.nthreads)

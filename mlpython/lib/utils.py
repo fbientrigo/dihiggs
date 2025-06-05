@@ -1,5 +1,10 @@
 import numpy as np
 
+# importing data
+
+
+
+# ---
 def expand_parameter_space(parameter_space):
     """
     Convierte un diccionario de definiciones de espacio de parámetros con min, max y step
@@ -137,3 +142,4 @@ def process_map(func, inputs, max_workers=4):
         for fut in as_completed(fut2i):
             results[fut2i[fut]] = fut.result()
     return results
+
