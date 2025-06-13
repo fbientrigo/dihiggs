@@ -80,6 +80,7 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 /mlpython/README filter=lfs diff=lfs merge=lfs -text
 *.bak filter=lfs diff=lfs merge=lfs -text
 *.pdf filter=lfs diff=lfs merge=lfs -text
+*.lhe filter=lfs diff=lfs merge=lfs -text
 * !text !filter !merge !diff
 /app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/outphys/0207a_phys.csv filter=lfs diff=lfs merge=lfs -text
@@ -157,3 +158,11 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_56.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_57.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_58.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/06_valid_points/output/filtered_data_0.csv filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_01.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_02.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_03.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_05.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_07.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_08.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_09.pkl filter=lfs diff=lfs merge=lfs -text
