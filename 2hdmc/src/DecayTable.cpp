@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// Particle naming
+// Particle naming and their id
 const char *dnames[4] = {" ","d ", "s ", "b "};
 const char *unames[4] = {" ","u ", "c ", "t "};
 const char *lnames[4] = {" ","e ", "mu", "ta"};
@@ -107,6 +107,17 @@ double DecayTable::get_gamma_uhd(int u, int h, int d) {
 
 double DecayTable::get_gamma_hdd(int h, int d1, int d2) {
 
+    #ifdef DEBUG
+    std::cout << "[DEBUG] cache antes de calcular: gamma_hdd["
+              << h << "]["<< d1 <<"]["<< d2 <<"] = "
+              << gamma_hdd[h][d1][d2] << "\n";
+    if (gamma_hdd[h][d1][d2] >= 0) {
+        std::cout << "[DEBUG] retorna 0 desde caché\n";
+        return gamma_hdd[h][d1][d2];
+    }
+    #endif
+
+
   if ((h<1)||(h>3)) return 0.;
   if ((d1<1)||(d1>3)) return 0.;
   if ((d2<1)||(d2>3)) return 0.;
@@ -147,7 +158,11 @@ double DecayTable::get_gamma_hdd(int h, int d1, int d2) {
 
   complex <double> cs,cp;
   model.get_coupling_hdd(h,d1,d2,cs,cp);
-
+  #ifdef DEBUG
+  std::cout << "[DEBUG] get_coupling_hdd(h="<<h
+            <<",d1="<<d1<<",d2="<<d2
+            <<") => cs="<<cs<<", cp="<<cp<<"\n";
+  #endif
   gamma_hdd[h][d1][d2] = hff_onshell(M,m1p,m1run,m2p,m2run,cs,cp,3,h,false);
   return gamma_hdd[h][d1][d2];
 }
