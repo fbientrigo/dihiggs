@@ -146,3 +146,35 @@ All required packages are listed in `requirements.txt`:
 └── README.md
 ```
 
+## Particle ID References
+From the 2hdmc calculator the particle references id in the lhe outs:
+| Category              | Name | PDG ID |
+|-----------------------|:----:|:------:|
+| Down-type quark (d)   |  –   |   0    |
+|                       | d    |   1    |
+|                       | s    |   3    |
+|                       | b    |   5    |
+| Up-type quark (u)     |  –   |   0    |
+|                       | u    |   2    |
+|                       | c    |   4    |
+|                       | t    |   6    |
+| Charged lepton (ℓ)    |  –   |   0    |
+|                       | e    |  11    |
+|                       | μ    |  13    |
+|                       | τ    |  15    |
+| Neutrino (ν)          |  –   |   0    |
+|                       | νₑ   |  12    |
+|                       | ν_μ  |  14    |
+|                       | ν_τ  |  16    |
+| Neutral Higgs boson   |  –   |   0    |
+|                       | h    |  25    |
+|                       | H    |  35    |
+|                       | A    |  36    |
+| Charged Higgs boson   | H⁺   |  37    |
+| Gauge boson           |  –   |   0    |
+|                       | γ    |  22    |
+|                       | Z    |  23    |
+|                       | W⁺   |  24    |
+
+
+
