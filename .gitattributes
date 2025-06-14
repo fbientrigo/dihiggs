@@ -166,3 +166,7 @@ results/*.csv filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_07.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_08.pkl filter=lfs diff=lfs merge=lfs -text
 /mlpython/data_batches/merged_09.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/06_valid_points/known_valid_points/filtered_data_0.csv filter=lfs diff=lfs merge=lfs -text
+/mlpython/0b1_samplings.ipynb filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_04.pkl filter=lfs diff=lfs merge=lfs -text
+/mlpython/data_batches/merged_06.pkl filter=lfs diff=lfs merge=lfs -text
