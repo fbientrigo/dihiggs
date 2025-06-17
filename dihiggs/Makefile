@@ -22,7 +22,8 @@ MAIN_SRCS = \
   PhysParamScan.cpp \
   testing.cpp \
   Oracle.cpp \
-  ModularParamScan.cpp   # <-- Nuevo
+  ModularParamScan.cpp \
+  PhysScanWithFixings.cpp   # <-- Nuevo
 
 # ============ 
 # Archivos fuente comunes (sin main).
@@ -45,7 +46,8 @@ BINARIES = \
   $(BIN_DIR)/PhysParamScan \
   $(BIN_DIR)/testing \
   $(BIN_DIR)/Oracle \
-  $(BIN_DIR)/ModularParamScan  # <-- Nuevo
+  $(BIN_DIR)/ModularParamScan\
+  $(BIN_DIR)/PhysScanWithFixings  # <-- Nuevo
 
 # Regla principal
 all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
@@ -68,8 +70,10 @@ $(BIN_DIR)/testing: $(OBJ_DIR)/testing.o $(OBJ_DIR)/ParamUtils.o
 $(BIN_DIR)/Oracle: $(OBJ_DIR)/Oracle.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
-# Regla de enlace para tu nuevo ejecutable
 $(BIN_DIR)/ModularParamScan: $(OBJ_DIR)/ModularParamScan.o $(OBJ_DIR)/ParamUtils.o
+	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
+
+$(BIN_DIR)/PhysScanWithFixings: $(OBJ_DIR)/PhysScanWithFixings.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
 # Regla genérica para compilar .cpp -> .o
