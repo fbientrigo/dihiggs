@@ -32,11 +32,16 @@ string calculatePoint(double m_phi, double mA, double sin_ba, double tan_beta,
     SM sm;
     model.set_SM(sm);
 
+
     // Intentar fijar los parámetros físicos
     bool pset = model.set_param_phys(m_h, m_phi, mA, m_Hp, sin_ba, lambda6, lambda7, m12, tan_beta);
     if (!pset) {
         return "{\"error\": \"Invalid parameter set.\"}";
     }
+    
+    // 2025 junio 12, se supone que nunca se especifico el tipo de Yukawa,
+    // esto deberia arreglar un bug de resultados distintos con CalcPhys
+    model.set_yukawas_type(1);
 
     // Informacion de los lambdas
     double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
