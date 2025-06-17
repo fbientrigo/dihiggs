@@ -279,3 +279,104 @@ def plot_branchings(results: List[Dict], subplot_tag: str = "(d)") -> None:
 
     plt.tight_layout()
     plt.show()
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+
+def plot_branchings_and_lifetime(
+    results: List[Dict],
+    subplot_tag: str = "(d)",
+    lifetime_unit: str = "mm",     # "mm", "cm" o "m"
+    lifetime_log: bool = True,     # True: escala log en vida media
+    width_log: bool = True         # True: escala log en decay width
+):
+    """
+    Plotea:
+     - Branching ratios (izq)
+     - Decay width Γ(φ) (arriba derecha)
+     - Vida media cτ = ħc/Γ (abajo derecha)
+
+    Parámetros adicionales:
+      lifetime_unit: unidad para cτ ("mm","cm","m")
+      lifetime_log: si True, y-axis de cτ en log
+      width_log:    si True, y-axis de Γ en log
+    """
+    # --- Extraer datos ----
+    mphi       = np.array([r['mphi'] for r in results])
+    brs        = {ch: np.array([r['br'][ch] for r in results])
+                  for ch in ['gaga','Zga','bb']}
+    total_width= np.array([r['total_width'] for r in results])
+
+    # --- Vida media base en mm ---
+    hbar = 6.582119569e-25    # GeV·s
+    c    = 2.99792458e11      # mm/s
+    c_tau_mm = hbar * c / total_width  # mm
+
+    # --- Conversión de unidades ---
+    unit_factors = {"mm": 1.0, "cm": 0.1, "m": 1e-3}
+    if lifetime_unit not in unit_factors:
+        raise ValueError(f"Unknown lifetime_unit '{lifetime_unit}'")
+    c_tau = c_tau_mm * unit_factors[lifetime_unit]
+    y_label_tau = rf"$c\tau\,[{lifetime_unit}]$"
+
+    # --- Preparar figura ---
+    global_title = make_title(results[0]['params'])
+    fig = plt.figure(figsize=(12, 6))
+    fig.suptitle(global_title, fontsize=14, y=0.98)
+    plt.subplots_adjust(top=0.85)
+
+    gs = GridSpec(2, 2, figure=fig,
+                  width_ratios=[1,1], height_ratios=[1,1],
+                  wspace=0.3, hspace=0.4)
+
+    # 1) Branching ratios (col 0)
+    ax_br = fig.add_subplot(gs[:,0])
+    styles = {'gaga':'--','Zga':'-','bb':':'}
+    colors = {'gaga':'r','Zga':'purple','bb':'b'}
+    labels = {
+        'gaga': r'$\phi\to \gamma\gamma$',
+        'Zga':  r'$\phi\to Z\gamma$',
+        'bb':   r'$\phi\to b\bar{b}$'
+    }
+    for ch in ['gaga','Zga','bb']:
+        ax_br.plot(
+            mphi, brs[ch],
+            linestyle=styles[ch],
+            color=colors[ch],
+            label=labels[ch]
+        )
+        valid = [(r['mphi'], r['br'][ch]) for r in results
+                 if all(r['flags'][f]==1 for f in ['positivity','unitarity','perturbativity'])]
+        if valid:
+            vx, vy = zip(*valid)
+            ax_br.scatter(vx, vy,
+                          color=colors[ch],
+                          edgecolors='k',
+                          s=30, zorder=5)
+    ax_br.set_xlabel(r'$m_\phi\,[\mathrm{GeV}]$')
+    ax_br.set_ylabel('Branching Ratio')
+    ax_br.set_ylim(0,1)
+    ax_br.legend(loc='upper left', fontsize=8)
+    ax_br.set_title(subplot_tag, loc='left', fontsize=12)
+
+    # 2) Decay width (fila 0,col 1)
+    ax_w = fig.add_subplot(gs[0,1])
+    ax_w.plot(mphi, total_width, linestyle='-', color='k', linewidth=1.2)
+    if width_log:
+        ax_w.set_yscale('log')
+    ax_w.set_xlabel(r'$m_\phi\,[\mathrm{GeV}]$')
+    ax_w.set_ylabel(r'$\Gamma(\phi)\,[\mathrm{GeV}]$')
+    ax_w.set_title('Decay Width', fontsize=10)
+
+    # 3) Vida media (fila 1,col 1)
+    ax_tau = fig.add_subplot(gs[1,1])
+    ax_tau.plot(mphi, c_tau, linestyle='-', color='g', linewidth=1.2)
+    if lifetime_log:
+        ax_tau.set_yscale('log')
+    ax_tau.set_xlabel(r'$m_\phi\,[\mathrm{GeV}]$')
+    ax_tau.set_ylabel(y_label_tau)
+    ax_tau.set_title(r'Lifetime $c\tau = \hbar c / \Gamma$', fontsize=10)
+
+    plt.show()
