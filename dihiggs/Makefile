@@ -12,21 +12,22 @@ SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = app
 
-# ============ 
+# ============
 # Archivos fuente con main (cada uno genera un ejecutable).
-# Agrega aquí tu nuevo archivo 'ModularParamScan.cpp'
-# ============ 
+# Incluye el nuevo 'ModularParamScan.cpp' y 'PhysScanWithFixings.cpp'
+# ============
 MAIN_SRCS = \
   GenParamScan.cpp \
   HiggsParamScan.cpp \
   PhysParamScan.cpp \
   testing.cpp \
   Oracle.cpp \
-  ModularParamScan.cpp   # <-- Nuevo
+  ModularParamScan.cpp \
+  PhysScanWithFixings.cpp
 
-# ============ 
+# ============
 # Archivos fuente comunes (sin main).
-# ============ 
+# ============
 COMMON_SRCS = \
   ParamUtils.cpp
 
@@ -36,16 +37,17 @@ SRCS = $(MAIN_SRCS:%=$(SRC_DIR)/%) $(COMMON_SRCS:%=$(SRC_DIR)/%)
 # Objetos correspondientes
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
-# ============ 
+# ============
 # Nombre de los binarios resultantes
-# ============ 
+# ============
 BINARIES = \
   $(BIN_DIR)/GenParamScan \
   $(BIN_DIR)/HiggsParamScan \
   $(BIN_DIR)/PhysParamScan \
   $(BIN_DIR)/testing \
   $(BIN_DIR)/Oracle \
-  $(BIN_DIR)/ModularParamScan  # <-- Nuevo
+  $(BIN_DIR)/ModularParamScan \
+  $(BIN_DIR)/PhysScanWithFixings
 
 # Regla principal
 all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
@@ -68,8 +70,10 @@ $(BIN_DIR)/testing: $(OBJ_DIR)/testing.o $(OBJ_DIR)/ParamUtils.o
 $(BIN_DIR)/Oracle: $(OBJ_DIR)/Oracle.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
-# Regla de enlace para tu nuevo ejecutable
 $(BIN_DIR)/ModularParamScan: $(OBJ_DIR)/ModularParamScan.o $(OBJ_DIR)/ParamUtils.o
+	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
+
+$(BIN_DIR)/PhysScanWithFixings: $(OBJ_DIR)/PhysScanWithFixings.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
 # Regla genérica para compilar .cpp -> .o
