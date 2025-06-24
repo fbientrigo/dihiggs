@@ -4,3 +4,4 @@ mlpython/data_train/dataset_full.parquet
 mlpython/data_train/dataset_full.csv
 mlpython/data_train/*
 *.parquet
+*.o
