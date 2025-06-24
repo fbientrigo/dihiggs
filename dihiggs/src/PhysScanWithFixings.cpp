@@ -34,7 +34,7 @@
  *
  * Autor: Fabian Trigo
  * Fecha: junio 2025
- */
+*/
 
 
 #include "THDM.h"
@@ -85,90 +85,109 @@ void perform_param_scan_fixings(
     double step_mphi = (N_mphi > 1) ? (mphi_max - mphi_min)/(N_mphi - 1) : 0.0;
     double step_m12  = (N_m12  > 1) ? (m12_max  - m12_min )/(N_m12  - 1) : 0.0;
 
+    cout << "steps m12="<<step_m12<<endl;
+    cout << "step_mphi="<<step_mphi<<endl;
+
     double total_iters = double(N_mphi) * double(N_m12);
     double iters_done  = 0.0;
+
+    cout << "steps m12="<<step_m12<<endl;
+    cout << "step_mphi="<<step_mphi<<endl;
+
     auto start = high_resolution_clock::now();
     g_bestBR = -1.0;
 
-    #pragma omp parallel
-    {
-        vector<vector<double>> buffer;
-        double local_bestBR = -1.0;
-        ParamSet local_bestParams;
+    //#pragma omp for collapse(2) schedule(dynamic)
+    #pragma omp parallel for schedule(dynamic)
+    for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
+        for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
 
-        #pragma omp for collapse(2) schedule(dynamic)
-        for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
-            for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
-                double m_phi = mphi_min + i_phi * step_mphi;
-                double m12   = m12_min  + i_m12 * step_m12;
+            vector<vector<double>> buffer;
+            double local_bestBR = -1.0;
+            ParamSet local_bestParams;
+            
+            double m_phi = mphi_min + i_phi * step_mphi;
+            double m12   = m12_min  + i_m12 * step_m12;
 
-                // Construir modelo
-                THDM model;
-                SM sm; model.set_SM(sm);
-                bool ok = model.set_param_phys(
-                    125.0,         // m_h fijo
-                    m_phi,
-                    mA_fixed,
-                    mA_fixed,     // mA = mHp
-                    sin_ba,
-                    lambda6,
-                    lambda7,
-                    m12,
-                    tan_beta
-                );
-                if (!ok) continue;
+            // Construir modelo
+            THDM model;
+            SM sm; model.set_SM(sm);
+            bool ok = model.set_param_phys(
+                125.0,         // m_h fijo
+                m_phi,
+                mA_fixed,
+                mA_fixed,     // mA = mHp
+                sin_ba,
+                lambda6,
+                lambda7,
+                m12,
+                tan_beta
+            );
 
-                Constraints check(model);
-                bool pos = check.check_positivity();
-                bool uni = check.check_unitarity();
-                bool pert = check.check_perturbativity();
+            if (!ok) {
+                cout << "."; //thinking
+                continue;
+            }
 
-                DecayTable tab(model);
-                double w_bb     = tab.get_gamma_hdd(2,3,3);
-                double w_tautau= tab.get_gamma_hll(2,3,3);
-                double w_WW    = tab.get_gamma_hvv(2,3);
-                double w_ZZ    = tab.get_gamma_hvv(2,2);
-                double w_gaga  = tab.get_gamma_hgaga(2);
-                double w_Zga   = tab.get_gamma_hZga(2);
-                double w_gg    = tab.get_gamma_hgg(2);
-                double w_hh    = tab.get_gamma_hhh(2,1,1);
-                double w_tot   = tab.get_gammatot_h(2);
-                double br_gaga = (w_tot > 1e-12) ? w_gaga / w_tot : 0.0;
+            Constraints check(model);
+            bool pos = check.check_positivity();
+            bool uni = check.check_unitarity();
+            bool pert = check.check_perturbativity();
 
-                // Guardar fila
-                buffer.push_back({
-                    m_phi, mA_fixed, 0.0, 0.0, lambda6, lambda7, m12,
-                    sin_ba, tan_beta,
-                    pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
-                    w_bb, w_tautau, w_WW, w_ZZ,
-                    w_gaga, w_Zga, w_gg, w_hh,
-                    w_tot, br_gaga
-                });
+            DecayTable tab(model);
+            double w_bb     = tab.get_gamma_hdd(2,3,3);
+            double w_tautau= tab.get_gamma_hll(2,3,3);
+            double w_WW    = tab.get_gamma_hvv(2,3);
+            double w_ZZ    = tab.get_gamma_hvv(2,2);
+            double w_gaga  = tab.get_gamma_hgaga(2);
+            double w_Zga   = tab.get_gamma_hZga(2);
+            double w_gg    = tab.get_gamma_hgg(2);
+            double w_hh    = tab.get_gamma_hhh(2,1,1);
+            double w_tot   = tab.get_gammatot_h(2);
+            // cout << "w_tot" << w_tot << endl;
+            double br_gaga = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
-                // Actualizar mejor BR local
-                if (pos && w_tot>0.0 && br_gaga > local_bestBR) {
-                    local_bestBR = br_gaga;
-                    local_bestParams = {m_phi, mA_fixed, 0., 0., lambda6, lambda7, m12};
+            // Guardar fila
+            buffer.push_back({
+                m_phi, mA_fixed, 0.0, 0.0, lambda6, lambda7, m12,
+                sin_ba, tan_beta,
+                pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
+                w_bb, w_tautau, w_WW, w_ZZ,
+                w_gaga, w_Zga, w_gg, w_hh,
+                w_tot, br_gaga
+            });
+
+            // Actualizar mejor BR local
+            if (pos && w_tot>0.0 && br_gaga > local_bestBR) {
+                local_bestBR = br_gaga;
+                local_bestParams = {m_phi, mA_fixed, 0., 0., lambda6, lambda7, m12};
+            }
+
+
+
+            // Escribir buffer y actualizar global
+            // probando dentro de este loop 0623
+            #pragma omp critical
+            {
+                for (auto &row : buffer) write_csv_row(results, row);
+                buffer.clear();
+                if (local_bestBR > g_bestBR) {
+                    g_bestBR = local_bestBR;
+                    g_bestParams = local_bestParams;
                 }
+                iters_done += buffer.size();
+                double elapsed = duration<double>(high_resolution_clock::now()-start).count();
+                double prog = (iters_done/total_iters)*100.0;
+                double eta  = (elapsed/iters_done)*(total_iters-iters_done);
+                cout << fixed<<setprecision(1)
+                    << "Prog: "<<prog<<"%  ETA: "<<eta/60.0<<" min\r";
             }
+
+
         }
 
-        // Escribir buffer y actualizar global
-        #pragma omp critical
-        {
-            for (auto &row : buffer) write_csv_row(results, row);
-            buffer.clear();
-            if (local_bestBR > g_bestBR) {
-                g_bestBR = local_bestBR;
-                g_bestParams = local_bestParams;
-            }
-            iters_done += buffer.size();
-            double elapsed = duration<double>(high_resolution_clock::now()-start).count();
-            double prog = (iters_done/total_iters)*100.0;
-            double eta  = (elapsed/iters_done)*(total_iters-iters_done);
-            cout << fixed<<setprecision(1)
-                 << "Prog: "<<prog<<"%  ETA: "<<eta/60.0<<" min\r";
-        }
+
+
     } // end parallel
 
     results.close();
@@ -176,7 +195,7 @@ void perform_param_scan_fixings(
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 12) {
+    if (argc != 13) {
         cerr << "Uso: "<< argv[0]
              << " mphi_min mphi_max N_mphi m12_min m12_max N_m12"
                 " mA sin(b-a) tan(beta) lambda6 lambda7 output.csv\n";
