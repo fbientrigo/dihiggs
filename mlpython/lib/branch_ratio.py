@@ -281,6 +281,85 @@ def plot_branchings(results: List[Dict], subplot_tag: str = "(d)") -> None:
     plt.show()
 
 
+# get format for plot_branchings_and_lifetime
+def get_branching_format_from_df(df_physical,
+    total_width_h2_name = "total_width",
+    branching_ratio_h2_gaga_name = "br_gaga",
+    width_h2_Zga_name = "width_Zga",
+    width_h2_bb_name = "width_bb",
+    m12_name = "m12"):
+
+    # -- internal ----
+    fixed_mA = df_physical["mA"].unique()
+    assert len(fixed_mA) == 1, "There should be only one unique value of mA in the DF"
+    fixed_mA = fixed_mA[0]  # Get the single value
+    fixed_lambda6 = df_physical["lambda6"].unique()
+    assert len(fixed_lambda6) == 1, "There should be only one unique"
+    fixed_lambda6 = fixed_lambda6[0]  # Get the single value
+    fixed_lambda7 = df_physical["lambda7"].unique()
+    assert len(fixed_lambda7) == 1, "There should be only one unique"
+    fixed_lambda7 = fixed_lambda7[0]  # Get the single value
+    fixed_sin_ba = df_physical["sin_ba"].unique()
+    assert len(fixed_sin_ba) == 1, "There should be only one unique value of sin_ba in the DF"
+    fixed_sin_ba = fixed_sin_ba[0]  # Get the single value
+    fixed_tan_beta = df_physical["tan_beta"].unique()
+    assert len(fixed_tan_beta) == 1, "There should be only one unique value of tan_beta in the DF"
+    fixed_tan_beta = fixed_tan_beta[0]  # Get the single value
+
+
+    # ---  Ordenar por m_phi y extraer mphi / m12_2 ---
+    df_physical = df_physical.sort_values(by='m_phi').reset_index(drop=True)
+
+    # Vector de valores de m_phi (ordenados ascendentemente)
+    mphi_values = df_physical['m_phi'].to_numpy()
+
+    # Vector de valores de m12_2 correspondientes a cada m_phi
+    m12_values  = df_physical[m12_name].to_numpy()
+
+
+
+
+
+    # --- Paso  Empaquetar cada fila en el formato esperado por plot_branchings ---
+    results = []
+    for idx, row in df_physical.iterrows():
+        # Extraer anchos y branching ratios
+        total_w = row[total_width_h2_name]
+        # Si total_width es cero o NaN, evitar división por cero
+        if total_w is None or total_w == 0 or np.isnan(total_w):
+            br_Zga = 0.0
+            br_bb  = 0.0
+        else:
+            br_Zga = row[width_h2_Zga_name] / total_w
+            br_bb  = row[width_h2_bb_name] / total_w
+
+        entry = {
+            'mphi': float(row['m_phi']),
+            'br': {
+                'gaga': float(row[branching_ratio_h2_gaga_name]),
+                'Zga':  float(br_Zga),
+                'bb':   float(br_bb)
+            },
+            'total_width': float(total_w),
+            'flags': {
+                'positivity':     int(row['positivity_ok']),
+                'unitarity':      int(row['unitarity_ok']),
+                'perturbativity': int(row['perturbativity_ok'])
+            },
+            'params': {
+                'mA':       fixed_mA,
+                'm12':      float(row[m12_name]),
+                'lambda6':  fixed_lambda6,
+                'lambda7':  fixed_lambda7,
+                'sin_ba':   fixed_sin_ba,
+                'tan_beta': fixed_tan_beta
+            }
+        }
+        results.append(entry)
+    return results
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec

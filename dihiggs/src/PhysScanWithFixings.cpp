@@ -34,6 +34,10 @@
  *
  * Autor: Fabian Trigo
  * Fecha: junio 2025
+ *
+ *
+ *
+ * Update: Implementar constrain de lambda1 y lambda2
 */
 
 
@@ -44,9 +48,19 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <chrono>
 #include <iomanip>
 #include <omp.h>
+
+#include <cmath>
+constexpr double PI = std::acos(-1.0);
+constexpr double VEV = 246.0;  // Valor estándar, ajústalo si lo obtienes de SM
+
+
+#include <chrono>
+using Clock = std::chrono::high_resolution_clock;
+using Duration = std::chrono::duration<double>;
+
+
 
 using namespace std;
 using namespace std::chrono;
@@ -56,8 +70,67 @@ struct ParamSet {
     double m_phi, mA, alpha, beta, lambda6, lambda7, m12;
 };
 
-static ParamSet g_bestParams;
+//static ParamSet g_bestParams;
 static double   g_bestBR = -1.0;
+
+/* extracto del codigo de THDM
+*   lambda[1]=(m_H*m_H*ca2+m_h*m_h*sa2-m12_2*tb)/v2/cb2-1.5*lambda6*tb+0.5*lambda7*tb*tb*tb;
+*   lambda[2]=(m_H*m_H*sa2+m_h*m_h*ca2-m12_2*ctb)/v2/sb2+0.5*lambda6*ctb*ctb*ctb-1.5*lambda7*ctb;
+*
+*/
+
+
+double calc_lambda1(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7) {
+    // Reconstruir beta y b–alpha sin usar atan/asin
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    // Reconstruir alpha
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double tb = tan_beta;
+
+    // Términos de lambda 1
+    double term1 = (mH*mH * ca*ca + mh*mh * sa*sa) / (VEV*VEV * cb*cb);
+    double term2 = 1.5 * lam6 * tb;
+    double term3 = (m12_2)/(VEV*VEV) * tb/(cb*cb);
+    double term4 = 0.5 * lam7 * tb*tb*tb;
+    double l1    = term1 - term2 - term3 + term4;
+    return l1;
+}
+
+double calc_lambda2(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7) {
+    // Reconstruir beta y b–alpha
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    // Reconstruir alpha
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double tb = tan_beta;
+    double ct = 1.0/tb;
+
+    // Términos de lambda_2
+    double term1 = (mh*mh * ca*ca + mH*mH * sa*sa) / (VEV*VEV * sb*sb);
+    double term2 = 1.5 * lam7 * ct;
+    double term3 = 0.5 * lam6 * ct*ct*ct;
+    double term4 = (m12_2)/(VEV*VEV) * ct/(sb*sb);
+    double l2    = term1 - term2 + term3 - term4;
+    return l2;
+}
+
+inline bool check_lambda(double l1) {
+    return (l1*l1) < (16.0 * PI * PI);
+}
+
 
 void perform_param_scan_fixings(
     double mphi_min, double mphi_max, int N_mphi,
@@ -77,7 +150,7 @@ void perform_param_scan_fixings(
         "sin_ba","tan_beta","positivity_ok","unitarity_ok","perturbativity_ok",
         "width_bb","width_tautau","width_WW","width_ZZ",
         "width_gaga","width_Zga","width_gg","width_hh",
-        "total_width","br_gaga"
+        "total_width","br_gaga", "lam1", "computed_lam1", "lam2","computed_lam2", "lam3", "lam4", "lam5"
     };
     write_csv_header(results, columns);
 
@@ -94,8 +167,12 @@ void perform_param_scan_fixings(
     cout << "steps m12="<<step_m12<<endl;
     cout << "step_mphi="<<step_mphi<<endl;
 
-    auto start = high_resolution_clock::now();
+    auto start = Clock::now();
+
     g_bestBR = -1.0;
+
+    // fixed param
+    double mh = 125.0;
 
     //#pragma omp for collapse(2) schedule(dynamic)
     #pragma omp parallel for schedule(dynamic)
@@ -103,11 +180,26 @@ void perform_param_scan_fixings(
         for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
 
             vector<vector<double>> buffer;
-            double local_bestBR = -1.0;
-            ParamSet local_bestParams;
+            // double local_bestBR = -1.0;
+            // ParamSet local_bestParams;
             
             double m_phi = mphi_min + i_phi * step_mphi;
             double m12   = m12_min  + i_m12 * step_m12;
+            
+            double l1 = calc_lambda1(mh, m_phi,
+                          m12, sin_ba, tan_beta,
+                          lambda6, lambda7);
+            double l2 = calc_lambda2(mh, m_phi,
+                          m12, sin_ba, tan_beta,
+                          lambda6, lambda7);
+            #ifdef SPEED_TEST
+            // Filtrado rápido:
+            if (!check_lambda(l1) ||
+                !check_lambda(l2) ) {
+                continue;
+            }
+            #endif
+
 
             // Construir modelo
             THDM model;
@@ -123,6 +215,9 @@ void perform_param_scan_fixings(
                 m12,
                 tan_beta
             );
+            model.set_yukawas_type(1); // Habrán warnings debido a que type 1 considera que lambda6 y lambda7 son 0.
+            double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
+            model.get_param_gen( lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
 
             if (!ok) {
                 cout << "."; //thinking
@@ -147,41 +242,58 @@ void perform_param_scan_fixings(
             // cout << "w_tot" << w_tot << endl;
             double br_gaga = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
+            double beta  = std::atan(tan_beta);
+            double alpha = beta - std::asin(sin_ba);
+
             // Guardar fila
-            buffer.push_back({
-                m_phi, mA_fixed, 0.0, 0.0, lambda6, lambda7, m12,
+            buffer.push_back( std::vector<double>{
+                m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12,
                 sin_ba, tan_beta,
                 pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
                 w_bb, w_tautau, w_WW, w_ZZ,
                 w_gaga, w_Zga, w_gg, w_hh,
-                w_tot, br_gaga
+                w_tot, br_gaga, lam1, l1, lam2, l2, lam3, lam4, lam5
             });
 
-            // Actualizar mejor BR local
-            if (pos && w_tot>0.0 && br_gaga > local_bestBR) {
-                local_bestBR = br_gaga;
-                local_bestParams = {m_phi, mA_fixed, 0., 0., lambda6, lambda7, m12};
-            }
+            // // Actualizar mejor BR local
+            // if (pos && w_tot>0.0 && br_gaga > local_bestBR) {
+            //     local_bestBR = br_gaga;
+            //     local_bestParams = {m_phi, mA_fixed, 0., 0., lambda6, lambda7, m12};
+            // }
 
 
-
-            // Escribir buffer y actualizar global
-            // probando dentro de este loop 0623
             #pragma omp critical
             {
-                for (auto &row : buffer) write_csv_row(results, row);
-                buffer.clear();
-                if (local_bestBR > g_bestBR) {
-                    g_bestBR = local_bestBR;
-                    g_bestParams = local_bestParams;
+                // 1) Capturamos cuántas filas vamos a procesar
+                double n = static_cast<double>(buffer.size());
+
+                // 2) Volcamos el buffer al CSV
+                for (auto &row : buffer) {
+                    write_csv_row(results, row);
                 }
-                iters_done += buffer.size();
-                double elapsed = duration<double>(high_resolution_clock::now()-start).count();
-                double prog = (iters_done/total_iters)*100.0;
-                double eta  = (elapsed/iters_done)*(total_iters-iters_done);
-                cout << fixed<<setprecision(1)
-                    << "Prog: "<<prog<<"%  ETA: "<<eta/60.0<<" min\r";
+
+                // 3) Actualizamos el contador global antes de limpiar
+                iters_done += n;
+
+                // 4) Limpiamos el buffer
+                buffer.clear();
+
+                // 5) Calculamos y mostramos progreso, elapsed y ETA
+                auto now     = high_resolution_clock::now();
+                double elapsed = duration<double>(now - start).count();
+                double prog    = (iters_done / total_iters) * 100.0;
+                double eta     = (iters_done > 0.0)
+                                ? (elapsed / iters_done) * (total_iters - iters_done)
+                                : 0.0;
+
+                std::cerr << fixed << setprecision(1)
+                        << "Iter: "    << iters_done
+                        << "/"          << total_iters
+                        << " ("         << prog << "%)  "
+                        << "elapsed: "  << elapsed << " s  "
+                        << "ETA: "      << eta     << " s\r";
             }
+
 
 
         }
@@ -192,6 +304,13 @@ void perform_param_scan_fixings(
 
     results.close();
     cout << "\n\nEscaneo completo. Best br_gaga="<<g_bestBR<<endl;
+
+    #ifdef SPEED_TEST
+    auto end = Clock::now();
+    double secs = Duration(end - start).count();
+    std::cerr << "== Speed test: tiempo total de escaneo = "
+              << secs << " s ==\n";
+    #endif
 }
 
 int main(int argc, char* argv[]) {

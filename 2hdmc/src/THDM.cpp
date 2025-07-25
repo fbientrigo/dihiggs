@@ -658,9 +658,10 @@ void THDM::set_yukawas_type(int type) {
   yukawas_type=type;
 
   // Warn but do not stop the user from breaking Z2
-  if ((abs(lambda[6])>1e-9)||(abs(lambda[7])>1e-9)) {
-    cerr << "WARNING: Requested Yukawa type respects Z2-symmetry but lambda6 or lambda7 is not zero\n";
-  }
+  // FTrigo 0717_ comenté esta parte, es solo un warning
+  // if ((abs(lambda[6])>1e-9)||(abs(lambda[7])>1e-9)) {
+  //   cerr << "WARNING: Requested Yukawa type respects Z2-symmetry but lambda6 or lambda7 is not zero\n";
+  // }
 
   set_kappa();
 

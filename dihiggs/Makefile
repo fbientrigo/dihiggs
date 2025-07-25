@@ -2,7 +2,8 @@
 CXX = g++
 
 # Flags de compilación
-CXXFLAGS = -I../2hdmc/src -fopenmp -std=c++11 -O2 -Wall
+CXXFLAGS     = -I../2hdmc/src -fopenmp -std=c++11 -O2 -Wall
+SPEED_FLAGS  = -DSPEED_TEST
 
 # Flags de enlazado (ajusta si necesitas más librerías)
 LDFLAGS = -L../2hdmc/lib -l2HDMC -lgsl -lgslcblas -lm
@@ -14,7 +15,6 @@ BIN_DIR = app
 
 # ============ 
 # Archivos fuente con main (cada uno genera un ejecutable).
-# Agrega aquí tu nuevo archivo 'ModularParamScan.cpp'
 # ============ 
 MAIN_SRCS = \
   GenParamScan.cpp \
@@ -23,7 +23,7 @@ MAIN_SRCS = \
   testing.cpp \
   Oracle.cpp \
   ModularParamScan.cpp \
-  PhysScanWithFixings.cpp   # <-- Nuevo
+  PhysScanWithFixings.cpp
 
 # ============ 
 # Archivos fuente comunes (sin main).
@@ -31,14 +31,17 @@ MAIN_SRCS = \
 COMMON_SRCS = \
   ParamUtils.cpp
 
-# Generamos la lista completa de fuentes
+# Lista completa de fuentes
 SRCS = $(MAIN_SRCS:%=$(SRC_DIR)/%) $(COMMON_SRCS:%=$(SRC_DIR)/%)
 
-# Objetos correspondientes
+# Objetos normales
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
+# Objeto especializado para speed test
+OBJ_SPEED = $(OBJ_DIR)/PhysScanWithFixings_speed_test.o
+
 # ============ 
-# Nombre de los binarios resultantes
+# Binarios resultantes
 # ============ 
 BINARIES = \
   $(BIN_DIR)/GenParamScan \
@@ -46,39 +49,31 @@ BINARIES = \
   $(BIN_DIR)/PhysParamScan \
   $(BIN_DIR)/testing \
   $(BIN_DIR)/Oracle \
-  $(BIN_DIR)/ModularParamScan\
-  $(BIN_DIR)/PhysScanWithFixings  # <-- Nuevo
+  $(BIN_DIR)/ModularParamScan \
+  $(BIN_DIR)/PhysScanWithFixings
+
+# Binario adicional de speed test
+SPEED_BINARIES = \
+  $(BIN_DIR)/PhysScanWithFixings_speed_test
 
 # Regla principal
-all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
+all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES) $(SPEED_BINARIES)
 
-# ----
-# Reglas de enlace de cada ejecutable
-# ----
-$(BIN_DIR)/GenParamScan: $(OBJ_DIR)/GenParamScan.o $(OBJ_DIR)/ParamUtils.o
+# ---- Regla de enlace de cada ejecutable normal ----
+$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
-$(BIN_DIR)/HiggsParamScan: $(OBJ_DIR)/HiggsParamScan.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
+# ---- Regla de enlace del speed test ----
+$(BIN_DIR)/PhysScanWithFixings_speed_test: $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o
+	$(CXX) -fopenmp $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o -o $@ $(LDFLAGS)
 
-$(BIN_DIR)/PhysParamScan: $(OBJ_DIR)/PhysParamScan.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-$(BIN_DIR)/testing: $(OBJ_DIR)/testing.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-$(BIN_DIR)/Oracle: $(OBJ_DIR)/Oracle.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-$(BIN_DIR)/ModularParamScan: $(OBJ_DIR)/ModularParamScan.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-$(BIN_DIR)/PhysScanWithFixings: $(OBJ_DIR)/PhysScanWithFixings.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-# Regla genérica para compilar .cpp -> .o
+# ---- Compilación genérica de .cpp -> .o ----
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# ---- Compilación específica para speed test (mismo .cpp, distinta bandera) ----
+$(OBJ_DIR)/PhysScanWithFixings_speed_test.o: $(SRC_DIR)/PhysScanWithFixings.cpp | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(SPEED_FLAGS) -c $< -o $@
 
 # Crear directorios si no existen
 $(BIN_DIR):
@@ -89,7 +84,7 @@ $(OBJ_DIR):
 
 # Limpieza
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(BINARIES)
+	rm -rf $(OBJ_DIR)/*.o $(BINARIES) $(SPEED_BINARIES)
 
 cleanall: clean
 	rm -rf $(BIN_DIR)/*
