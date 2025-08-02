@@ -23,7 +23,8 @@ MAIN_SRCS = \
   testing.cpp \
   Oracle.cpp \
   ModularParamScan.cpp \
-  PhysScanWithFixings.cpp
+  PhysScanWithFixings.cpp \
+  PhysScanPolynomial.cpp
 
 # ============ 
 # Archivos fuente comunes (sin main).
@@ -50,7 +51,8 @@ BINARIES = \
   $(BIN_DIR)/testing \
   $(BIN_DIR)/Oracle \
   $(BIN_DIR)/ModularParamScan \
-  $(BIN_DIR)/PhysScanWithFixings
+  $(BIN_DIR)/PhysScanWithFixings \
+  $(BIN_DIR)/PhysScanPolynomial
 
 # Binario adicional de speed test
 SPEED_BINARIES = \

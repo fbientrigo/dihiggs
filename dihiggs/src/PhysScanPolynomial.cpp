@@ -14,18 +14,12 @@
  *
  * Uso:
  *   ./PhysScanWithFixings
- *     <mphi_min> <mphi_max> <N_mphi>
- *     <m12_min>  <m12_max>  <N_m12>
- *     <mA_fixed> <sin(b-a)> <tan_beta>
- *     <lambda6>   <lambda7>
+ *    <base model> <N_mphi> <N_m12> <delta_m12>
  *     <output_csv>
  *
- * Ejemplo:
- *   ./PhysScanWithFixings 150 300 30 0.5 3.0 30000 300 0.9 1000 0.1 0 results.csv
- *
  * Paralelización:
- *   Usa OpenMP para distribuir el bucle 2D de (m_phi × m12) con
- *   `#pragma omp for collapse(2) schedule(dynamic)`.
+ *   Usa OpenMP para distribuir el bucle 2D de (m_phi × m12) 
+ *   y aprovecha la informacion previa para explorar alrededor de los mejores puntos.
  *
  * Dependencias:
  *   - Biblioteca 2HDMC (–l2HDMC)
@@ -33,13 +27,14 @@
  *   - OpenMP
  *
  * Autor: Fabian Trigo
- * Fecha: junio 2025
+ * Fecha: agosto 2025
  *
  *
  *
- * Update: Implementar constrain de lambda1 y lambda2
 */
 
+// activa el chequeo acelerado de lam1, lam2
+#define SPEED_TEST
 
 #include "THDM.h"
 #include "Constraints.h"
@@ -50,10 +45,7 @@
 #include <cmath>
 #include <iomanip>
 #include <omp.h>
-
 #include <cmath>
-constexpr double PI = std::acos(-1.0);
-constexpr double VEV = 246.0;  // Valor estándar, ajústalo si lo obtienes de SM
 
 
 #include <chrono>
@@ -61,22 +53,23 @@ using Clock = std::chrono::high_resolution_clock;
 using Duration = std::chrono::duration<double>;
 
 
-
 using namespace std;
 using namespace std::chrono;
+
 
 // Estructura para resultados
 struct ParamSet {
     double m_phi, mA, alpha, beta, lambda6, lambda7, m12;
 };
 
+
 //static ParamSet g_bestParams;
 static double   g_bestBR = -1.0;
 
 
-
-void perform_param_scan_fixings(
+void perform_param_scan_polynomial(
     double mphi_min, double mphi_max, int N_mphi,
+    double a, double b, double c, int delta_m12_exp,
     double m12_min,  double m12_max,  int N_m12,
     double mA_fixed, double sin_ba,   double tan_beta,
     double lambda6,  double lambda7,
@@ -99,43 +92,58 @@ void perform_param_scan_fixings(
 
     // Calcular pasos
     double step_mphi = (N_mphi > 1) ? (mphi_max - mphi_min)/(N_mphi - 1) : 0.0;
-    double step_m12  = (N_m12  > 1) ? (m12_max  - m12_min )/(N_m12  - 1) : 0.0;
 
     double total_iters = double(N_mphi) * double(N_m12);
-    double iters_done  = 0.0;
+    int iters_done  = 0;
+    int iters_jumped = 0;
 
-    cout << "steps m12="<<step_m12<<endl;
     cout << "step_mphi="<<step_mphi<<endl;
 
     auto start = Clock::now();
 
     g_bestBR = -1.0;
 
-    // fixed param
+    // fixed param, known higgs
     double mh = 125.0;
 
     //#pragma omp for collapse(2) schedule(dynamic)
     #pragma omp parallel for schedule(dynamic)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
-        for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
+        double m_phi = mphi_min + i_phi * step_mphi;
+        for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) { // controla dispersion alrededor
 
             vector<vector<double>> buffer;
-            // double local_bestBR = -1.0;
-            // ParamSet local_bestParams;
+            double local_bestBR = -1.0;
+            ParamSet local_bestParams;
             
-            double m_phi = mphi_min + i_phi * step_mphi;
-            double m12   = m12_min  + i_m12 * step_m12;
+            double m12_pol = a * m_phi * m_phi + b * m_phi + c ;//define el punto polinomial predichp
             
+            // Calcular delta_m12
+            double delta_m12 = (2 * a * m_phi + b) * m_phi; // derivada del polinomio en m_phi
+            
+            delta_m12 = delta_m12 *  std::pow(10, - delta_m12_exp); // usamos el modific
+
+            double m12   = m12_pol - 0.5 * N_m12 * delta_m12  + i_m12 * delta_m12;
+            
+
+
             double l1 = calc_lambda1(mh, m_phi,
                           m12, sin_ba, tan_beta,
                           lambda6, lambda7);
             double l2 = calc_lambda2(mh, m_phi,
                           m12, sin_ba, tan_beta,
                           lambda6, lambda7);
+
+            #ifdef DEBUG
+                cout << "m12:" << m12 << "l1,l2" << l1 << "," << l2 << endl;
+            #endif
+
             #ifdef SPEED_TEST
-            // Filtrado rápido:
+            // Filtrado rápido, el counter puede no ser representativo al ser paralelizado
+            // y presentar condiciones de carrera.
             if (!check_lambda(l1) ||
                 !check_lambda(l2) ) {
+                iters_jumped++; 
                 continue;
             }
             #endif
@@ -145,7 +153,7 @@ void perform_param_scan_fixings(
             THDM model;
             SM sm; model.set_SM(sm);
             bool ok = model.set_param_phys(
-                125.0,         // m_h fijo
+                mh,         // m_h fijo
                 m_phi,
                 mA_fixed,
                 mA_fixed,     // mA = mHp
@@ -160,7 +168,6 @@ void perform_param_scan_fixings(
             model.get_param_gen( lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
 
             if (!ok) {
-                cout << "."; //thinking
                 continue;
             }
 
@@ -170,7 +177,7 @@ void perform_param_scan_fixings(
             bool pert = check.check_perturbativity();
 
             DecayTable tab(model);
-            double w_bb     = tab.get_gamma_hdd(2,3,3);
+            double w_bb    = tab.get_gamma_hdd(2,3,3);
             double w_tautau= tab.get_gamma_hll(2,3,3);
             double w_WW    = tab.get_gamma_hvv(2,3);
             double w_ZZ    = tab.get_gamma_hvv(2,2);
@@ -231,15 +238,10 @@ void perform_param_scan_fixings(
                         << "/"          << total_iters
                         << " ("         << prog << "%)  "
                         << "elapsed: "  << elapsed << " s  "
-                        << "ETA: "      << eta     << " s\r";
+                        << "ETA: "      << eta     << " s  "
+                        << "Omited iterations: " << iters_jumped << "\r";
             }
-
-
-
         }
-
-
-
     } // end parallel
 
     results.close();
@@ -253,32 +255,65 @@ void perform_param_scan_fixings(
     #endif
 }
 
+// ---
+
 int main(int argc, char* argv[]) {
-    if (argc != 13) {
-        cerr << "Uso: "<< argv[0]
-             << " mphi_min mphi_max N_mphi m12_min m12_max N_m12"
-                " mA sin(b-a) tan(beta) lambda6 lambda7 output.csv\n";
+    if (argc < 3) {
+        std::cerr << "Uso: " << argv[0] << " <config.json> <output_csv> <opt delta mod> <opt N m_12>\n";
         return 1;
     }
-    double mphi_min = atof(argv[1]);
-    double mphi_max = atof(argv[2]);
-    int    N_mphi   = atoi(argv[3]);
-    double m12_min  = atof(argv[4]);
-    double m12_max  = atof(argv[5]);
-    int    N_m12    = atoi(argv[6]);
-    double mA_fixed = atof(argv[7]);
-    double sin_ba   = atof(argv[8]);
-    double tan_beta = atof(argv[9]);
-    double lambda6  = atof(argv[10]);
-    double lambda7  = atof(argv[11]);
-    string output   = argv[12];
+    
+    std::string config_file = argv[1];
+    std::string output_csv  = argv[2];
 
-    perform_param_scan_fixings(
-        mphi_min, mphi_max, N_mphi,
-        m12_min,  m12_max,  N_m12,
-        mA_fixed, sin_ba,   tan_beta,
-        lambda6,  lambda7,
-        output
+    // Estructuras definidas en ParamUtils.hpp
+    QuadraticModel   qm;
+    SearchSettings   ss;
+    FixedParameters  fp;
+
+    // Carga de configuración JSON
+    try {
+        parse_json_config(config_file, qm, ss, fp);
+    } catch (const std::exception &e) {
+        std::cerr << "Error leyendo configuración: " << e.what() << std::endl;
+        return 1;
+    }
+
+
+    // Si se pasa un tercer argumento, lo usamos como modifier de delta_m12
+    int delta_m12_exp = 1;
+    if (argc > 3) {
+        delta_m12_exp = atoi(argv[3]);
+        cout << "delta_m12_exp = " << delta_m12_exp << endl;
+
+        if (argc > 4) {
+            ss.N_m12 = atoi(argv[4]);
+            cout << "N_m12 = " << ss.N_m12 << endl;
+        }
+    }
+
+    
+    double m_phi_mean = (130.0 + 300.0) / 2.0;
+    cout << "delta_m12 app = " << (2 * qm.a * m_phi_mean + qm.b )*m_phi_mean *  std::pow(10, - delta_m12_exp) << endl;
+
+
+    // Ejecución del escaneo usando los valores del JSON
+    perform_param_scan_polynomial(
+        /* mphi_min   */  130.0,
+        /* mphi_max   */ 300.0,
+        /* N_mphi     */ ss.N_mphi , // multiplicamos por 10 para mayor resolución
+        qm.a, qm.b, qm.c, // polynomial information
+        delta_m12_exp,
+        /* m12_min    */ ss.m12_min,
+        /* m12_max    */ ss.m12_max,
+        /* N_m12      */ ss.N_m12 , // multiplicamos por 10 para mayor resolución
+        /* mA_fixed   */ fp.mA,
+        /* sin_ba     */ fp.sin_ba,
+        /* tan_beta   */ fp.tan_beta,
+        /* lambda6    */ fp.lambda6,
+        /* lambda7    */ fp.lambda7,
+        /* output CSV */ output_csv
     );
+
     return 0;
 }

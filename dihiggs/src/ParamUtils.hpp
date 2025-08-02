@@ -101,3 +101,45 @@ void write_csv_row(std::ofstream &results, const std::vector<std::string> &value
 // Función para imprimir progreso
 void print_progress(double progress, double elapsed_time,
                     double total_iterations, double current_iteration);
+
+double calc_lambda1(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7);
+
+ 
+double calc_lambda2(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7);
+
+
+bool check_lambda(double l1);
+
+#pragma once
+#include <string>
+#include <regex>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+
+struct QuadraticModel {
+    double a, b, c;
+};
+
+struct SearchSettings {
+    int N_mphi, N_m12;
+    double m12_min, m12_max;
+    double mphi_min, mphi_max;
+};
+
+struct FixedParameters {
+    double mA, sin_ba, tan_beta, lambda6, lambda7;
+};
+
+// Lanza std::runtime_error en caso de fallo
+void parse_json_config(
+    const std::string &filename,
+    QuadraticModel    &qm,
+    SearchSettings    &ss,
+    FixedParameters   &fp
+);
+

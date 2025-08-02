@@ -6,6 +6,10 @@
 using namespace std;
 using namespace std::chrono;
 
+constexpr double PI = std::acos(-1.0);
+constexpr double VEV = 246.0;  // Valor estándar, ajústalo si lo obtienes de SM
+
+
 // Implementación de readConfig (opcional)
 Config readConfig(const string &filename)
 {
@@ -238,4 +242,118 @@ void print_progress(double progress, double elapsed_time,
     cout << "] " << int(progress * 100.0) << "% | Elapsed: "
          << int(elapsed_time) << "s | Remaining: " << int(remaining_time) << "s\r";
     cout.flush();
+}
+
+
+double calc_lambda1(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7) {
+    // Reconstruir beta y b–alpha sin usar atan/asin
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    // Reconstruir alpha
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double tb = tan_beta;
+
+    // Términos de lambda 1
+    double term1 = (mH*mH * ca*ca + mh*mh * sa*sa) / (VEV*VEV * cb*cb);
+    double term2 = 1.5 * lam6 * tb;
+    double term3 = (m12_2)/(VEV*VEV) * tb/(cb*cb);
+    double term4 = 0.5 * lam7 * tb*tb*tb;
+    double l1    = term1 - term2 - term3 + term4;
+    return l1;
+}
+
+double calc_lambda2(double mh, double mH,
+                          double m12_2, double sin_ba, double tan_beta,
+                          double lam6, double lam7) {
+    // Reconstruir beta y b–alpha
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    // Reconstruir alpha
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double tb = tan_beta;
+    double ct = 1.0/tb;
+
+    // Términos de lambda_2
+    double term1 = (mh*mh * ca*ca + mH*mH * sa*sa) / (VEV*VEV * sb*sb);
+    double term2 = 1.5 * lam7 * ct;
+    double term3 = 0.5 * lam6 * ct*ct*ct;
+    double term4 = (m12_2)/(VEV*VEV) * ct/(sb*sb);
+    double l2    = term1 - term2 + term3 - term4;
+    return l2;
+}
+
+bool check_lambda(double l1) {
+    return (l1*l1) < (16.0 * PI * PI);
+}
+
+
+// Scan del modelo en archivo json
+
+static std::string load_file(const std::string &path) {
+    std::ifstream in(path);
+    if (!in.is_open())
+        throw std::runtime_error("No pude abrir JSON: " + path);
+    std::ostringstream buf;
+    buf << in.rdbuf();
+    return buf.str();
+}
+
+static double extract_double(const std::string &text, const std::string &key) {
+    // Busca: "key" : número (entero o decimal, posible notación científica)
+    std::regex re("\"" + key + "\"\\s*:\\s*([-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?)");
+    std::smatch m;
+    if (std::regex_search(text, m, re)) {
+        try {
+            return std::stod(m[1].str());
+        } catch (...) {
+            throw std::runtime_error("Conversión a double falló para clave: " + key);
+        }
+    }
+    throw std::runtime_error("Clave no encontrada en JSON: " + key);
+}
+
+static int extract_int(const std::string &text, const std::string &key) {
+    std::regex re("\"" + key + "\"\\s*:\\s*([0-9]+)");
+    std::smatch m;
+    if (std::regex_search(text, m, re)) {
+        return std::stoi(m[1].str());
+    }
+    throw std::runtime_error("Clave no encontrada en JSON: " + key);
+}
+
+void parse_json_config(
+    const std::string &filename,
+    QuadraticModel    &qm,
+    SearchSettings    &ss,
+    FixedParameters   &fp
+) {
+    const std::string content = load_file(filename);
+
+    // Modelo cuadrático
+    qm.a = extract_double(content, "a");
+    qm.b = extract_double(content, "b");
+    qm.c = extract_double(content, "c");
+
+    // search_settings
+    ss.N_mphi   = extract_int   (content, "N_mphi");
+    ss.N_m12    = extract_int   (content, "N_m12");
+    ss.m12_min  = extract_double(content, "m12_min");
+    ss.m12_max  = extract_double(content, "m12_max");
+
+    // fixed_parameters
+    fp.mA        = extract_double(content, "mA");
+    fp.sin_ba    = extract_double(content, "sin_ba");
+    fp.tan_beta  = extract_double(content, "tan_beta");
+    fp.lambda6   = extract_double(content, "lambda6");
+    fp.lambda7   = extract_double(content, "lambda7");
 }
