@@ -1,19 +1,13 @@
-results/*.csv filter=lfs diff=lfs merge=lfs -text
-mlpython/*.parquet filter=lfs diff=lfs merge=lfs -text
-app/out/* filter=lfs diff=lfs merge=lfs -text
-mlpython/outs/* filter=lfs diff=lfs merge=lfs -text
-mlpython/0b1_samplings.ipynb filter=lfs diff=lfs merge=lfs -text
-*.md filter=lfs diff=lfs merge=lfs -text
-/Makefile filter=lfs diff=lfs merge=lfs -text
-*.conf filter=lfs diff=lfs merge=lfs -text
-*.cpp filter=lfs diff=lfs merge=lfs -text
-*.hpp filter=lfs diff=lfs merge=lfs -text
-/app/ParamScanGen filter=lfs diff=lfs merge=lfs -text
-/app/ParamScanGen_pll filter=lfs diff=lfs merge=lfs -text
-/app/ParamScanHiggs filter=lfs diff=lfs merge=lfs -text
-*.csv filter=lfs diff=lfs merge=lfs -text
-/app/testing filter=lfs diff=lfs merge=lfs -text
-*.o filter=lfs diff=lfs merge=lfs -text
+# (Opcional) Normalización de texto común; NO activa LFS.
+*.txt text eol=lf
+*.md  text eol=lf
+*.py  text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.json text eol=lf
+*.ipynb text eol=lf
+* !text !filter !merge !diff
+/app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_aa filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ab filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ac filter=lfs diff=lfs merge=lfs -text
@@ -22,75 +16,6 @@ mlpython/0b1_samplings.ipynb filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_af filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ag filter=lfs diff=lfs merge=lfs -text
 /app/out/0129b_part_ah filter=lfs diff=lfs merge=lfs -text
-/app/out/0129b_part_ai filter=lfs diff=lfs merge=lfs -text
-*.sh filter=lfs diff=lfs merge=lfs -text
-/app/ParamScanPhys filter=lfs diff=lfs merge=lfs -text
-/app/GenParamScan filter=lfs diff=lfs merge=lfs -text
-/app/HiggsParamScan filter=lfs diff=lfs merge=lfs -text
-/app/PhysParamScan filter=lfs diff=lfs merge=lfs -text
-*.json filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcGen filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcHMSSM filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcHiggs filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcHybrid filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcInert filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcLH filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcMSSM filter=lfs diff=lfs merge=lfs -text
-/2hdmc/CalcPhys filter=lfs diff=lfs merge=lfs -text
-/2hdmc/Demo filter=lfs diff=lfs merge=lfs -text
-*.lha filter=lfs diff=lfs merge=lfs -text
-*.root filter=lfs diff=lfs merge=lfs -text
-/2hdmc/Doxyfile filter=lfs diff=lfs merge=lfs -text
-/2hdmc/LH_sample_input filter=lfs diff=lfs merge=lfs -text
-*.txt filter=lfs diff=lfs merge=lfs -text
-*.inc filter=lfs diff=lfs merge=lfs -text
-*.f filter=lfs diff=lfs merge=lfs -text
-*.dat filter=lfs diff=lfs merge=lfs -text
-/2hdmc/MGME/2HDMC/makefile filter=lfs diff=lfs merge=lfs -text
-/2hdmc/MGME/2HDMC/makefile_dynamic filter=lfs diff=lfs merge=lfs -text
-/2hdmc/Makefile filter=lfs diff=lfs merge=lfs -text
-/2hdmc/README filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.C filter=lfs diff=lfs merge=lfs -text
-*.a filter=lfs diff=lfs merge=lfs -text
-*.h filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/ParamScan filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/ParamScanGen filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/ParamScanGenP filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/ParamScanGenPll filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/ParamScanHiggs filter=lfs diff=lfs merge=lfs -text
-/2hdmc/working/paralelscan filter=lfs diff=lfs merge=lfs -text
-/dihiggs/Makefile filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/GenParamScan filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/HiggsParamScan filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/ModularParamScan filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/Oracle filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/PhysParamScan filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/testing filter=lfs diff=lfs merge=lfs -text
-*.ipynb filter=lfs diff=lfs merge=lfs -text
-*.py filter=lfs diff=lfs merge=lfs -text
-*.pyc filter=lfs diff=lfs merge=lfs -text
-*.pkl filter=lfs diff=lfs merge=lfs -text
-*.pptx filter=lfs diff=lfs merge=lfs -text
-*.gitignore filter=lfs diff=lfs merge=lfs -text
-*.code-workspace filter=lfs diff=lfs merge=lfs -text
-*.parquet filter=lfs diff=lfs merge=lfs -text
-/mlpython/valid_points_lhe/Haa filter=lfs diff=lfs merge=lfs -text
-/mlpython/valid_points_lhe/Haz filter=lfs diff=lfs merge=lfs -text
-/mlpython/valid_points_lhe/Hbb filter=lfs diff=lfs merge=lfs -text
-/mlpython/valid_points_lhe/Hwidth filter=lfs diff=lfs merge=lfs -text
-*.Identifier filter=lfs diff=lfs merge=lfs -text
-*.python-version filter=lfs diff=lfs merge=lfs -text
-/mlpython/README filter=lfs diff=lfs merge=lfs -text
-*.bak filter=lfs diff=lfs merge=lfs -text
-*.pdf filter=lfs diff=lfs merge=lfs -text
-*.lhe filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/PhysScanWithFixings filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/PhysScanWithFixings_speed_test filter=lfs diff=lfs merge=lfs -text
-/dihiggs/app/PhysScanPolynomial filter=lfs diff=lfs merge=lfs -text
-/output/o1e0 filter=lfs diff=lfs merge=lfs -text
-* !text !filter !merge !diff
-/app/out/out_3pll.csv filter=lfs diff=lfs merge=lfs -text
 /app/outphys/0207a_phys.csv filter=lfs diff=lfs merge=lfs -text
 /app/outphys/0207b_phys.csv filter=lfs diff=lfs merge=lfs -text
 /mlpython/opt_result_extended.pkl filter=lfs diff=lfs merge=lfs -text

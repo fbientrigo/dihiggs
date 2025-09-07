@@ -132,6 +132,7 @@ void perform_param_scan_fixings(
             double l2 = calc_lambda2(mh, m_phi,
                           m12, sin_ba, tan_beta,
                           lambda6, lambda7);
+                          
             #ifdef SPEED_TEST
             // Filtrado rápido:
             if (!check_lambda(l1) ||

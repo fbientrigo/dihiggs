@@ -125,8 +125,7 @@ void perform_param_scan_polynomial(
 
             double m12   = m12_pol - 0.5 * N_m12 * delta_m12  + i_m12 * delta_m12;
             
-
-
+            
             double l1 = calc_lambda1(mh, m_phi,
                           m12, sin_ba, tan_beta,
                           lambda6, lambda7);
