@@ -1,7 +1,27 @@
-*/env
+# entornos
+*/env/
 */ubenv/
-mlpython/data_train/dataset_full.parquet
-mlpython/data_train/dataset_full.csv
-mlpython/data_train/*
-*.parquet
+datasets
+
+# instalaciones que se deben configurar por cada pc
+higgstools/installation
+higgstools/build
+
+# datasets de entrenamiento locales
+mlpython/data_train/
+!mlpython/data_train/.gitkeep
+
+# artefactos grandes opcionales (si no quieres versionarlos)
+# results/**        # <- descomenta si prefieres que NO entren por defecto
+# mlpython/outs/**  # idem
+
+# binarios y builds
 *.o
+*.parquet
+*.joblib
+*.model
+*.h5
+*.pth
+*.ckpt
+*.so
+*.dll
