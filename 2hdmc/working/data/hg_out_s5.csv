@@ -1,5 +1,3 @@
-lambda1,lambda2,lambda3,lambda4,lambda5,width_hgaga,total_width_h2,branching_ratio_hgaga,mass_h,mass_H,mass_A,mass_Hp
-0.01,0.01,4.76,-0.24,-0.24,0,0,0,24.6221,159.531,200,200
-0.01,0.01,4.76,4.76,-0.24,0,17.8531,0,24.6221,420.727,437.677,200
-0.01,0.01,9.76,-5.24,-0.24,3.44142e-08,-nan,0,-355.122,24.6221,-334.008,200
-0.01,0.01,9.76,-0.24,-0.24,0,0,0,24.6221,159.531,200,200
+version https://git-lfs.github.com/spec/v1
+oid sha256:648ff7e4f7e5d8eade396c284034e27fd2be3f026f202db46933ce62e273169a
+size 374
