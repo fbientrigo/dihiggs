@@ -1,12 +1,19 @@
 # Nombre del compilador
 CXX = g++
 
+# Prefijo de instalación local de HiggsTools (puedes sobreescribir por CLI)
+HIGGSTOOLS_PREFIX ?= $(HOME)/dihiggs/higgstools/installation
+HIGGSTOOLS_INC    := $(HIGGSTOOLS_PREFIX)/include
+HIGGSTOOLS_LIB    := $(HIGGSTOOLS_PREFIX)/lib
+
 # Flags de compilación
-CXXFLAGS     = -I../2hdmc/src -fopenmp -std=c++11 -O2 -Wall
+CXXFLAGS     = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -O2 -Wall
 SPEED_FLAGS  = -DSPEED_TEST
 
 # Flags de enlazado (ajusta si necesitas más librerías)
-LDFLAGS = -L../2hdmc/lib -l2HDMC -lgsl -lgslcblas -lm
+LDFLAGS = -L../2hdmc/lib -l2HDMC \
+          -L$(HIGGSTOOLS_LIB) -lHiggsTools -lgsl -lgslcblas -lm \
+          -Wl,-rpath,$(HIGGSTOOLS_LIB)
 
 # Directorios
 SRC_DIR = src
