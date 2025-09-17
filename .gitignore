@@ -4,7 +4,7 @@
 datasets
 
 # ignorar datasets de HB/HS pesados
-dihiggs/datasets/*
+datasets/*
 
 # instalaciones que se deben configurar por cada pc
 higgstools/installation

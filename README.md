@@ -76,33 +76,78 @@ All required packages are listed in `requirements.txt`:
 
 1. **Create and activate a virtual environment**
     
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate   # Linux/macOS
-    venv\Scripts\activate      # Windows
-    ```
+```bash
+python3 -m venv venv
+source venv/bin/activate   # Linux/macOS
+venv\Scripts\activate      # Windows
+```
 
 2. **Install Python dependencies**
 
-    ```bash
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    ```
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
 
 3. **Recompile C++ libraries**
+This library allows for the uses of 2HDMC, compilation for your own system its neccesary
+```bash
+# Compile 2HDMC library
+cd 2hdmc/
+make clean
+make
+```
 
-    ```bash
-    # Compile 2HDMC library
-    cd 2hdmc/
-    make clean
-    make
-    
-    # Compile the main project
-    cd ..
-    make clean
-    make
-    ```
+4. **Install HiggsTools (HB/HS modern interface)**
+In addition to 2HDMC, this project requires [HiggsTools](https://gitlab.com/higgstools/higgstools) 
+for collider constraints (HiggsBounds/HiggsSignals). 
+The Makefile is already prepared to look for 
+a local installation under `dihiggs/higgstools/installation`.
 
+if *not* included by any reason,, *ignore this if higgstools already exists*
+```bash
+cd ~/dihiggs
+git clone https://gitlab.com/higgstools/higgstools.git
+```
+
+Having the higgstools folder or not, you may continue here:
+```bash
+cd higgstools
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=./higgstools/installation
+
+make -j4
+sudo make install
+
+```
+
+You may check your installation
+```bash
+ls ./higgstools/installation/include/Higgs
+ls ./dihiggs/higgstools/installation/lib
+```
+
+5. **Get the HS/HB datasets**
+This bash script will download the datasets from the official repos
+```bash
+chmod +x get_datasets.sh
+./get_datasets.sh
+```
+located at
+```bash
+./datasets/HBDataset
+./datasets/HSDataset
+```
+
+5. **Compilation of project**
+Having all that is required
+
+```bash
+# Compile the main project
+cd ..
+make clean
+make
+```
 
 ## Usage
 
