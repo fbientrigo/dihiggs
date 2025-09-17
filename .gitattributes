@@ -111,3 +111,5 @@
 /mlpython/data_batches/merged_tan1e3_6.pkl filter=lfs diff=lfs merge=lfs -text
 /results/mA300_l6001_l70_sinba1/res_t1e2.csv filter=lfs diff=lfs merge=lfs -text
 /results/mA300_l6001_l70_sinba1/res_t1e5.csv filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+higgstools/examples/example_data/*.csv filter=lfs diff=lfs merge=lfs -text
