@@ -3,6 +3,9 @@
 */ubenv/
 datasets
 
+# ignorar datasets de HB/HS pesados
+dihiggs/datasets/*
+
 # instalaciones que se deben configurar por cada pc
 higgstools/installation
 higgstools/build
