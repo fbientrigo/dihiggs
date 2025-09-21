@@ -2,6 +2,7 @@
 */env/
 */ubenv/
 datasets
+app/*
 
 # ignorar datasets de HB/HS pesados
 datasets/*
