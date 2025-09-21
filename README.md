@@ -139,6 +139,14 @@ located at
 ./datasets/HSDataset
 ```
 
+*Important!!!*
+Whenever the code its called, the variables neccesary shall point to his dataset
+
+```bash
+export HB_DATASET=$HOME/dihiggs/datasets/HBDataset
+export HS_DATASET=$HOME/dihiggs/datasets/HSDataset
+```
+
 5. **Compilation of project**
 Having all that is required
 
