@@ -116,7 +116,10 @@ double calc_lambda2(double mh, double mH,
 
 bool check_lambda(double l1);
 
-double m12_base(double mh, double m_phi, double sa, double ca, double sb, double cb, double tan_beta, double VEV);
+double m12_base(double mh, double m_phi, double sa, double ca, 
+    double sb, double cb, 
+    double lambda6, double lambda7,
+    double tan_beta, double VEV);
 
 
 #pragma once

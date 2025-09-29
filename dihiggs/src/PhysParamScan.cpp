@@ -157,10 +157,9 @@ void perform_param_scan(
 
             vector<vector<double>> buffer;
 
-            // double m12_base = (std::pow(m_phi, 2)*std::pow(ca, 2) +
-            //                    std::pow(mh, 2)*std::pow(sa, 2))/tan_beta
-            //                    + (VEV*VEV/2)*(lambda7*std::pow(sb,2) - 3*lambda6*std::pow(cb,2));
-            double m12_base = m12_base(mh, m_phi, sa, ca, sb, cb, tan_beta, VEV);
+            double m12_base = m12_base(mh, m_phi, sa, ca, sb, cb, 
+                lambda6, lambda7,
+                tan_beta, VEV);
 
             double delta_m12 = std::pow(10.0, - delta_m12_exp);
             double m12 = m12_base - 0.5 * N_m12 * delta_m12 + i_m12 * delta_m12;

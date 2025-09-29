@@ -292,7 +292,10 @@ bool check_lambda(double l1) {
     return (l1*l1) < (16.0 * PI * PI);
 }
 
-double m12_base(double mh, double m_phi, double sa, double ca, double sb, double cb, double tan_beta, double VEV) {
+double m12_base(double mh, double m_phi, double sa, double ca, 
+    double sb, double cb, 
+    double lambda6, double lambda7,
+    double tan_beta, double VEV) {
     double m12_base_f2 = (std::pow(m_phi, 2)*std::pow(sa, 2) +
                     std::pow(mh, 2)*std::pow(ca, 2))*tan_beta
                     + (VEV*VEV/2)*(lambda6*std::pow(cb,2) - 3*lambda7*std::pow(sb,2));
