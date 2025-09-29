@@ -8,6 +8,8 @@ HIGGSTOOLS_LIB    := $(HIGGSTOOLS_PREFIX)/lib
 
 # Flags de compilación
 CXXFLAGS     = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -O2 -Wall
+CXXFLAGS += -Wextra -Wpedantic
+
 SPEED_FLAGS  = -DSPEED_TEST
 
 # Flags de enlazado (ajusta si necesitas más librerías)
@@ -24,15 +26,10 @@ BIN_DIR = app
 # Archivos fuente con main (cada uno genera un ejecutable).
 # ============ 
 MAIN_SRCS = \
-  GenParamScan.cpp \
-  HiggsParamScan.cpp \
   PhysParamScan.cpp \
-  testing.cpp \
   Oracle.cpp \
-  ModularParamScan.cpp \
-  PhysScanWithFixings.cpp \
-  PhysScanPolynomial.cpp \
-  HBHS_testing.cpp 
+  HBHS_testing.cpp \
+  PostProcessHBHS.cpp
 
 # ============ 
 # Archivos fuente comunes (sin main).
@@ -47,44 +44,40 @@ SRCS = $(MAIN_SRCS:%=$(SRC_DIR)/%) $(COMMON_SRCS:%=$(SRC_DIR)/%)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 # Objeto especializado para speed test
-OBJ_SPEED = $(OBJ_DIR)/PhysScanWithFixings_speed_test.o
+# OBJ_SPEED = $(OBJ_DIR)/PhysScanWithFixings_speed_test.o
 
 # ============ 
 # Binarios resultantes
 # ============ 
 BINARIES = \
-  $(BIN_DIR)/GenParamScan \
-  $(BIN_DIR)/HiggsParamScan \
   $(BIN_DIR)/PhysParamScan \
-  $(BIN_DIR)/testing \
   $(BIN_DIR)/Oracle \
-  $(BIN_DIR)/ModularParamScan \
-  $(BIN_DIR)/PhysScanWithFixings \
-  $(BIN_DIR)/PhysScanPolynomial  \
-  $(BIN_DIR)/HBHS_testing
+  $(BIN_DIR)/HBHS_testing \
+  $(BIN_DIR)/PostProcessHBHS \
 
-# Binario adicional de speed test
-SPEED_BINARIES = \
-  $(BIN_DIR)/PhysScanWithFixings_speed_test
+
+# # Binario adicional de speed test
+# SPEED_BINARIES = \
+#   $(BIN_DIR)/PhysScanWithFixings_speed_test
 
 # Regla principal
-all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES) $(SPEED_BINARIES)
+all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
 
 # ---- Regla de enlace de cada ejecutable normal ----
 $(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/ParamUtils.o
 	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
 
 # ---- Regla de enlace del speed test ----
-$(BIN_DIR)/PhysScanWithFixings_speed_test: $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o -o $@ $(LDFLAGS)
+# $(BIN_DIR)/PhysScanWithFixings_speed_test: $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o
+# 	$(CXX) -fopenmp $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o -o $@ $(LDFLAGS)
 
 # ---- Compilación genérica de .cpp -> .o ----
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # ---- Compilación específica para speed test (mismo .cpp, distinta bandera) ----
-$(OBJ_DIR)/PhysScanWithFixings_speed_test.o: $(SRC_DIR)/PhysScanWithFixings.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(SPEED_FLAGS) -c $< -o $@
+# $(OBJ_DIR)/PhysScanWithFixings_speed_test.o: $(SRC_DIR)/PhysScanWithFixings.cpp | $(OBJ_DIR)
+# 	$(CXX) $(CXXFLAGS) $(SPEED_FLAGS) -c $< -o $@
 
 # Crear directorios si no existen
 $(BIN_DIR):
@@ -95,7 +88,7 @@ $(OBJ_DIR):
 
 # Limpieza
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(BINARIES) $(SPEED_BINARIES)
+	rm -rf $(OBJ_DIR)/*.o $(BINARIES)
 
 cleanall: clean
 	rm -rf $(BIN_DIR)/*

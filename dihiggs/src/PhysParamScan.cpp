@@ -1,3 +1,35 @@
+/**
+ * @file PhysParamScan.cpp
+ * @brief Escaneo de parámetros m_phi y m12 con parámetros físicos fijos.
+ *
+ * Este programa recorre un rango de valores de m_phi y m12, mientras
+ * mantiene los demás parámetros del 2HDM (mA, sin(b−a), tanβ, λ6, λ7) fijos.
+ * Para cada punto calcula condiciones de positividad, unitariedad y perturbatividad,
+ * construye la tabla de decaimientos y guarda en CSV:
+ *   m_phi, mA, α, β, λ6, λ7, m12,
+ *   sin(b−a), tanβ,
+ *   positivity_ok, unitarity_ok, perturbativity_ok,
+ *   widths de bb, ττ, WW, ZZ, γγ, Zγ, gg, hh,
+ *   total_width, BR(h→γγ).
+ *
+ * Uso:
+ *   ./PhysScanClassic <output_csv> <N_mphi> [N_m12] [yukawa_type]
+ *
+ * Paralelización:
+ *   Usa OpenMP para distribuir el bucle 2D de (m_phi × m12).
+ *
+ * Dependencias:
+ *   - Biblioteca 2HDMC ( –l2HDMC )
+ *   - GSL ( –lgsl –lgslcblas –lm )
+ *   - OpenMP
+ *
+ * Autor: Fabian Trigo
+ * Fecha: septiembre 2025
+ */
+
+// activa el chequeo acelerado de lam1, lam2
+#define SPEED_TEST
+
 #include "THDM.h"
 #include "Constraints.h"
 #include "DecayTable.h"
@@ -5,309 +37,223 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <chrono>
 #include <iomanip>
-#include <omp.h>  // OpenMP for parallelization
+#include <omp.h>
+#include <chrono>
 
+constexpr double PI = std::acos(-1.0);
+constexpr double VEV = 246.0;  // Valor estándar
+
+using Clock = std::chrono::high_resolution_clock;
+using Duration = std::chrono::duration<double>;
 using namespace std;
 using namespace std::chrono;
 
-// Estructura para almacenar temporalmente el conjunto de parámetros
-struct ParamSet {
-    double m_phi;
-    double mA;       // m_A = m_Hp
-    double alpha;
-    double beta;
+struct FixedParams {
+    double mA;
+    double sin_ba;
+    double tan_beta;
     double lambda6;
     double lambda7;
-    double m12;
 };
 
-// Variable global para guardar la mejor BR(h->gamma gamma)
-static ParamSet g_bestParams;
-static double   g_bestBR = -1.0;
-
-// ----------------------------------------------------------------------------------------------
-// Función principal de escaneo
-// ----------------------------------------------------------------------------------------------
-void perform_param_scan_withGD(const ConfigPhys &cfg, const string &output_file) {
-
-    // Abrir archivo de resultados
+void perform_param_scan(
+    int y_type, double mphi_min, double mphi_max,
+    int N_mphi, int N_m12, int delta_m12_exp,
+    double mA_fixed, double sin_ba, double tan_beta,
+    double lambda6, double lambda7,
+    const string &output_file
+) {
     ofstream results(output_file);
     if (!results.is_open()) {
-        cerr << "Failed to open output file: " << output_file << endl;
+        cerr << "No pude abrir: " << output_file << endl;
         return;
     }
 
-    // Definir cabeceras de columnas para el CSV
     vector<string> columns = {
-        "m_phi", "mA",      // (mA = m_Hp)
-        "alpha", "beta",
-        "lambda6", "lambda7",
-        "m12",
-        "sin_ba", "tan_beta",
-        "positivity_ok", "unitarity_ok", "perturbativity_ok",
-        "width_h2_bb", "width_h2_tautau", "width_h2_WW", "width_h2_ZZ", "width_h2_gaga",
-        "width_h2_Zga", "width_h2_gg", "width_h2_hh",
-        "total_width_h2",
-        "branching_ratio_h2_gaga"
+        "m_phi","mA","alpha","beta","lambda6","lambda7","m12",
+        "sin_ba","tan_beta","positivity_ok","unitarity_ok","perturbativity_ok",
+        "width_bb","width_tautau","width_WW","width_ZZ",
+        "width_gaga","width_Zga","width_gg","width_hh",
+        "total_width","br_gaga",
+        "lam1","computed_lam1","lam2","computed_lam2","lam3","lam4","lam5"
     };
     write_csv_header(results, columns);
 
-    // get_gamma_hZga(int h=2)
-    // get_gamma_hgg(int h=2)
-    // get_gamma_hhh(int h=2, int h1=1, int h2=1) 
+    double step_mphi = (N_mphi > 1) ? (mphi_max - mphi_min)/(N_mphi - 1) : 0.0;
+    double total_iters = double(N_mphi) * double(N_m12);
+    int iters_done  = 0;
+    int iters_jumped = 0;
 
+    cout << "step_mphi="<<step_mphi<<endl;
+    auto start = Clock::now();
 
-    // ------------------------------------------------------------------------------------------
-    // Calcular el número de pasos (ejemplo, ajustando a cómo se definan en el Config)
-    // ------------------------------------------------------------------------------------------
-    int steps_lambda6 = (cfg.lambda6_max - cfg.lambda6_min) / cfg.step_lambda6 + 1;
-    int steps_lambda7 = (cfg.lambda7_max - cfg.lambda7_min) / cfg.step_lambda7 + 1;
-    int steps_m12     = (cfg.m12_squared_max - cfg.m12_squared_min) / cfg.step_m12_squared + 1;
-    int steps_alpha   = (cfg.alpha_max - cfg.alpha_min) / cfg.step_alpha + 1;
-    int steps_beta    = (cfg.beta_max - cfg.beta_min) / cfg.step_beta + 1;
+    double mh = 125.0;
 
-    // Pasos para las masas
-    int steps_mphi = (cfg.mphi_max - cfg.mphi_min) / cfg.step_mphi + 1;
-    int steps_mA   = (cfg.mA_max   - cfg.mA_min)   / cfg.step_mA   + 1;
+    #pragma omp parallel for schedule(dynamic)
+    for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
+        double m_phi = mphi_min + i_phi * step_mphi;
+        for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
 
-    if (cfg.step_lambda6 == 0.0) {
-        steps_lambda6 = 1;
+            vector<vector<double>> buffer;
+
+            double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+            double cb  = inv;
+            double sb  = tan_beta * inv;
+            double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+            double ca = cb * cba + sb * sin_ba;
+            double sa = sb * cba - cb * sin_ba;
+
+            double m12_base = (std::pow(m_phi, 2)*std::pow(ca, 2) +
+                               std::pow(mh, 2)*std::pow(sa, 2))/tan_beta
+                               + (VEV*VEV/2)*(lambda7*std::pow(sb,2) - 3*lambda6*std::pow(cb,2));
+
+            double delta_m12 = std::pow(10.0, - delta_m12_exp);
+            double m12 = m12_base - 0.5 * N_m12 * delta_m12 + i_m12 * delta_m12;
+
+            double l1 = calc_lambda1(mh, m_phi, m12, sin_ba, tan_beta, lambda6, lambda7);
+            double l2 = calc_lambda2(mh, m_phi, m12, sin_ba, tan_beta, lambda6, lambda7);
+
+            //#ifdef SPEED_TEST
+            if (!check_lambda(l1) || !check_lambda(l2)) {
+                iters_jumped++;
+                continue;
+            }
+            //#endif
+
+            THDM model;
+            SM sm; model.set_SM(sm);
+            bool ok = model.set_param_phys(
+                mh, m_phi,
+                mA_fixed, mA_fixed,
+                sin_ba, lambda6, lambda7, m12, tan_beta
+            );
+            model.set_yukawas_type(y_type);
+
+            if (!ok) continue;
+
+            Constraints check(model);
+            bool pos  = check.check_positivity();
+            bool uni  = check.check_unitarity();
+            bool pert = check.check_perturbativity();
+
+            DecayTable tab(model);
+            double w_bb     = tab.get_gamma_hdd(2,3,3);
+            double w_tautau = tab.get_gamma_hll(2,3,3);
+            double w_WW     = tab.get_gamma_hvv(2,3);
+            double w_ZZ     = tab.get_gamma_hvv(2,2);
+            double w_gaga   = tab.get_gamma_hgaga(2);
+            double w_Zga    = tab.get_gamma_hZga(2);
+            double w_gg     = tab.get_gamma_hgg(2);
+            double w_hh     = tab.get_gamma_hhh(2,1,1);
+            double w_tot    = tab.get_gammatot_h(2);
+            double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
+
+            double beta  = std::atan(tan_beta);
+            double alpha = beta - std::asin(sin_ba);
+
+            double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
+            model.get_param_gen( lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
+
+            buffer.push_back({
+                m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12,
+                sin_ba, tan_beta,
+                pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
+                w_bb, w_tautau, w_WW, w_ZZ,
+                w_gaga, w_Zga, w_gg, w_hh,
+                w_tot, br_gaga, lam1, l1, lam2, l2, lam3, lam4, lam5
+            });
+
+            #pragma omp critical
+            {
+                for (auto &row : buffer) write_csv_row(results, row);
+                iters_done += buffer.size();
+                buffer.clear();
+
+                auto now = high_resolution_clock::now();
+                double elapsed = duration<double>(now - start).count();
+                double prog = (iters_done / total_iters) * 100.0;
+                double eta = (iters_done > 0.0) ? (elapsed / iters_done) * (total_iters - iters_done) : 0.0;
+
+                std::cerr << fixed << setprecision(1)
+                          << "Iter: " << iters_done << "/" << total_iters
+                          << " (" << prog << "%)  elapsed: " << elapsed
+                          << " s  ETA: " << eta << " s  Omited: " << iters_jumped << "\r";
+            }
+        }
     }
-    if (cfg.step_lambda7 == 0.0) {
-        steps_lambda7 = 1;
-    }
-    if (cfg.step_m12_squared == 0.0) {
-        steps_m12 = 1;
-    }
-    if (cfg.step_alpha == 0.0) {
-        steps_alpha = 1;
-    }
-    if (cfg.step_beta == 0.0) {
-        steps_beta = 1;
-    }
-    if (cfg.step_mphi == 0.0) {
-        steps_mphi = 1;
-    }
-    if (cfg.step_mA == 0.0) {
-        steps_mA = 1;
-    }
 
-    // Para estimar iteraciones totales (productorio)
-    double total_iterations = static_cast<double>(steps_lambda6)
-                            * steps_lambda7
-                            * steps_m12
-                            * steps_alpha
-                            * steps_beta
-                            * steps_mphi
-                            * steps_mA;
-    cout << "Total iterations: " << total_iterations << "\n";
-    double current_iteration = 0.0;
-    auto start_time = high_resolution_clock::now();
-
-    // Inicializar la mejor BR global
-    g_bestBR = -1.0;
-
-    // ------------------------------------------------------------------------------------------
-    // Bucles anidados externos para parámetros "poco variables" o fijos
-    // (lambda6, lambda7, m12, alpha, beta).
-    // ------------------------------------------------------------------------------------------
-    for (int i_l6 = 0; i_l6 < steps_lambda6; i_l6++) {
-        double lambda6 = cfg.lambda6_min + i_l6 * cfg.step_lambda6;
-
-        for (int i_l7 = 0; i_l7 < steps_lambda7; i_l7++) {
-            double lambda7 = cfg.lambda7_min + i_l7 * cfg.step_lambda7;
-
-            for (int i_m12 = 0; i_m12 < steps_m12; i_m12++) {
-                double m12 = cfg.m12_squared_min + i_m12 * cfg.step_m12_squared;
-
-                for (int i_alpha = 0; i_alpha < steps_alpha; i_alpha++) {
-                    double alpha = cfg.alpha_min + i_alpha * cfg.step_alpha;
-
-                    for (int i_beta = 0; i_beta < steps_beta; i_beta++) {
-                            
-                        double beta = cfg.beta_min + i_beta * cfg.step_beta;
-                        
-                        double sin_ba   = std::sin(beta - alpha);
-                        double tan_beta = std::tan(beta);
-
-                        // ----------------------------------------------------------------------------------
-                        // Paralelización: bucles para m_phi y m_A ( = m_{H^+} )
-                        // Se desea que  m_phi <= m_A  y  ambos hasta ~400.
-                        // ----------------------------------------------------------------------------------
-                        #pragma omp parallel 
-                        {
-                            // Cada hilo guardará temporalmente sus filas para luego volcarlas a "results".
-                            vector<vector<double>> thread_local_rows;
-                            double local_bestBR = -1.0;
-                            ParamSet local_bestParams;
-
-                            // collapse(2) para que OpenMP itere en 2D
-                            #pragma omp for collapse(2) schedule(dynamic)
-
-        
-                            for (int i_mphi = 0; i_mphi < steps_mphi; i_mphi++) {
-                                for (int i_mA = 0; i_mA < steps_mA; i_mA++) {
-
-                                    // Determinar valores físicos de las masas
-                                    double m_phi = cfg.mphi_min + i_mphi * cfg.step_mphi;
-                                    double mA    = cfg.mA_min   + i_mA   * cfg.step_mA;
-
-
-                                    // Imponer m_phi <= mA (mA = m_{H^+})
-                                    //if (mA < m_phi) {
-                                    //    continue;
-                                    //}
-
-                                    // Fijar m_h = 125.0
-                                    double m_h  = 125.0; 
-                                    double m_Hp = mA;     // por la condición m_A = m_{H^+}
-
-                                    // ======= Construir el modelo 2HDM e intentar fijar parámetros físicos
-                                    THDM model;
-                                    SM sm;
-                                    model.set_SM(sm);
-
-                                    bool pset = model.set_param_phys(
-                                        m_h,
-                                        m_phi,
-                                        mA,
-                                        m_Hp,
-                                        sin_ba,
-                                        lambda6,
-                                        lambda7,
-                                        m12,
-                                        tan_beta
-                                    );
-                                    // if (!pset) {
-                                    //     // Si no se pudo setear este punto, descartamos
-                                    //     #pragma omp atomic
-                                    //     current_iteration += 1.0;
-                                    //     //continue;
-                                    // }
-
-                                    // Chequeos de estabilidad, unitariedad, etc.
-                                    Constraints check(model);
-                                    bool positivity_ok     = check.check_positivity();
-                                    bool unitarity_ok      = check.check_unitarity();
-                                    bool perturbativity_ok = check.check_perturbativity();
-
-                                    // Calcular anchos de decaimiento
-                                    DecayTable table(model);
-                                    // "2" corresponde al Higgs pesado en la librería
-                                    double w_h2_bb     = table.get_gamma_hdd(2, 3, 3);
-                                    double w_h2_tautau = table.get_gamma_hll(2, 3, 3);
-                                    double w_h2_WW     = table.get_gamma_hvv(2, 3);
-                                    double w_h2_ZZ     = table.get_gamma_hvv(2, 2);
-                                    double w_h2_gaga   = table.get_gamma_hgaga(2);
-
-                                    // 0319                                    
-                                    // get_gamma_hZga(int h=2)
-                                    // get_gamma_hgg(int h=2)
-                                    // get_gamma_hhh(int h=2, int h1=1, int h2=1) 
-                                    double w_h2_Zga = table.get_gamma_hZga(2);
-                                    double w_h2_gg = table.get_gamma_hgg(2);
-                                    double w_h2_hh = table.get_gamma_hhh(2,1,1);
-
-                                    double w_total_h2  = table.get_gammatot_h(2);
-
-                                    double br_h2_gaga  = (w_total_h2 > 1e-12) ? w_h2_gaga / w_total_h2 : 0.0;
-
-                                    // Guardar la fila de resultados en el buffer local
-                                    vector<double> row = {
-                                        m_phi, mA,
-                                        alpha, beta,
-                                        lambda6, lambda7,
-                                        m12,
-                                        sin_ba, tan_beta,
-                                        positivity_ok     ? 1.0 : 0.0,
-                                        unitarity_ok      ? 1.0 : 0.0,
-                                        perturbativity_ok ? 1.0 : 0.0,
-                                        w_h2_bb,
-                                        w_h2_tautau,
-                                        w_h2_WW,
-                                        w_h2_ZZ,
-                                        w_h2_gaga,
-                                        w_h2_Zga,
-                                        w_h2_gg,
-                                        w_h2_hh,
-                                        w_total_h2,
-                                        br_h2_gaga
-                                    };
-                                    thread_local_rows.push_back(row);
-
-                                    // Actualizar mejor BR local
-                                    if (positivity_ok && w_total_h2 > 0.0) {
-                                        if (br_h2_gaga > local_bestBR) {
-                                            local_bestBR = br_h2_gaga;
-                                            local_bestParams = {m_phi, mA, alpha, beta, lambda6, lambda7, m12};
-                                        }
-                                    }
-
-
-                                } // end for i_mA
-                            } // end for i_mphi
-
-                            // Escribir en el archivo principal de resultados
-                            #pragma omp critical
-                            {
-                                for (auto &row : thread_local_rows) {
-                                    write_csv_row(results, row);
-                                }
-                                thread_local_rows.clear();
-
-                                // Actualizar mejor BR global
-                                if (local_bestBR > g_bestBR) {
-                                    g_bestBR = local_bestBR;
-                                    g_bestParams = local_bestParams;
-                                }
-                                // ----- mostrar avance del programa -----------
-                                current_iteration += 1.0;
-                                double elapsed = duration<double>(
-                                    high_resolution_clock::now() - start_time
-                                ).count();
-                                double progress = (current_iteration / total_iterations) * 100.0;
-                                double est_time_left = (elapsed / current_iteration)
-                                                        * (total_iterations - current_iteration);
-
-                                cout << fixed << setprecision(2)
-                                        << "Progress: " << progress << "% | "
-                                        << "Elapsed: " << (elapsed / 60.0) << " min | "
-                                        << "ETA: " << (est_time_left / 60.0) << " min"
-                                        << "\r" << flush;
-
-
-                            }
-
-                        } // end #pragma omp parallel
-                    } // end for i_beta
-                } // end for i_alpha
-            } // end for i_m12
-        } // end for i_l7
-    } // end for i_l6
-
-    // Cerrar archivo de resultados
     results.close();
-    cout << "\n\nScan completed. Results saved to " << output_file << endl;
-    cout << "Best BR(h->gaga) found = " << g_bestBR << endl;
+    cout << "\n\nEscaneo completo.\n";
+
+    #ifdef SPEED_TEST
+    auto end = Clock::now();
+    double secs = Duration(end - start).count();
+    std::cerr << "== Speed test: tiempo total de escaneo = " << secs << " s ==\n";
+    #endif
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc < 3) {
-        cerr << "Usage: " << argv[0] << " <config_file> <output_csv>\n";
+        std::cerr << "Uso: " << argv[0]
+                  << " <output_csv> <N_mphi> [delta_m12_exp] [N_m12] [yukawa_type]\n";
         return 1;
     }
 
-    string config_file = argv[1];
-    string output_file = argv[2];
+    std::string output_csv = argv[1];
 
-    try {
-        ConfigPhys cfg = readPhysConfig(config_file);
-        perform_param_scan_withGD(cfg, output_file);
-    } catch(const exception &e) {
-        cerr << "Error: " << e.what() << endl;
+    // Obligatorio
+    int N_mphi = atoi(argv[2]);
+    if (N_mphi < 1) {
+        std::cerr << "N_mphi debe ser positivo.\n";
         return 1;
     }
+
+    // Defaults
+    int delta_m12_exp = 13;  // default → paso ~10^-13
+    int N_m12  = 10;
+    int y_type = 1;
+
+    if (argc > 3) {
+        delta_m12_exp = atoi(argv[3]);
+        if (delta_m12_exp < 1) {
+            std::cerr << "delta_m12_exp debe ser >= 1.\n";
+            return 1;
+        }
+    }
+
+    if (argc > 4) {
+        N_m12 = atoi(argv[4]);
+        if (N_m12 < 1) {
+            std::cerr << "N_m12 debe ser positivo.\n";
+            return 1;
+        }
+    }
+
+    if (argc > 5) {
+        y_type = atoi(argv[5]);
+        if (y_type < 1 || y_type > 4) {
+            std::cerr << "yukawa_type debe estar entre 1 y 4.\n";
+            return 1;
+        }
+    }
+
+    FixedParams fp;
+    fp.mA       = 300.0;
+    fp.sin_ba   = 0.99;
+    fp.tan_beta = 10.0;
+    fp.lambda6  = 0.1;
+    fp.lambda7  = 0.0;
+
+    perform_param_scan(
+        y_type,
+        130.0, 300.0,
+        N_mphi, N_m12, delta_m12_exp,
+        fp.mA, fp.sin_ba, fp.tan_beta,
+        fp.lambda6, fp.lambda7,
+        output_csv
+    );
+
     return 0;
 }
