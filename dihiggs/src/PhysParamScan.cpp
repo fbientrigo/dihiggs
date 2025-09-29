@@ -90,20 +90,22 @@ void perform_param_scan(
 
     double mh = 125.0;
 
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double beta  = std::atan(tan_beta);
+    double alpha = beta - std::asin(sin_ba);
+    
     #pragma omp parallel for schedule(dynamic)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
         double m_phi = mphi_min + i_phi * step_mphi;
         for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
 
             vector<vector<double>> buffer;
-
-            double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
-            double cb  = inv;
-            double sb  = tan_beta * inv;
-            double cba = std::sqrt(1.0 - sin_ba*sin_ba);
-
-            double ca = cb * cba + sb * sin_ba;
-            double sa = sb * cba - cb * sin_ba;
 
             double m12_base = (std::pow(m_phi, 2)*std::pow(ca, 2) +
                                std::pow(mh, 2)*std::pow(sa, 2))/tan_beta
@@ -150,8 +152,7 @@ void perform_param_scan(
             double w_tot    = tab.get_gammatot_h(2);
             double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
-            double beta  = std::atan(tan_beta);
-            double alpha = beta - std::asin(sin_ba);
+
 
             double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
             model.get_param_gen( lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);

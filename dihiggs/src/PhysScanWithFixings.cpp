@@ -114,6 +114,8 @@ void perform_param_scan_fixings(
     // fixed param
     double mh = 125.0;
 
+    double beta  = std::atan(tan_beta);
+    double alpha = beta - std::asin(sin_ba);
     //#pragma omp for collapse(2) schedule(dynamic)
     #pragma omp parallel for schedule(dynamic)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
@@ -183,8 +185,6 @@ void perform_param_scan_fixings(
             // cout << "w_tot" << w_tot << endl;
             double br_gaga = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
-            double beta  = std::atan(tan_beta);
-            double alpha = beta - std::asin(sin_ba);
 
             // Guardar fila
             buffer.push_back( std::vector<double>{
