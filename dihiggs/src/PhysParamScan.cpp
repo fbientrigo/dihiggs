@@ -60,46 +60,68 @@ struct FixedParams {
 };
 
 
-// ------- m12 base ---------
+// ======= m12 range con límites =======
 std::pair<double,double>
 find_m12_range(double m12_guess,
                double mh, double mphi,
-               double sin_ba, double tanb,
-               double lambda6, double lambda7)
+               double sa, double ca, double sb, double cb,
+               double tanb,
+               double lambda6, double lambda7,
+               double TOL = 1e-3)
 {
+    constexpr double M12_ABS_MAX = 1.0e8;   // GeV^2  (ajusta a tu escala física)
+    constexpr int    MAX_STEPS   = 64;      // tope de iteraciones de expansión/bisección
+
     auto valid = [&](double x){
-        double l1 = calc_lambda1(mh, mphi, x, sin_ba, tanb, lambda6, lambda7);
-        double l2 = calc_lambda2(mh, mphi, x, sin_ba, tanb, lambda6, lambda7);
-        return (l1>0.0 && l1<LMAX && l2>0.0 && l2<LMAX);
+        if (std::isnan(x) || std::abs(x) > M12_ABS_MAX) return false;
+        double l1 = calc_lambda1(mh, mphi, x, sa, ca, sb, cb, tanb, lambda6, lambda7, VEV);
+        double l2 = calc_lambda2(mh, mphi, x, sa, ca, sb, cb, tanb, lambda6, lambda7, VEV);
+        return (l1 > 0.0 && l1 < LMAX && l2 > 0.0 && l2 < LMAX);
     };
 
-    // --- Bracket inferior ---
     double low_ok = m12_guess;
     double low_bad = std::max(0.0, m12_guess);
-    while (valid(low_bad) && low_bad>0.0) {
+    int steps = 0;
+    // --- Bracket inferior ---
+    while (valid(low_bad) && low_bad > 0.0 &&
+           steps++ < MAX_STEPS && low_bad < M12_ABS_MAX)
+    {
         low_ok  = low_bad;
-        low_bad *= 0.5;              // exponencial hacia abajo
+        low_bad *= 0.5;
     }
 
-    // --- Bracket superior ---
     double up_ok = m12_guess;
     double up_bad = m12_guess;
-    while (valid(up_bad)) {
+    steps = 0;
+    // --- Bracket superior ---
+    while (valid(up_bad) &&
+           steps++ < MAX_STEPS && up_bad < M12_ABS_MAX)
+    {
         up_ok = up_bad;
-        up_bad *= 2.0;               // exponencial hacia arriba
+        up_bad *= 2.0;
     }
 
     // --- Bisección inferior ---
-    while ((low_ok - low_bad) > TOL) {
+    steps = 0;
+    while ((low_ok - low_bad) > TOL &&
+           steps++ < MAX_STEPS)
+    {
         double mid = 0.5 * (low_ok + low_bad);
         if (valid(mid)) low_ok = mid; else low_bad = mid;
     }
 
     // --- Bisección superior ---
-    while ((up_bad - up_ok) > TOL) {
+    steps = 0;
+    while ((up_bad - up_ok) > TOL &&
+           steps++ < MAX_STEPS)
+    {
         double mid = 0.5 * (up_ok + up_bad);
         if (valid(mid)) up_ok = mid; else up_bad = mid;
     }
+
+    // Si se llegó al límite, recortar al máximo permitido
+    low_ok = std::max(0.0, std::min(low_ok, M12_ABS_MAX));
+    up_ok  = std::max(0.0, std::min(up_ok , M12_ABS_MAX));
 
     return {low_ok, up_ok};
 }
@@ -109,7 +131,7 @@ find_m12_range(double m12_guess,
 // --------------------------- main scan-----------------------------
 void perform_param_scan(
     int y_type, double mphi_min, double mphi_max,
-    int N_mphi, int N_m12, int delta_m12_exp,
+    int N_mphi, int N_m12, int TOL,
     double mA_fixed, double sin_ba, double tan_beta,
     double lambda6, double lambda7,
     const string &output_file
@@ -150,20 +172,31 @@ void perform_param_scan(
     double beta  = std::atan(tan_beta);
     double alpha = beta - std::asin(sin_ba);
 
-    #pragma omp parallel for schedule(dynamic)
+    THDM model;
+    SM sm; model.set_SM(sm);
+
+    //#pragma omp parallel for schedule(dynamic)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
         double m_phi = mphi_min + i_phi * step_mphi;
-        for(int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
+        double m12_guess = m12_base(mh, m_phi, sa, ca, sb, cb, 
+            lambda6, lambda7,
+            tan_beta, VEV);
+
+        auto [m12_min, m12_max] = find_m12_range(m12_guess, mh, m_phi,
+                           sa, ca, sb, cb, tan_beta,
+                           lambda6, lambda7, TOL);
+        if (m12_max <= m12_min) {
+            iters_jumped += N_m12;
+            std::cerr << "No valid m12 range at m_phi=" << m_phi << "\n";
+            continue; // No hay rango válido
+        }   
+
+        for (int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
+
+            double m12 = m12_min + (m12_max - m12_min)
+                         * i_m12 / (N_m12 - 1.0);
 
             vector<vector<double>> buffer;
-
-            double m12_base = m12_base(mh, m_phi, sa, ca, sb, cb, 
-                lambda6, lambda7,
-                tan_beta, VEV);
-
-            double delta_m12 = std::pow(10.0, - delta_m12_exp);
-            double m12 = m12_base - 0.5 * N_m12 * delta_m12 + i_m12 * delta_m12;
-
             double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
             double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
 
@@ -174,8 +207,6 @@ void perform_param_scan(
             }
             //#endif
 
-            THDM model;
-            SM sm; model.set_SM(sm);
             bool ok = model.set_param_phys(
                 mh, m_phi,
                 mA_fixed, mA_fixed,
@@ -248,7 +279,11 @@ void perform_param_scan(
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Uso: " << argv[0]
-                  << " <output_csv> <N_mphi> [delta_m12_exp] [N_m12] [yukawa_type]\n";
+                  << " <output_csv> <N_mphi> [tol_exp] [N_m12] [yukawa_type]\n "
+                  << "  - tol_exp: precisión en búsqueda m12 (default 3 → ~10^-3)\n "
+                  << "  - N_m12: número de pasos en m12 (default 10)\n "
+                  << "  - yukawa_type: tipo de acoplos (1-4, default 1)\n";
+                  
         return 1;
     }
 
@@ -262,14 +297,14 @@ int main(int argc, char* argv[]) {
     }
 
     // Defaults
-    int delta_m12_exp = 13;  // default → paso ~10^-13
+    int TOL_exp = 3;  // default → paso ~10^-13
     int N_m12  = 10;
     int y_type = 1;
 
     if (argc > 3) {
-        delta_m12_exp = atoi(argv[3]);
-        if (delta_m12_exp < 1) {
-            std::cerr << "delta_m12_exp debe ser >= 1.\n";
+        TOL_exp = atoi(argv[3]);
+        if (TOL_exp < 1) {
+            std::cerr << "TOL_exp debe ser >= 1.\n";
             return 1;
         }
     }
@@ -297,10 +332,12 @@ int main(int argc, char* argv[]) {
     fp.lambda6  = 0.1;
     fp.lambda7  = 0.0;
 
+    double TOL = std::pow(10.0, -TOL_exp);
+
     perform_param_scan(
         y_type,
         130.0, 300.0,
-        N_mphi, N_m12, delta_m12_exp,
+        N_mphi, N_m12, TOL,
         fp.mA, fp.sin_ba, fp.tan_beta,
         fp.lambda6, fp.lambda7,
         output_csv

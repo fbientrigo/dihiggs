@@ -7,7 +7,11 @@ HIGGSTOOLS_INC    := $(HIGGSTOOLS_PREFIX)/include
 HIGGSTOOLS_LIB    := $(HIGGSTOOLS_PREFIX)/lib
 
 # Flags de compilación
-CXXFLAGS     = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -O2 -Wall
+# CXXFLAGS     = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -O2 -Wall
+
+# Para debugging, usa estas líneas en lugar de la anterior:
+CXXFLAGS = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -Wall -O0 -g
+
 CXXFLAGS += -Wextra -Wpedantic
 
 SPEED_FLAGS  = -DSPEED_TEST
