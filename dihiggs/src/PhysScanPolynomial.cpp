@@ -65,7 +65,7 @@ struct ParamSet {
 
 //static ParamSet g_bestParams;
 static double   g_bestBR = -1.0;
-
+const double VEV = 246.0;
 
 void perform_param_scan_polynomial(
     double mphi_min, double mphi_max, int N_mphi,
@@ -106,6 +106,16 @@ void perform_param_scan_polynomial(
     // fixed param, known higgs
     double mh = 125.0;
 
+    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
+    double cb  = inv;
+    double sb  = tan_beta * inv;
+    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+
+    double ca = cb * cba + sb * sin_ba;
+    double sa = sb * cba - cb * sin_ba;
+    double beta  = std::atan(tan_beta);
+    double alpha = beta - std::asin(sin_ba);
+
     //#pragma omp for collapse(2) schedule(dynamic)
     #pragma omp parallel for schedule(dynamic)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
@@ -126,12 +136,9 @@ void perform_param_scan_polynomial(
             double m12   = m12_pol - 0.5 * N_m12 * delta_m12  + i_m12 * delta_m12;
             
             
-            double l1 = calc_lambda1(mh, m_phi,
-                          m12, sin_ba, tan_beta,
-                          lambda6, lambda7);
-            double l2 = calc_lambda2(mh, m_phi,
-                          m12, sin_ba, tan_beta,
-                          lambda6, lambda7);
+            double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
+            double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
+
 
             #ifdef DEBUG
                 cout << "m12:" << m12 << "l1,l2" << l1 << "," << l2 << endl;

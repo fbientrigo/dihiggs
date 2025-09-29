@@ -244,44 +244,40 @@ void print_progress(double progress, double elapsed_time,
     cout.flush();
 }
 
+/* 
+    double mh = 125.0;
 
-double calc_lambda1(double mh, double mH,
-                          double m12_2, double sin_ba, double tan_beta,
-                          double lam6, double lam7) {
-    // Reconstruir beta y b–alpha sin usar atan/asin
     double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
     double cb  = inv;
     double sb  = tan_beta * inv;
     double cba = std::sqrt(1.0 - sin_ba*sin_ba);
 
-    // Reconstruir alpha
     double ca = cb * cba + sb * sin_ba;
     double sa = sb * cba - cb * sin_ba;
-    double tb = tan_beta;
+    double beta  = std::atan(tan_beta);
+    double alpha = beta - std::asin(sin_ba);
 
+*/
+
+double calc_lambda1(double mh, double mH,
+                          double m12_2,
+                          double sa, double ca, double sb, double cb, double tan_beta,
+                          double lam6, double lam7, double VEV) {
     // Términos de lambda 1
     double term1 = (mH*mH * ca*ca + mh*mh * sa*sa) / (VEV*VEV * cb*cb);
-    double term2 = 1.5 * lam6 * tb;
-    double term3 = (m12_2)/(VEV*VEV) * tb/(cb*cb);
-    double term4 = 0.5 * lam7 * tb*tb*tb;
+    double term2 = 1.5 * lam6 * tan_beta;
+    double term3 = (m12_2)/(VEV*VEV) * tan_beta/(cb*cb);
+    double term4 = 0.5 * lam7 * tan_beta*tan_beta*tan_beta;
     double l1    = term1 - term2 - term3 + term4;
     return l1;
 }
 
 double calc_lambda2(double mh, double mH,
-                          double m12_2, double sin_ba, double tan_beta,
-                          double lam6, double lam7) {
-    // Reconstruir beta y b–alpha
-    double inv = 1.0/std::sqrt(1.0 + tan_beta*tan_beta);
-    double cb  = inv;
-    double sb  = tan_beta * inv;
-    double cba = std::sqrt(1.0 - sin_ba*sin_ba);
+                          double m12_2,
+                          double sa, double ca, double sb, double cb, double tan_beta,
+                          double lam6, double lam7, double VEV) {
 
-    // Reconstruir alpha
-    double ca = cb * cba + sb * sin_ba;
-    double sa = sb * cba - cb * sin_ba;
-    double tb = tan_beta;
-    double ct = 1.0/tb;
+    double ct = 1.0/tan_beta;
 
     // Términos de lambda_2
     double term1 = (mh*mh * ca*ca + mH*mH * sa*sa) / (VEV*VEV * sb*sb);
@@ -296,6 +292,17 @@ bool check_lambda(double l1) {
     return (l1*l1) < (16.0 * PI * PI);
 }
 
+double m12_base(double mh, double m_phi, double sa, double ca, double sb, double cb, double tan_beta, double VEV) {
+    double m12_base_f2 = (std::pow(m_phi, 2)*std::pow(sa, 2) +
+                    std::pow(mh, 2)*std::pow(ca, 2))*tan_beta
+                    + (VEV*VEV/2)*(lambda6*std::pow(cb,2) - 3*lambda7*std::pow(sb,2));
+
+    double m12_base_f1 = (std::pow(m_phi, 2)*std::pow(ca, 2) +
+                    std::pow(mh, 2)*std::pow(sa, 2))/tan_beta
+                    + (VEV*VEV/2)*(lambda7*std::pow(sb,2) - 3*lambda6*std::pow(cb,2));
+    return (m12_base_f1 + m12_base_f2) / 2.0; // Promedio para simetría
+
+}
 
 // Scan del modelo en archivo json
 

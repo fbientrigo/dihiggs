@@ -103,16 +103,21 @@ void print_progress(double progress, double elapsed_time,
                     double total_iterations, double current_iteration);
 
 double calc_lambda1(double mh, double mH,
-                          double m12_2, double sin_ba, double tan_beta,
-                          double lam6, double lam7);
+                          double m12_2,
+                          double sa, double ca, double sb, double cb, double tan_beta,
+                          double lam6, double lam7, double VEV);
 
  
 double calc_lambda2(double mh, double mH,
-                          double m12_2, double sin_ba, double tan_beta,
-                          double lam6, double lam7);
+                          double m12_2,
+                          double sa, double ca, double sb, double cb, double tan_beta,
+                          double lam6, double lam7, double VEV);
 
 
 bool check_lambda(double l1);
+
+double m12_base(double mh, double m_phi, double sa, double ca, double sb, double cb, double tan_beta, double VEV);
+
 
 #pragma once
 #include <string>
