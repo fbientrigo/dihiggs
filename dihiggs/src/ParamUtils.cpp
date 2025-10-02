@@ -296,6 +296,7 @@ double m12_base(double mh, double m_phi, double sa, double ca,
     double sb, double cb, 
     double lambda6, double lambda7,
     double tan_beta, double VEV) {
+    // se observa que f2 entrega valores enormes, alejados de f1
     double m12_base_f2 = (std::pow(m_phi, 2)*std::pow(sa, 2) +
                     std::pow(mh, 2)*std::pow(ca, 2))*tan_beta
                     + (VEV*VEV/2)*(lambda6*std::pow(cb,2) - 3*lambda7*std::pow(sb,2));
@@ -303,8 +304,8 @@ double m12_base(double mh, double m_phi, double sa, double ca,
     double m12_base_f1 = (std::pow(m_phi, 2)*std::pow(ca, 2) +
                     std::pow(mh, 2)*std::pow(sa, 2))/tan_beta
                     + (VEV*VEV/2)*(lambda7*std::pow(sb,2) - 3*lambda6*std::pow(cb,2));
-    return (m12_base_f1 + m12_base_f2) / 2.0; // Promedio para simetría
-
+    //return (m12_base_f1 + m12_base_f2) / 2.0; // Promedio para simetría
+    return m12_base_f1; // parece mejor
 }
 
 // Scan del modelo en archivo json
