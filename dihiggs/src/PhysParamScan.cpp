@@ -77,10 +77,11 @@ inline bool check_lambda(double l){ return (l > 0.0 && l < LMAX); }
 
 // ===== Paso físico "seguro" Δ =====
 inline double delta_safe(double /*sa*/, double /*ca*/, double sb, double cb, double tanb){
+    // uso de la expresion de l1
     // Δ = 2π v^2 (cotβ cos^2β + tanβ sin^2β)
     const double cotb = 1.0 / tanb;
-    const double term = cotb * cb*cb + tanb * sb*sb;
-    return 2.0 * PI * VEV * VEV * term;  // GeV^2
+    const double term = cotb * cb*cb; // + tanb * sb*sb;
+    return 4.0 * PI * VEV * VEV * term;  // GeV^2
 }
 
 // ===== Validación de un punto dado m12 =====

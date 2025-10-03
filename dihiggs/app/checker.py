@@ -37,3 +37,4 @@ for i in range(len(conds)):
 # intersección triple
 mask_all = (df["positivity_ok"] == 1) & (df["unitarity_ok"] == 1) & (df["perturbativity_ok"] == 1)
 print(f"\nIntersección triple: {pct(mask_all):6.2f}%")
+print(f"\n\t N=",mask_all.sum())
