@@ -1,0 +1,5 @@
+Tips para llamar el codigo:
+- N_mphi debe ser 16, de manera que pueda sub dividirse con gracia para hacer partes de calculo
+	permitiendo dividir en 2 el trabajo
+	Si estamos entre 130, 300
+	la mitad es 215
