@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pandas as pd
 import sys
+import numpy as np
 
 if len(sys.argv) < 2:
     print("Uso: python check_ok.py <archivo.csv>")
@@ -24,7 +25,7 @@ print(f"Total puntos: {total}\n")
 
 # porcentajes individuales
 for c in conds:
-    print(f"{c:20s}: {pct(df[c] == 1):6.2f}%")
+    print(f"{c:20s}: {pct(df[c] == 1):6.2f}%, n={np.sum(df[c]==1)}")
 
 # intersecciones de pares
 print("\nIntersecciones pares:")

@@ -22,6 +22,10 @@ mlpython/data_train/
 # mlpython/outs/**  # idem
 
 # binarios y builds
+/dihiggs/app/PostProcessHBHS
+/dihiggs/app/Oracle
+/dihiggs/app/PhysParamScan
+/dihiggs/app/HBHS_testing
 *.o
 *.parquet
 *.joblib
