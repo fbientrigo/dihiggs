@@ -1,32 +1,10 @@
 /** 
  * @file PhysParamScan.cpp
  * @brief Escaneo de parámetros m_phi y m12 con búsqueda **lineal** desde m12_base.
- *
- * Estrategia simple y trazable:
- *  - Tomamos m12_guess = m12_base(...).
- *  - Definimos un paso físico seguro: Δ = 2π v^2 (cotβ cos^2β + tanβ sin^2β).
- *  - Si el guess es válido (0 < λ1,λ2 < 4π), avanzamos **de a poco** ±Δ·f hasta que deje de cumplir
- *    y tomamos esos extremos como [m12_min, m12_max]. Si el guess no es válido, buscamos una semilla
- *    válida en un radio ±Δ.
- *  - Luego muestreamos N_m12 valores uniformes en [m12_min, m12_max] y evaluamos el modelo.
- *
- * Ventajas: código directo, sin bisección; excelente para depuración con logs.
- *
- * Uso:
- *   ./PhysParamScan <output_csv> <N_mphi> [tol_exp] [N_m12] [yukawa_type]
- *   - tol_exp: precisión de reporte (no aplica a la búsqueda lineal; default 3 → 10^-3)
- *   - N_m12: puntos a muestrear dentro del rango encontrado (default 10)
- *   - yukawa_type: 1–4 (default 1)
- *
- * Dependencias:
- *   - 2HDMC ( -l2HDMC ), GSL ( -lgsl -lgslcblas -lm ), OpenMP (opcional)
- *
- * Autor: Fabian Trigo — versión lineal simplificada (oct-2025)
+ * (… descripción original …)
  */
 
-// Activa chequeo rápido de λ1,λ2 antes de construir el modelo completo
 #define SPEED_TEST 1
-// Activa logs de diagnóstico locales (0/1)
 #ifndef RLOG
 #define RLOG 0
 #endif
@@ -34,12 +12,15 @@
 #include "THDM.h"
 #include "Constraints.h"
 #include "DecayTable.h"
-#include "ParamUtils.hpp"  // CSV & config utilities: write_csv_header, write_csv_row
+#include "ParamUtils.hpp"
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <iomanip>
 #include <chrono>
+#include <thread>
+#include <map>
+#include <cstring>
 #ifdef _OPENMP
   #include <omp.h>
 #endif
@@ -63,30 +44,24 @@ struct FixedParams {
     double lambda7;
 };
 
-// ===== Prototipos (debes tener estas funciones en tu proyecto) =====
-// calc_lambda1/2 deben existir con esta firma (ajusta si tu firma difiere)
+// ===== Prototipos =====
 double calc_lambda1(double mh, double mphi, double m12,
                     double sa, double ca, double sb, double cb,
                     double tanb, double lambda6, double lambda7, double v);
-
 double calc_lambda2(double mh, double mphi, double m12,
                     double sa, double ca, double sb, double cb,
                     double tanb, double lambda6, double lambda7, double v);
-
 inline bool check_lambda(double l){ return (l > 0.0 && l < LMAX); }
 
 // ===== Paso físico "seguro" Δ =====
 inline double delta_safe(double /*sa*/, double /*ca*/, double sb, double cb, double tanb){
-    // uso de la expresion de l1
-    // Δ = 2π v^2 (cotβ cos^2β + tanβ sin^2β)
     const double cotb = 1.0 / tanb;
     const double term = cotb * cb*cb; // + tanb * sb*sb;
     return 4.0 * PI * VEV * VEV * term;  // GeV^2
 }
 
-// ===== Validación de un punto dado m12 =====
+// ===== Validación =====
 struct Lpair { double l1, l2; };
-
 inline bool valid_point(double mh, double mphi, double m12,
                         double sa, double ca, double sb, double cb,
                         double tanb, double lambda6, double lambda7,
@@ -99,7 +74,7 @@ inline bool valid_point(double mh, double mphi, double m12,
     return check_lambda(l1) && check_lambda(l2);
 }
 
-// ===== Búsqueda lineal de rango [m12_min, m12_max] desde m12_guess =====
+// ===== Búsqueda lineal de rango [m12_min, m12_max] =====
 pair<double,double>
 find_m12_range_linear(double m12_guess,
                       double mh, double mphi,
@@ -109,20 +84,9 @@ find_m12_range_linear(double m12_guess,
                       int    max_steps_each_dir = 2048)
 {
     constexpr double M12_ABS_MAX = 1.0e8; // GeV^2 — cota dura
-
-    // Paso base físico
     double d_safe = delta_safe(0,0,sb,cb,tanb);
-    if (!std::isfinite(d_safe) || d_safe <= 0) d_safe = 1.0; // fallback
-
+    if (!std::isfinite(d_safe) || d_safe <= 0) d_safe = 1.0;
     const double step = step_frac * d_safe / max_steps_each_dir ;
-
-    // 0) si el guess no es válido, probamos un radio local ±step
-#if RLOG
-    cerr << "[RANGE] mphi="<<mphi<<"  guess="<<m12_guess
-         <<"  l1="<<gg.l1<<" l2="<<gg.l2
-         <<"  d_safe="<<d_safe<<"  step="<<step<<"\n";
-#endif
-
 
     // 1) Descenso lineal
     double m12_min = m12_guess;
@@ -132,9 +96,14 @@ find_m12_range_linear(double m12_guess,
         if (!valid_point(mh, mphi, cand, sa, ca, sb, cb, tanb, lambda6, lambda7)) break;
         m12_min = cand;
     }
-
     // 2) Ascenso lineal
     double m12_max = m12_guess;
+    for (int k=0; k<max_steps_each_dir; ++k){
+        double cand = m12_max + step;
+        if (cand < 0.0 || cand > M12_ABS_MAX) break;
+        if (!valid_point(mh, mphi, cand, sa, ca, sb, cb, tanb, lambda6, lambda7)) break;
+        m12_max = cand;
+    }
 
 #if RLOG
     Lpair llo{}, lup{};
@@ -195,14 +164,11 @@ void perform_param_scan(
 
     THDM model; SM sm; model.set_SM(sm);
 
-    // Bucle externo (puedes reactivar OpenMP cuando quieras)
     for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
         const double m_phi = mphi_min + i_phi * step_mphi;
 
-        // Semilla física
         const double m12_guess = m12_base(mh, m_phi, sa, ca, sb, cb, lambda6, lambda7, tan_beta, VEV);
 
-        // Rango lineal desde la semilla
         auto [m12_min, m12_max] = find_m12_range_linear(
             m12_guess, mh, m_phi, sa, ca, sb, cb, tan_beta, lambda6, lambda7,
             /*step_frac=*/0.25, /*max_steps_each_dir=*/4096);
@@ -216,12 +182,10 @@ void perform_param_scan(
         for (int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
             const double m12 = m12_min + (m12_max - m12_min) * ( (N_m12==1)? 0.0 : (double)i_m12 / (N_m12 - 1) );
 
-            // Pre-filtro λ1,λ2 (rápido)
             const double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
             const double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
             if (!check_lambda(l1) || !check_lambda(l2)) { iters_jumped++; continue; }
 
-            // Modelo completo
             model.set_yukawas_type(y_type);
             const bool ok = model.set_param_phys(mh, m_phi, mA_fixed, mA_fixed, sin_ba, lambda6, lambda7, m12, tan_beta);
             if (!ok) { iters_jumped++; continue; }
@@ -275,57 +239,154 @@ void perform_param_scan(
     cout << "\n\nEscaneo completo.\n";
 }
 
+/* ===================== CLI con flags + posicional ===================== */
 
+struct CLI {
+    // valores (con defaults del programa original)
+    string  output_csv;
+    int     N_mphi      = -1;
+    double  tan_beta    = -1.0;
+    int     TOL_exp     = 3;
+    int     N_m12       = 10;
+    int     y_type      = 1;
+    // extras opcionales
+    double  mphi_min    = 130.0;
+    double  mphi_max    = 300.0;
+    double  mA          = 300.0;
+    double  sin_ba      = 0.999;
+    double  lambda6     = 0.1;
+    double  lambda7     = 0.0;
+    int     threads     = 0;    // 0 => no fijar
+};
+
+// parsea --key value o --key=value
+static map<string,string> parse_kv_args(int argc, char* argv[]) {
+    map<string,string> kv;
+    for (int i=1;i<argc;++i){
+        const char* s = argv[i];
+        if (std::strncmp(s,"--",2)!=0) continue;
+        const char* eq = std::strchr(s,'=');
+        if (eq){
+            string k(s+2, eq-(s+2));
+            string v(eq+1);
+            kv[k]=v;
+        }else{
+            string k(s+2);
+            if (i+1<argc && std::strncmp(argv[i+1],"--",2)!=0){
+                kv[k]=argv[i+1];
+                ++i;
+            }else{
+                kv[k]="1"; // flag booleana (no usamos aquí, pero queda soportado)
+            }
+        }
+    }
+    return kv;
+}
+
+static bool to_int(const map<string,string>& kv, const string& k, int& out){
+    auto it=kv.find(k); if(it==kv.end()) return false; out=std::stoi(it->second); return true;
+}
+static bool to_double(const map<string,string>& kv, const string& k, double& out){
+    auto it=kv.find(k); if(it==kv.end()) return false; out=std::stod(it->second); return true;
+}
+static bool to_string(const map<string,string>& kv, const string& k, string& out){
+    auto it=kv.find(k); if(it==kv.end()) return false; out=it->second; return true;
+}
+
+static void print_usage(const char* prog){
+    cerr <<
+    "Uso (posicional):\n  " << prog <<
+    " <output_csv> <N_mphi> <tan_beta> [tol_exp] [N_m12] [yukawa_type]\n\n"
+    "Flags equivalentes (opcionales, tienen prioridad):\n"
+    "  --output FILE         \n"
+    "  --N_mphi INT          \n"
+    "  --tan_beta FLOAT      \n"
+    "  --tol_exp INT         \n"
+    "  --N_m12 INT           \n"
+    "  --yukawa_type {1..4}  \n"
+    "Extras opcionales:\n"
+    "  --mphi_min FLOAT   (def 130)\n"
+    "  --mphi_max FLOAT   (def 300)\n"
+    "  --mA FLOAT         (def 300)\n"
+    "  --sin_ba FLOAT     (def 0.999)\n"
+    "  --lambda6 FLOAT    (def 0.1)\n"
+    "  --lambda7 FLOAT    (def 0.0)\n"
+    "  --threads INT      (fija hilos OpenMP si está habilitado)\n";
+}
+
+/* ===================== main ===================== */
 int main(int argc, char* argv[]) {
-    if (argc < 4) {
-        std::cerr << "Uso: " << argv[0]
-                  << " <output_csv> <N_mphi> <tan_beta> [tol_exp] [N_m12] [yukawa_type]\n "
-                  << "  - tan_beta: valor obligatorio\n "
-                  << "  - tol_exp: precisión de reporte (default 3 → 10^-3)\n "
-                  << "  - N_m12: número de puntos en m12 (default 10)\n "
-                  << "  - yukawa_type: 1–4 (default 1)\n";
+    CLI cli;
+    // 1) Posicional (como antes)
+    if (argc >= 4 && strncmp(argv[1],"--",2)!=0) {
+        cli.output_csv = argv[1];
+        cli.N_mphi     = std::atoi(argv[2]);
+        cli.tan_beta   = std::atof(argv[3]);
+        if (argc > 4 && strncmp(argv[4],"--",2)!=0) {
+            cli.TOL_exp = std::atoi(argv[4]);
+            if (cli.TOL_exp < 1) { std::cerr << "TOL_exp debe ser >= 1.\n"; return 1; }
+        }
+        if (argc > 5 && strncmp(argv[5],"--",2)!=0) {
+            cli.N_m12 = std::atoi(argv[5]);
+        }
+        if (argc > 6 && strncmp(argv[6],"--",2)!=0) {
+            cli.y_type = std::atoi(argv[6]);
+        }
+    }
+
+    // 2) Flags (tienen prioridad sobre posicional)
+    auto kv = parse_kv_args(argc, argv);
+    to_string(kv, "output",      cli.output_csv);
+    to_int   (kv, "N_mphi",      cli.N_mphi);
+    to_double(kv, "tan_beta",    cli.tan_beta);
+    to_int   (kv, "tol_exp",     cli.TOL_exp);
+    to_int   (kv, "N_m12",       cli.N_m12);
+    to_int   (kv, "yukawa_type", cli.y_type);
+
+    to_double(kv, "mphi_min",    cli.mphi_min);
+    to_double(kv, "mphi_max",    cli.mphi_max);
+    to_double(kv, "mA",          cli.mA);
+    to_double(kv, "sin_ba",      cli.sin_ba);
+    to_double(kv, "lambda6",     cli.lambda6);
+    to_double(kv, "lambda7",     cli.lambda7);
+    to_int   (kv, "threads",     cli.threads);
+
+    // 3) Validaciones mínimas
+    if (cli.output_csv.empty() || cli.N_mphi < 1 || cli.tan_beta <= 0.0) {
+        print_usage(argv[0]);
         return 1;
     }
+    if (cli.N_m12 < 1) { std::cerr << "N_m12 debe ser positivo.\n"; return 1; }
+    if (cli.y_type < 1 || cli.y_type > 4) { std::cerr << "yukawa_type debe estar entre 1 y 4.\n"; return 1; }
 
-    const std::string output_csv = argv[1];
-
-    // Obligatorios
-    const int N_mphi = std::atoi(argv[2]);
-    if (N_mphi < 1) { std::cerr << "N_mphi debe ser positivo.\n"; return 1; }
-
-    const double tan_beta = std::atof(argv[3]);
-    if (tan_beta <= 0.0) { std::cerr << "tan_beta debe ser positivo.\n"; return 1; }
-
-    // Defaults
-    int TOL_exp = 3;  // solo informativo en esta versión lineal
-    int N_m12   = 10;
-    int y_type  = 1;
-
-    if (argc > 4) {
-        TOL_exp = std::atoi(argv[4]);
-        if (TOL_exp < 1) { std::cerr << "TOL_exp debe ser >= 1.\n"; return 1; }
+    // 4) Configurar/Reportar hilos/cores
+    unsigned hw = std::thread::hardware_concurrency();
+#ifdef _OPENMP
+    if (cli.threads > 0) omp_set_num_threads(cli.threads);
+    int used = omp_get_max_threads();
+    cout << "[INFO] OpenMP habilitado. Hilos: " << used
+         << " (hardware_concurrency=" << (hw? hw : 0) << ")\n";
+#else
+    if (cli.threads > 0) {
+        cout << "[WARN] OpenMP no está habilitado en compilación; --threads será ignorado.\n";
     }
-    if (argc > 5) {
-        N_m12 = std::atoi(argv[5]);
-        if (N_m12 < 1) { std::cerr << "N_m12 debe ser positivo.\n"; return 1; }
-    }
-    if (argc > 6) {
-        y_type = std::atoi(argv[6]);
-        if (y_type < 1 || y_type > 4) { std::cerr << "yukawa_type debe estar entre 1 y 4.\n"; return 1; }
-    }
+    cout << "[INFO] OpenMP deshabilitado. Ejecutando en 1 hilo. "
+         << "Cores detectados: " << (hw? hw : 0) << "\n";
+#endif
 
-    FixedParams fp{ /*mA*/300.0, /*sin_ba*/0.999, tan_beta, /*lambda6*/0.1, /*lambda7*/0.0 };
+    // 5) Parámetros fijos (permitimos override por flags)
+    FixedParams fp{ cli.mA, cli.sin_ba, cli.tan_beta, cli.lambda6, cli.lambda7 };
 
-    // Nota: TOL no se usa en la búsqueda lineal, se mantiene por compatibilidad de firma
-    const double TOL = std::pow(10.0, -TOL_exp);
+    const double TOL = std::pow(10.0, -cli.TOL_exp);
 
+    // 6) Ejecutar
     perform_param_scan(
-        y_type,
-        /*mphi_min*/130.0, /*mphi_max*/300.0,
-        N_mphi, N_m12, TOL,
+        cli.y_type,
+        cli.mphi_min, cli.mphi_max,
+        cli.N_mphi, cli.N_m12, TOL,
         fp.mA, fp.sin_ba, fp.tan_beta,
         fp.lambda6, fp.lambda7,
-        output_csv
+        cli.output_csv
     );
 
     return 0;
