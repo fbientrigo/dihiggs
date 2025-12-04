@@ -35,3 +35,16 @@ mlpython/data_train/
 *.ckpt
 *.so
 *.dll
+2hdmc/Demo
+2hdmc/CalcGen
+2hdmc/CalcHiggs
+2hdmc/CalcHMSSM
+2hdmc/CalcHybrid
+2hdmc/CalcInert
+2hdmc/CalcLH
+2hdmc/CalcMSSM
+2hdmc/CalcPhys
+dihiggs/app/PhysParamScan
+dihiggs/app/Oracle
+dihiggs/app/PhysScanWithFixings
+dihiggs/app/PostProcessHBHS
