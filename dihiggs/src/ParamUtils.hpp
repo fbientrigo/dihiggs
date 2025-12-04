@@ -7,10 +7,14 @@
 #include <cmath>
 #include <stdexcept>
 #include <chrono>
+#include <atomic> // Necesario para ScanMonitor
+#include <regex>
+#include <sstream>
 
 // Si quieres usar directamente un namespace o no, es decisión de estilo.
 // using namespace std;
 
+// Estructuras de configuración básicas
 struct Config {
     // Rangos
     double lambda1_min;
@@ -40,7 +44,6 @@ struct Config {
     double beta_min;
     double beta_max;
     double step_beta;
-
 };
 
 struct ConfigPhys {
@@ -71,14 +74,72 @@ struct ConfigPhys {
     double mA_min;
     double mA_max;
     double step_mA;
-
 };
+
+// Estructuras para JSON parsing
+struct QuadraticModel {
+    double a, b, c;
+};
+
+struct SearchSettings {
+    int N_mphi, N_m12;
+    double m12_min, m12_max;
+    double mphi_min, mphi_max;
+};
+
+struct FixedParameters {
+    double mA, sin_ba, tan_beta, lambda6, lambda7;
+};
+
+// =============================================================
+//  Clase ScanMonitor (HPC Real-Time Monitoring)
+// =============================================================
+class ScanMonitor {
+public:
+    // Constructor: recibe el total de iteraciones estimadas para calcular %
+    ScanMonitor(long long total_tasks);
+
+    // Registra intentos (cálculos realizados). Thread-safe (lock-free).
+    // Llamar frecuentemente (o en batches locales).
+    void record_attempts(long long n);
+
+    // Registra puntos válidos y verifica si es hora de imprimir en consola.
+    // IMPORTANTE: Esta función debe llamarse dentro de una sección crítica o manejarse con cuidado
+    // si se llama concurrentemente, ya que imprime en std::cerr.
+    void update_valid_and_report(long long n_valid);
+
+    // Imprime el resumen final
+    void finish();
+
+private:
+    long long total_tasks;
+    std::atomic<long long> global_attempts;
+    std::atomic<long long> global_valid;
+    
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> last_report_time;
+    
+    // Configuración interna
+    const double REPORT_INTERVAL_SEC = 0.5; 
+};
+
+// =============================================================
+//  Funciones Utilitarias (I/O, Config, Física)
+// =============================================================
 
 // Función para leer configuración desde un archivo (opcional)
 Config readConfig(const std::string &filename);
 
 // Lectura de config "física"
 ConfigPhys readPhysConfig(const std::string &filename);
+
+// Lanza std::runtime_error en caso de fallo
+void parse_json_config(
+    const std::string &filename,
+    QuadraticModel    &qm,
+    SearchSettings    &ss,
+    FixedParameters   &fp
+);
 
 // Cálculo de número de pasos
 long stepsCount(double minVal, double maxVal, double step);
@@ -98,21 +159,20 @@ void write_csv_header(std::ofstream &results, const std::vector<std::string> &co
 void write_csv_row(std::ofstream &results, const std::vector<double> &values);
 void write_csv_row(std::ofstream &results, const std::vector<std::string> &values);
 
-// Función para imprimir progreso
+// Función para imprimir progreso (Legacy)
 void print_progress(double progress, double elapsed_time,
                     double total_iterations, double current_iteration);
 
+// Cálculos físicos auxiliares
 double calc_lambda1(double mh, double mH,
-                          double m12_2,
-                          double sa, double ca, double sb, double cb, double tan_beta,
-                          double lam6, double lam7, double VEV);
+                    double m12_2,
+                    double sa, double ca, double sb, double cb, double tan_beta,
+                    double lam6, double lam7, double VEV);
 
- 
 double calc_lambda2(double mh, double mH,
-                          double m12_2,
-                          double sa, double ca, double sb, double cb, double tan_beta,
-                          double lam6, double lam7, double VEV);
-
+                    double m12_2,
+                    double sa, double ca, double sb, double cb, double tan_beta,
+                    double lam6, double lam7, double VEV);
 
 bool check_lambda(double l1);
 
@@ -120,34 +180,3 @@ double m12_base(double mh, double m_phi, double sa, double ca,
     double sb, double cb, 
     double lambda6, double lambda7,
     double tan_beta, double VEV);
-
-
-#pragma once
-#include <string>
-#include <regex>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-
-struct QuadraticModel {
-    double a, b, c;
-};
-
-struct SearchSettings {
-    int N_mphi, N_m12;
-    double m12_min, m12_max;
-    double mphi_min, mphi_max;
-};
-
-struct FixedParameters {
-    double mA, sin_ba, tan_beta, lambda6, lambda7;
-};
-
-// Lanza std::runtime_error en caso de fallo
-void parse_json_config(
-    const std::string &filename,
-    QuadraticModel    &qm,
-    SearchSettings    &ss,
-    FixedParameters   &fp
-);
-

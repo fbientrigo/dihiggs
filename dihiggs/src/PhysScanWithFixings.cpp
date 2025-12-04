@@ -3,6 +3,7 @@
  * @brief Escaneo de parámetros m_phi y lambda1 con parámetros físicos fijos.
  *
  * Refactored to use Analytical Inversion Strategy for m12^2 based on lambda1.
+ * Included Real-Time Statistical Monitoring (VPPM & PPS) with optimized granularity.
  */
 
 #include "THDM.h"
@@ -16,6 +17,7 @@
 #include <omp.h>
 #include <vector>
 #include <chrono>
+#include <atomic> // [MONITORING] Necesario para contadores thread-safe sin bloqueos
 
 using namespace std;
 using namespace std::chrono;
@@ -60,116 +62,199 @@ void perform_param_scan_fixings(
     double step_mphi = (N_mphi > 1) ? (mphi_max - mphi_min)/(N_mphi - 1) : 0.0;
     double step_lam1 = (N_lam1 > 1) ? (lam1_max - lam1_min)/(N_lam1 - 1) : 0.0;
 
-    double total_iters = double(N_mphi) * double(N_lam1);
-    double iters_done  = 0.0;
+    // [MONITORING] Variables estadísticas globales y temporizadores
+    long long total_tasks = (long long)N_mphi * (long long)N_lam1; 
+    std::atomic<long long> global_attempts(0); // Total puntos calculados (válidos + inválidos)
+    std::atomic<long long> global_valid(0);    // Total puntos guardados
+    
+    auto start_time = Clock::now();
+    auto last_report_time = start_time;
+
+    // [HPC ADJUSTMENT] Configuracion de granularidad de reporte
+    const double REPORT_INTERVAL_SEC = 0.5; // Reportar cada 0.5s para feedback rapido
+    const int BATCH_SIZE = 50;              // Forzar escritura/reporte cada 50 puntos validos por hilo
 
     cout << "step_lam1=" << step_lam1 << endl;
     cout << "step_mphi=" << step_mphi << endl;
+    cout << "Total iterations to compute: " << total_tasks << endl;
 
-    auto start = Clock::now();
     g_bestBR = -1.0;
 
     const double mh = 125.0;
 
     // Step A: Precise Angle Initialization
-    const double inv = 1.0 / std::sqrt(1.0 + tan_beta*tan_beta); // 1/sec(beta) = cos(beta) factor
-    const double cb  = inv;                  // cos(beta)
-    const double sb  = tan_beta * inv;       // sin(beta)
-    const double cba = std::sqrt(1.0 - sin_ba*sin_ba); // cos(beta - alpha)
+    const double inv = 1.0 / std::sqrt(1.0 + tan_beta*tan_beta); 
+    const double cb  = inv;                  
+    const double sb  = tan_beta * inv;       
+    const double cba = std::sqrt(1.0 - sin_ba*sin_ba); 
 
     // Physics basis angles needed for lambda inversion
-    const double ca = cb * cba + sb * sin_ba; // cos(alpha)
-    const double sa = sb * cba - cb * sin_ba; // sin(alpha)
+    const double ca = cb * cba + sb * sin_ba; 
+    const double sa = sb * cba - cb * sin_ba; 
     
     // Angles for reporting/logging
     const double beta  = std::atan(tan_beta);
     const double alpha = beta - std::asin(sin_ba);
 
-    #pragma omp parallel for schedule(dynamic)
-    for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
-        vector<vector<double>> buffer;
+    #pragma omp parallel
+    {
+        // [MONITORING] Contador local para evitar contención en el bus de memoria (False Sharing)
+        long long local_attempts = 0; 
         
-        double m_phi = mphi_min + i_phi * step_mphi;
+        vector<vector<double>> buffer;
+        buffer.reserve(BATCH_SIZE); // Pre-reservar memoria
 
-        for(int i_l1 = 0; i_l1 < N_lam1; ++i_l1) {
-            double lambda1 = lam1_min + i_l1 * step_lam1;
-
-            // Step C: Analytical Inversion (m12^2 Calculation)
-            double term_mass = (m_phi*m_phi * ca*ca + mh*mh * sa*sa);
-            double term_l6   = 1.5 * lambda6 * tan_beta;
-            double term_l7   = 0.5 * lambda7 * std::pow(tan_beta, 3);
-            double pre_factor = (term_mass / (VEV*VEV * cb*cb)) - term_l6 + term_l7 - lambda1;
-
-            double m12_sq = pre_factor * (VEV*VEV * cb*cb / tan_beta);
-
-            // Step 3: Validation & Model Setting
-            // Calculate lambda2
-            double l2 = calc_lambda2(mh, m_phi, m12_sq, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
-
-            // Filter
-            if (std::abs(l2) > 4 * PI) continue;
-
-            // Set Model
-            THDM model;
-            SM sm; model.set_SM(sm);
-            bool pset = model.set_param_phys(mh, m_phi, mA_fixed, mA_fixed, sin_ba, lambda6, lambda7, m12_sq, tan_beta);
+        #pragma omp for schedule(dynamic)
+        for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
             
-            if (!pset) continue;
+            double m_phi = mphi_min + i_phi * step_mphi;
 
-            model.set_yukawas_type(1);
+            for(int i_l1 = 0; i_l1 < N_lam1; ++i_l1) {
+                
+                local_attempts++;
+                
+                // Actualizar contadores globales en lotes mas grandes (reduce contencion atomica)
+                if (local_attempts >= 200) {
+                    global_attempts += local_attempts;
+                    local_attempts = 0;
+                }
 
-            // Retrieve generated parameters for logging
-            double lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g;
-            model.get_param_gen(lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g);
+                double lambda1 = lam1_min + i_l1 * step_lam1;
 
-            Constraints check(model);
-            bool pos = check.check_positivity();
-            bool uni = check.check_unitarity();
-            bool pert = check.check_perturbativity();
+                // Step C: Analytical Inversion (m12^2 Calculation)
+                // m12^2 = [ (m_phi^2 ca^2 + mh^2 sa^2)/(v^2 cb^2) - 1.5*l6*tb + 0.5*l7*tb^3 - l1 ] * (v^2 cb^2 / tb)
+                // Se despeja m12 de la ecuacion de lambda1
+                double term_mass = (m_phi*m_phi * ca*ca + mh*mh * sa*sa);
+                double term_l6   = 1.5 * lambda6 * tan_beta;
+                double term_l7   = 0.5 * lambda7 * std::pow(tan_beta, 3);
+                
+                // Pre-factor sin multiplicar por el ultimo termino geometrico
+                // Nota: lambda1 esta restando en la formula despejada
+                double pre_factor = (term_mass / (VEV*VEV * cb*cb)) - term_l6 + term_l7 - lambda1;
 
-            DecayTable tab(model);
-            double w_bb     = tab.get_gamma_hdd(2,3,3);
-            double w_tautau = tab.get_gamma_hll(2,3,3);
-            double w_WW     = tab.get_gamma_hvv(2,3);
-            double w_ZZ     = tab.get_gamma_hvv(2,2);
-            double w_gaga   = tab.get_gamma_hgaga(2);
-            double w_Zga    = tab.get_gamma_hZga(2);
-            double w_gg     = tab.get_gamma_hgg(2);
-            double w_hh     = tab.get_gamma_hhh(2,1,1);
-            double w_tot    = tab.get_gammatot_h(2);
-            double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
+                double m12_sq = pre_factor * (VEV*VEV * cb*cb / tan_beta);
 
-            // Guardar fila
-            buffer.push_back(std::vector<double>{
-                m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12_sq,
-                sin_ba, tan_beta,
-                pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
-                w_bb, w_tautau, w_WW, w_ZZ,
-                w_gaga, w_Zga, w_gg, w_hh,
-                w_tot, br_gaga, lambda1, lam1_g, l2, lam2_g, lam3_g, lam4_g, lam5_g
-            });
+                // Step 3: Validation & Model Setting
+                // Calculate lambda2 con el m12_sq calculado
+                double l2 = calc_lambda2(mh, m_phi, m12_sq, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
+
+                // Filter: Check Perturbativity of lambda2
+                if (std::abs(l2) > 4 * PI) continue;
+
+                // Set Model
+                THDM model;
+                SM sm; model.set_SM(sm);
+                
+                // Usamos m12_sq calculado
+                bool pset = model.set_param_phys(mh, m_phi, mA_fixed, mA_fixed, sin_ba, lambda6, lambda7, m12_sq, tan_beta);
+                
+                if (!pset) continue;
+
+                model.set_yukawas_type(1);
+
+                double lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g;
+                model.get_param_gen(lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g);
+
+                Constraints check(model);
+                bool pos = check.check_positivity();
+                bool uni = check.check_unitarity();
+                bool pert = check.check_perturbativity();
+
+                DecayTable tab(model);
+                double w_bb     = tab.get_gamma_hdd(2,3,3);
+                double w_tautau = tab.get_gamma_hll(2,3,3);
+                double w_WW     = tab.get_gamma_hvv(2,3);
+                double w_ZZ     = tab.get_gamma_hvv(2,2);
+                double w_gaga   = tab.get_gamma_hgaga(2);
+                double w_Zga    = tab.get_gamma_hZga(2);
+                double w_gg     = tab.get_gamma_hgg(2);
+                double w_hh     = tab.get_gamma_hhh(2,1,1);
+                double w_tot    = tab.get_gammatot_h(2);
+                double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
+
+                // Guardar fila en buffer local
+                buffer.push_back(std::vector<double>{
+                    m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12_sq,
+                    sin_ba, tan_beta,
+                    pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
+                    w_bb, w_tautau, w_WW, w_ZZ,
+                    w_gaga, w_Zga, w_gg, w_hh,
+                    w_tot, br_gaga, lambda1, lam1_g, l2, lam2_g, lam3_g, lam4_g, lam5_g
+                });
+
+                // [HPC FLUSH] Si el buffer local se llena, forzamos escritura y reporte
+                // Esto soluciona el problema de granularidad en scans cortos
+                if (buffer.size() >= BATCH_SIZE) {
+                    #pragma omp critical
+                    {
+                        global_valid += buffer.size();
+                        for (const auto &row : buffer) {
+                            write_csv_row(results, row);
+                        }
+                        buffer.clear(); 
+
+                        // Check timer
+                        auto now = Clock::now();
+                        std::chrono::duration<double> diff = now - last_report_time;
+                        
+                        if (diff.count() > REPORT_INTERVAL_SEC) {
+                            // Sincronizar contador de intentos para el reporte
+                            long long current_attempts = global_attempts.load() + local_attempts; // Sumar local pendiente
+                            long long current_valid = global_valid.load();
+                            
+                            auto total_elapsed = std::chrono::duration<double>(now - start_time).count();
+                            
+                            double pps = (total_elapsed > 0) ? (double)current_attempts / total_elapsed : 0.0;
+                            double vppm = (total_elapsed > 0) ? (double)current_valid / (total_elapsed / 60.0) : 0.0;
+                            double progress = (total_tasks > 0) ? (100.0 * current_attempts / total_tasks) : 0.0;
+
+                            std::cerr << "\r" 
+                                      << "[ " << std::fixed << std::setprecision(1) << progress << "% ] "
+                                      << "Speed: " << (long)pps << " pts/s | "
+                                      << "Valid: " << (long)vppm << "/min | "
+                                      << "Found: " << current_valid << "/" << current_attempts
+                                      << "   " << std::flush;
+                            
+                            last_report_time = now;
+                        }
+                    }
+                }
+
+            } // Fin loop interno
+        } // Fin loop externo
+
+        // [LIMPIEZA FINAL] Volcar remanentes al terminar el hilo
+        if (local_attempts > 0) {
+            global_attempts += local_attempts;
         }
 
         #pragma omp critical
         {
-            double n = static_cast<double>(buffer.size());
-            for (auto &row : buffer) {
-                write_csv_row(results, row);
+            if (!buffer.empty()) {
+                global_valid += buffer.size(); 
+                for (const auto &row : buffer) {
+                    write_csv_row(results, row);
+                }
+                buffer.clear();
             }
-            iters_done += n;
-            buffer.clear();
-
-            auto now = high_resolution_clock::now();
-            double elapsed = duration<double>(now - start).count();
-            
-            std::cerr << fixed << setprecision(1)
-                    << "Rows: " << iters_done
-                    << "  elapsed: " << elapsed << " s\r";
         }
+    } // End parallel
+
+    // [MONITORING] Reporte final
+    auto total_time = std::chrono::duration<double>(Clock::now() - start_time).count();
+    long long final_attempts = global_attempts.load();
+    long long final_valid = global_valid.load();
+
+    std::cout << "\n\n--- Scan Finalizado ---" << endl;
+    std::cout << "Total Attempts: " << final_attempts << endl;
+    std::cout << "Total Valid Points: " << final_valid << endl;
+    std::cout << "Total Time: " << total_time << " s" << endl;
+    if (total_time > 0) {
+        std::cout << "Average Speed: " << (long)(final_attempts / total_time) << " pts/s" << endl;
+        std::cout << "Final Valid Rate: " << (long)(final_valid / (total_time/60.0)) << " valid/min" << endl;
     }
 
     results.close();
-    cout << "\n\nEscaneo completo." << endl;
 }
 
 int main(int argc, char* argv[]) {

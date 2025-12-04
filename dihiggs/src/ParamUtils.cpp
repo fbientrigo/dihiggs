@@ -368,3 +368,75 @@ void parse_json_config(
     fp.lambda6   = extract_double(content, "lambda6");
     fp.lambda7   = extract_double(content, "lambda7");
 }
+
+// 1203: Reportes en tiempo real
+
+// =============================================================
+//  Implementación de ScanMonitor (HPC Real-Time Monitoring)
+// =============================================================
+
+ScanMonitor::ScanMonitor(long long total) 
+    : total_tasks(total), global_attempts(0), global_valid(0) {
+    start_time = std::chrono::high_resolution_clock::now();
+    last_report_time = start_time;
+}
+
+void ScanMonitor::record_attempts(long long n) {
+    // Operación atómica simple, segura para llamar desde múltiples hilos sin locks
+    global_attempts += n;
+}
+
+void ScanMonitor::update_valid_and_report(long long n_valid) {
+    // 1. Actualizar contador de válidos (Atómico)
+    if (n_valid > 0) {
+        global_valid += n_valid;
+    }
+
+    // 2. Timer Gate: Chequear si ha pasado suficiente tiempo para imprimir
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = now - last_report_time;
+
+    if (diff.count() > REPORT_INTERVAL_SEC) {
+        auto total_elapsed = std::chrono::duration<double>(now - start_time).count();
+        
+        long long att = global_attempts.load();
+        long long val = global_valid.load();
+        
+        // Evitar división por cero
+        double pps = (total_elapsed > 0) ? (double)att / total_elapsed : 0.0;
+        double vppm = (total_elapsed > 0) ? (double)val / (total_elapsed / 60.0) : 0.0;
+        
+        double progress = 0.0;
+        if (total_tasks > 0) {
+            progress = (100.0 * att) / total_tasks;
+        }
+
+        // Imprimir usando \r para actualizar la línea
+        std::cerr << "\r"
+                  << "[ " << std::fixed << std::setprecision(1) << progress << "% ] "
+                  << "Speed: " << (long)pps << " pts/s | "
+                  << "Valid: " << (long)vppm << "/min | "
+                  << "Found: " << val << "/" << att
+                  << "   " << std::flush;
+
+        last_report_time = now;
+    }
+}
+
+void ScanMonitor::finish() {
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto total_time = std::chrono::duration<double>(end_time - start_time).count();
+    
+    long long final_attempts = global_attempts.load();
+    long long final_valid = global_valid.load();
+
+    std::cout << "\n\n--- Scan Finalizado (ScanMonitor) ---" << std::endl;
+    std::cout << "Total Attempts:    " << final_attempts << std::endl;
+    std::cout << "Total Valid Points:" << final_valid << std::endl;
+    std::cout << "Total Time:        " << total_time << " s" << std::endl;
+    
+    if (total_time > 0) {
+        std::cout << "Average Speed:     " << (long)(final_attempts / total_time) << " pts/s" << std::endl;
+        std::cout << "Final Valid Rate:  " << (long)(final_valid / (total_time / 60.0)) << " valid/min" << std::endl;
+    }
+}

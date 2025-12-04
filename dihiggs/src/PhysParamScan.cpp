@@ -1,7 +1,12 @@
-/** 
- * @file PhysParamScan.cpp
- * @brief Escaneo de parámetros m_phi y m12 con búsqueda **lineal** desde m12_base.
- * (… descripción original …)
+/** * @file PhysParamScan.cpp
+ * @brief Exploración de parámetros m_phi y m12 utilizando una estrategia de Búsqueda Lineal.
+ * * Este programa implementa un algoritmo de "Shooting" (Disparo):
+ * 1. Estima un m12 base.
+ * 2. Realiza una búsqueda lineal para encontrar el intervalo [m12_min, m12_max] donde
+ * los acoplamientos lambda son válidos.
+ * 3. Escanea densamente dentro de ese intervalo.
+ *
+ * Actualizado con HPC Real-Time Monitoring (ScanMonitor) para diagnósticos de rendimiento.
  */
 
 #define SPEED_TEST 1
@@ -21,6 +26,7 @@
 #include <thread>
 #include <map>
 #include <cstring>
+#include <atomic> // [MONITORING]
 #ifdef _OPENMP
   #include <omp.h>
 #endif
@@ -143,11 +149,15 @@ void perform_param_scan(
 
     const double step_mphi = (N_mphi > 1) ? (mphi_max - mphi_min)/(N_mphi - 1) : 0.0;
     const double total_iters = double(N_mphi) * double(N_m12);
-    long long iters_done  = 0;
-    long long iters_jumped = 0;
+    
+    // [MONITORING] Instanciamos el monitor HPC
+    ScanMonitor monitor((long long)total_iters);
+    // Contador para puntos omitidos (no válidos por rango o constraints)
+    std::atomic<long long> global_skipped(0);
 
-    cout << "step_mphi="<<step_mphi<<"\n";
-    const auto t0 = Clock::now();
+    cout << "Strategy: Linear Range Search (PhysParamScan)" << endl;
+    cout << "step_mphi=" << step_mphi << "\n";
+    cout << "Total iterations to compute: " << (long long)total_iters << endl;
 
     const double mh = 125.0;
 
@@ -162,81 +172,131 @@ void perform_param_scan(
     const double beta  = std::atan(tan_beta);
     const double alpha = beta - std::asin(sin_ba);
 
-    THDM model; SM sm; model.set_SM(sm);
+    #pragma omp parallel
+    {
+        // Buffers y contadores locales
+        long long local_attempts = 0;
+        long long local_skipped = 0;
+        vector<vector<double>> buffer;
+        buffer.reserve(50); // Batch size para flush
 
-    for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
-        const double m_phi = mphi_min + i_phi * step_mphi;
+        THDM model; 
+        SM sm; 
+        model.set_SM(sm);
 
-        const double m12_guess = m12_base(mh, m_phi, sa, ca, sb, cb, lambda6, lambda7, tan_beta, VEV);
+        #pragma omp for schedule(dynamic)
+        for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
+            
+            const double m_phi = mphi_min + i_phi * step_mphi;
 
-        auto [m12_min, m12_max] = find_m12_range_linear(
-            m12_guess, mh, m_phi, sa, ca, sb, cb, tan_beta, lambda6, lambda7,
-            /*step_frac=*/0.25, /*max_steps_each_dir=*/4096);
+            // 1. Adivinar m12 base y buscar rango linealmente
+            const double m12_guess = m12_base(mh, m_phi, sa, ca, sb, cb, lambda6, lambda7, tan_beta, VEV);
 
-        if (m12_max <= m12_min) {
-            iters_jumped += N_m12;
-            cerr << "No valid m12 range at m_phi=" << m_phi << "\n";
-            continue;
-        }
+            auto [m12_min, m12_max] = find_m12_range_linear(
+                m12_guess, mh, m_phi, sa, ca, sb, cb, tan_beta, lambda6, lambda7,
+                /*step_frac=*/0.25, /*max_steps_each_dir=*/4096);
 
-        for (int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
-            const double m12 = m12_min + (m12_max - m12_min) * ( (N_m12==1)? 0.0 : (double)i_m12 / (N_m12 - 1) );
+            // Si el rango colapsa, saltamos todo el bloque de N_m12
+            if (m12_max <= m12_min) {
+                local_skipped += N_m12;
+                local_attempts += N_m12; // Se cuentan como intentos fallidos
+                continue;
+            }
 
-            const double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
-            const double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
-            if (!check_lambda(l1) || !check_lambda(l2)) { iters_jumped++; continue; }
+            // 2. Escanear dentro del rango válido encontrado
+            for (int i_m12 = 0; i_m12 < N_m12; ++i_m12) {
+                
+                // [MONITORING] Registro local
+                local_attempts++;
+                if (local_attempts >= 200) {
+                    monitor.record_attempts(local_attempts);
+                    global_skipped += local_skipped;
+                    local_attempts = 0;
+                    local_skipped = 0;
+                }
 
-            model.set_yukawas_type(y_type);
-            const bool ok = model.set_param_phys(mh, m_phi, mA_fixed, mA_fixed, sin_ba, lambda6, lambda7, m12, tan_beta);
-            if (!ok) { iters_jumped++; continue; }
+                const double m12 = m12_min + (m12_max - m12_min) * ( (N_m12==1)? 0.0 : (double)i_m12 / (N_m12 - 1) );
 
-            Constraints check(model);
-            const bool pos  = check.check_positivity();
-            const bool uni  = check.check_unitarity();
-            const bool pert = check.check_perturbativity();
+                // Validaciones rápidas
+                const double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
+                const double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
+                if (!check_lambda(l1) || !check_lambda(l2)) { 
+                    local_skipped++; 
+                    continue; 
+                }
 
-            DecayTable tab(model);
-            const double w_bb     = tab.get_gamma_hdd(2,3,3);
-            const double w_tautau = tab.get_gamma_hll(2,3,3);
-            const double w_WW     = tab.get_gamma_hvv(2,3);
-            const double w_ZZ     = tab.get_gamma_hvv(2,2);
-            const double w_gaga   = tab.get_gamma_hgaga(2);
-            const double w_Zga    = tab.get_gamma_hZga(2);
-            const double w_gg     = tab.get_gamma_hgg(2);
-            const double w_hh     = tab.get_gamma_hhh(2,1,1);
-            const double w_tot    = tab.get_gammatot_h(2);
-            const double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
+                model.set_yukawas_type(y_type);
+                const bool ok = model.set_param_phys(mh, m_phi, mA_fixed, mA_fixed, sin_ba, lambda6, lambda7, m12, tan_beta);
+                if (!ok) { 
+                    local_skipped++; 
+                    continue; 
+                }
 
-            double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
-            model.get_param_gen(lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
+                // Checks físicos completos
+                Constraints check(model);
+                const bool pos  = check.check_positivity();
+                const bool uni  = check.check_unitarity();
+                const bool pert = check.check_perturbativity();
 
-            vector<double> row = {
-                m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12,
-                sin_ba, tan_beta,
-                pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
-                w_bb, w_tautau, w_WW, w_ZZ,
-                w_gaga, w_Zga, w_gg, w_hh,
-                w_tot, br_gaga,
-                lam1, l1, lam2, l2, lam3, lam4, lam5
-            };
-            write_csv_row(results, row);
-            ++iters_done;
+                DecayTable tab(model);
+                const double w_bb     = tab.get_gamma_hdd(2,3,3);
+                const double w_tautau = tab.get_gamma_hll(2,3,3);
+                const double w_WW     = tab.get_gamma_hvv(2,3);
+                const double w_ZZ     = tab.get_gamma_hvv(2,2);
+                const double w_gaga   = tab.get_gamma_hgaga(2);
+                const double w_Zga    = tab.get_gamma_hZga(2);
+                const double w_gg     = tab.get_gamma_hgg(2);
+                const double w_hh     = tab.get_gamma_hhh(2,1,1);
+                const double w_tot    = tab.get_gammatot_h(2);
+                const double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
-            if ((iters_done % 2000) == 0) {
-                const auto now = Clock::now();
-                const double elapsed = Duration(now - t0).count();
-                const double prog = (iters_done / total_iters) * 100.0;
-                const double eta  = (iters_done > 0) ? (elapsed / iters_done) * (total_iters - iters_done) : 0.0;
-                cerr << fixed << setprecision(1)
-                     << "Iter: " << iters_done << "/" << total_iters
-                     << " (" << prog << "%)  elapsed: " << elapsed
-                     << " s  ETA: " << eta << " s  Omitted: " << iters_jumped << "\r";
+                double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
+                model.get_param_gen(lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
+
+                buffer.push_back(std::vector<double>{
+                    m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12,
+                    sin_ba, tan_beta,
+                    pos?1.0:0.0, uni?1.0:0.0, pert?1.0:0.0,
+                    w_bb, w_tautau, w_WW, w_ZZ,
+                    w_gaga, w_Zga, w_gg, w_hh,
+                    w_tot, br_gaga,
+                    lam1, l1, lam2, l2, lam3, lam4, lam5
+                });
+
+                // [MONITORING] Flush si el buffer está lleno
+                if (buffer.size() >= 50) {
+                    #pragma omp critical
+                    {
+                        for (const auto &row : buffer) {
+                            write_csv_row(results, row);
+                        }
+                        monitor.update_valid_and_report(buffer.size());
+                        buffer.clear();
+                    }
+                }
+            } // Fin m12 loop
+        } // Fin m_phi loop
+
+        // Limpieza final del hilo
+        if (local_attempts > 0) monitor.record_attempts(local_attempts);
+        if (local_skipped > 0) global_skipped += local_skipped;
+
+        #pragma omp critical
+        {
+            if (!buffer.empty()) {
+                for (const auto &row : buffer) {
+                    write_csv_row(results, row);
+                }
+                monitor.update_valid_and_report(buffer.size());
+                buffer.clear();
             }
         }
-    }
+    } // Fin parallel
+
+    monitor.finish();
+    std::cout << "Total Skipped/Invalid (Linear Search Failures): " << global_skipped.load() << endl;
 
     results.close();
-    cout << "\n\nEscaneo completo.\n";
 }
 
 /* ===================== CLI con flags + posicional ===================== */
