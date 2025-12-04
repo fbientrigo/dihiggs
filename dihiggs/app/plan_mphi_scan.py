@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -82,6 +83,12 @@ def parse_args():
         action="store_true",
         help="Solo mostrar el plan y los comandos sin ejecutarlos.",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=None,
+        help="Número de threads OpenMP a usar en PhysParamScan (por defecto: todos disponibles).",
+    )
     return parser.parse_args()
 
 
@@ -154,8 +161,21 @@ def main():
     outdir = Path("outcsv") / f"tb{tb_label}"
     outdir.mkdir(parents=True, exist_ok=True)
 
+    # Detectar threads disponibles
+    available_threads = os.cpu_count()
+    if available_threads is None:
+        available_threads = 4
+        print("[WARN] No se pudo detectar el número de threads disponibles. Usando valor por defecto: 4")
+
+    # Determinar threads a usar
+    selected_threads = args.threads if args.threads is not None else available_threads
+    if selected_threads <= 0:
+        print(f"[ERROR] --threads debe ser > 0. Usando {available_threads}.")
+        selected_threads = available_threads
+
     print(f"[INFO] tan_beta = {args.tan_beta} (tb_label = tb{tb_label})")
     print(f"[INFO] Directorio de salida: {outdir}")
+    print(f"[INFO] Threads disponibles: {available_threads}, a usar: {selected_threads}")
 
     # Definir chunks globales
     chunks = compute_chunks(args.mphi_min, args.mphi_max, args.n_chunks)
@@ -251,6 +271,31 @@ def main():
             f"{args.n_chunks - (len(done_chunks) + nrun)} chunks pendientes."
         )
 
+    # Selección de threads (antes de confirmación final)
+    while True:
+        try:
+            threads_input = input(
+                f"¿Threads a usar? [1..{available_threads}] (Enter = {selected_threads}): "
+            ).strip()
+        except EOFError:
+            # En caso de no-interactivo, usar selected_threads
+            threads_input = ""
+        
+        if not threads_input:
+            # Usar el valor actual
+            break
+        else:
+            try:
+                user_threads = int(threads_input)
+                if 1 <= user_threads <= available_threads:
+                    selected_threads = user_threads
+                    print(f"[OK] Se usarán {selected_threads} threads.")
+                    break
+                else:
+                    print(f"[WARN] Valor fuera de rango [1..{available_threads}]. Intenta de nuevo.")
+            except ValueError:
+                print("Por favor ingresa un entero válido.")
+
     # Confirmación final
     try:
         confirm = input("¿Confirmas la ejecución? [y/N]: ").strip().lower()
@@ -289,7 +334,9 @@ def main():
                 "--mphi_max",
                 f"{mmax:.6f}",
                 "--N_mphi",
-                "1"
+                "1",
+                "--threads",
+                str(selected_threads)
             ]
         )
 

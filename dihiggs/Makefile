@@ -33,7 +33,8 @@ MAIN_SRCS = \
   PhysParamScan.cpp \
   Oracle.cpp \
   HBHS_testing.cpp \
-  PostProcessHBHS.cpp
+  PostProcessHBHS.cpp \
+  PhysScanWithFixings.cpp
 
 # ============ 
 # Archivos fuente comunes (sin main).
@@ -58,6 +59,7 @@ BINARIES = \
   $(BIN_DIR)/Oracle \
   $(BIN_DIR)/HBHS_testing \
   $(BIN_DIR)/PostProcessHBHS \
+  $(BIN_DIR)/PhysScanWithFixings \
 
 
 # # Binario adicional de speed test
