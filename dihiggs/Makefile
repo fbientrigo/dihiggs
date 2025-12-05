@@ -1,8 +1,15 @@
 # Nombre del compilador
 CXX = g++
 
-# Prefijo de instalación local de HiggsTools (puedes sobreescribir por CLI)
-HIGGSTOOLS_PREFIX ?= $(HOME)/dihiggs/higgstools/installation
+# Directorio donde está este Makefile
+MAKEFILE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# Root del repo: un nivel por encima de dihiggs/
+REPO_ROOT    := $(abspath $(MAKEFILE_DIR)/..)
+
+# Prefijo de instalación de HiggsTools relativo al repo
+HIGGSTOOLS_PREFIX ?= $(REPO_ROOT)/higgstools/installation
+
 HIGGSTOOLS_INC    := $(HIGGSTOOLS_PREFIX)/include
 HIGGSTOOLS_LIB    := $(HIGGSTOOLS_PREFIX)/lib
 
