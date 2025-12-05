@@ -57,12 +57,6 @@ dihiggs/app/PostProcessHBHS
 2hdmc/CalcMSSM
 2hdmc/CalcPhys
 2hdmc/Demo
-2hdmc/lib/Constraints.o
-2hdmc/lib/DecayTable.o
-2hdmc/lib/lib2HDMC.a
-2hdmc/lib/SM.o
-2hdmc/lib/THDM.o
-2hdmc/lib/Util.o
 dihiggs/app/HBHS_testing
 dihiggs/app/Oracle
 dihiggs/app/PhysParamScan
@@ -92,4 +86,4 @@ dihiggs/app/outcsv/tb8000/chunk_00.csv
 dihiggs/app/outcsv/tb8000/chunk_01.csv
 dihiggs/app/outcsv/tb8000/timings.json
 mlpython/0b1_samplings.ipynb
-mlpython/0b1_samplings.ipynb
+
