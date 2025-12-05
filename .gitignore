@@ -26,7 +26,6 @@ mlpython/data_train/
 /dihiggs/app/Oracle
 /dihiggs/app/PhysParamScan
 /dihiggs/app/HBHS_testing
-*.o
 *.parquet
 *.joblib
 *.model
