@@ -13,16 +13,16 @@ def explore_points(m_phi_range, mA_range, alpha_range, beta_range, lambda6_range
     """
     Explora un grid de combinaciones de parámetros físicos y devuelve solo los casos físicamente válidos.
 
-    Parámetros:
-    -----------
+    Parameters
+    ----------
     m_phi_range : iterable
         Valores para el parámetro m_phi.
     mA_range : iterable
         Valores para el parámetro mA.
-    sin(beta-alpha)_range : iterable
-        Valores para el parámetro alpha.
-    tan(beta)_range : iterable
-        Valores para el parámetro beta.
+    alpha_range : iterable
+        Valores para el parámetro alpha (sin(beta-alpha)).
+    beta_range : iterable
+        Valores para el parámetro beta (tan(beta)).
     lambda6_range : iterable
         Valores para el parámetro lambda6.
     lambda7_range : iterable
@@ -30,17 +30,17 @@ def explore_points(m_phi_range, mA_range, alpha_range, beta_range, lambda6_range
     m12_range : iterable
         Valores para el parámetro m12.
 
-    Retorna:
-    --------
-    results : list of dict
+    Returns
+    -------
+    list of dict
         Lista de diccionarios que contienen los parámetros de entrada y los resultados de decays y branching ratios,
         solo si se cumple que:
         - positivity_ok == 1
         - unitarity_ok == 1
         - perturbativity_ok == 1
 
-    Ejemplo de uso:
-    ---------------
+    Examples
+    --------
     >>> from lib.explorer import explore_points
     >>> import numpy as np
     >>> results = explore_points(
@@ -118,6 +118,16 @@ def _evaluate_point(params):
     """
     Evalúa un único punto del espacio de parámetros y retorna el resultado si es físicamente válido.
     Esta función se usa internamente con multiprocessing.
+
+    Parameters
+    ----------
+    params : list
+        Lista de parámetros [m_phi, mA, alpha, beta, lambda6, lambda7, m12].
+
+    Returns
+    -------
+    dict or None
+        Diccionario con resultados si es válido, None en caso contrario.
     """
     try:
         out = run_oracle(params)
@@ -153,13 +163,29 @@ def explore_points_parallel(m_phi_range, mA_range, alpha_range, beta_range, lamb
     """
     Versión paralela de explore_points usando multiprocessing.Pool.
 
-    Parámetros:
-    -----------
-    Los mismos que explore_points + n_processes opcional.
+    Parameters
+    ----------
+    m_phi_range : iterable
+        Valores para el parámetro m_phi.
+    mA_range : iterable
+        Valores para el parámetro mA.
+    alpha_range : iterable
+        Valores para el parámetro alpha.
+    beta_range : iterable
+        Valores para el parámetro beta.
+    lambda6_range : iterable
+        Valores para el parámetro lambda6.
+    lambda7_range : iterable
+        Valores para el parámetro lambda7.
+    m12_range : iterable
+        Valores para el parámetro m12.
+    n_processes : int, optional
+        Número de procesos a utilizar. Por defecto usa cpu_count().
 
-    Retorna:
-    --------
-    List of dict con resultados físicamente válidos.
+    Returns
+    -------
+    list of dict
+        Lista de diccionarios con resultados físicamente válidos.
     """
     all_combinations = list(product(m_phi_range, mA_range, alpha_range, beta_range, lambda6_range, lambda7_range, m12_range))
     total = len(all_combinations)

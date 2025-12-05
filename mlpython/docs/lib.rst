@@ -1,0 +1,27 @@
+Library Reference
+=================
+
+.. automodule:: lib
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: lib.explorer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: lib.oracle
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: lib.branch_ratio
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: lib.pipeline
+   :members:
+   :undoc-members:
+   :show-inheritance:

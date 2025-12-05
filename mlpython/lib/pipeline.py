@@ -15,12 +15,16 @@ from typing import Iterable, Dict, List, Generator, Union
 def find_files(pattern: str) -> List[str]:
     """
     Devuelve una lista ordenada de rutas de archivos que coinciden con el patrón dado.
-    
-    Parámetro:
-        pattern (str): Patrón de búsqueda tipo glob, p.ej. "../data_batches/merged_0*.pkl"
-        
-    Retorna:
-        List[str]: Lista de rutas de archivos ordenada.
+
+    Parameters
+    ----------
+    pattern : str
+        Patrón de búsqueda tipo glob, p.ej. "../data_batches/merged_0*.pkl"
+
+    Returns
+    -------
+    List[str]
+        Lista de rutas de archivos ordenada.
     """
     return sorted(glob.glob(pattern))
 
@@ -29,12 +33,16 @@ def flatten_batch(batch: Dict) -> Generator[Dict, None, None]:
     """
     A partir de un diccionario de lote con "params" y "results", genera pares (params, result)
     y empaqueta cada par en un dict intermedio con los campos paramétricos y los resultados.
-    
-    Parámetros:
-        batch (Dict): Diccionario con claves "params" (Nx7 array) y "results" (lista de N dicts).
-        
-    Genera:
-        Dict: Cada diccionario contiene los 7 parámetros (m_phi, m_A, etc.) y las claves de resultado.
+
+    Parameters
+    ----------
+    batch : Dict
+        Diccionario con claves "params" (Nx7 array) y "results" (lista de N dicts).
+
+    Yields
+    ------
+    Dict
+        Cada diccionario contiene los 7 parámetros (m_phi, m_A, etc.) y las claves de resultado.
     """
     ps = batch["params"]
     rs = batch["results"]
@@ -55,12 +63,16 @@ def flatten_point(entry: Dict) -> Generator[Dict, None, None]:
     """
     A partir de un diccionario de punto con "params" y "result" o "results", genera un único dict
     que combina los 7 parámetros y el diccionario de resultados (desenvuelto si es lista de tamaño 1).
-    
-    Parámetros:
-        entry (Dict): Diccionario con clave "params" (array de 7) y "result" o "results".
-        
-    Genera:
-        Dict: Un diccionario con los 7 parámetros y las claves de resultado.
+
+    Parameters
+    ----------
+    entry : Dict
+        Diccionario con clave "params" (array de 7) y "result" o "results".
+
+    Yields
+    ------
+    Dict
+        Un diccionario con los 7 parámetros y las claves de resultado.
     """
     p = entry["params"]
     # "result" simple o "results" que puede ser lista de longitud 1
@@ -84,12 +96,16 @@ def parse_file(fp: str) -> Generator[Dict, None, None]:
     Procesa un archivo pickle y genera dicts aplanados (fila a fila) según su estructura interna:
       - Caso 1: data es un dict con "params" y "results" → se llama a flatten_batch
       - Caso 2: data es una lista de entries → cada entry puede ser batch-dict o point-dict
-    
-    Parámetros:
-        fp (str): Ruta al archivo pickle.
-        
-    Genera:
-        Dict: Cada diccionario representa una fila con parámetros y resultados.
+
+    Parameters
+    ----------
+    fp : str
+        Ruta al archivo pickle.
+
+    Yields
+    ------
+    Dict
+        Cada diccionario representa una fila con parámetros y resultados.
     """
     with open(fp, "rb") as f:
         data = pickle.load(f)
@@ -119,12 +135,16 @@ def parse_file(fp: str) -> Generator[Dict, None, None]:
 def load_rows(file_paths: List[str]) -> Generator[Dict, None, None]:
     """
     Itera sobre cada archivo y genera filas aplanadas usando parse_file.
-    
-    Parámetros:
-        file_paths (List[str]): Lista de rutas a archivos pickle.
-        
-    Genera:
-        Dict: Cada diccionario representa una fila completa con parámetros y resultados.
+
+    Parameters
+    ----------
+    file_paths : List[str]
+        Lista de rutas a archivos pickle.
+
+    Yields
+    ------
+    Dict
+        Cada diccionario representa una fila completa con parámetros y resultados.
     """
     for fp in file_paths:
         yield from parse_file(fp)
@@ -133,12 +153,16 @@ def load_rows(file_paths: List[str]) -> Generator[Dict, None, None]:
 def build_dataframe(rows: Iterable[Dict]) -> pd.DataFrame:
     """
     Construye un DataFrame de pandas a partir de un iterable de diccionarios.
-    
-    Parámetros:
-        rows (Iterable[Dict]): Iterable que produce dicts (cada dict = una fila).
-        
-    Retorna:
-        pd.DataFrame: DataFrame con todas las filas cargadas.
+
+    Parameters
+    ----------
+    rows : Iterable[Dict]
+        Iterable que produce dicts (cada dict = una fila).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame con todas las filas cargadas.
     """
     return pd.DataFrame(rows)
 
@@ -151,14 +175,20 @@ def filter_errors(
     """
     Filtra el DataFrame para eliminar filas cuyo campo de error esté en la lista de errores prohibidos.
     Luego elimina la columna de error.
-    
-    Parámetros:
-        df (pd.DataFrame): DataFrame original.
-        error_col (str): Nombre de la columna que contiene la descripción de error.
-        prohibited_errors (List[str]): Lista de mensajes de error a filtrar.
-        
-    Retorna:
-        pd.DataFrame: DataFrame filtrado sin la columna de error.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame original.
+    error_col : str, optional
+        Nombre de la columna que contiene la descripción de error. Por defecto "error".
+    prohibited_errors : List[str], optional
+        Lista de mensajes de error a filtrar.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame filtrado sin la columna de error.
     """
     # 1) Si no existe la columna, avisar y devolver df intacto
     if error_col not in df.columns:
@@ -181,14 +211,19 @@ def filter_valid_points(
     """
     Filtra el DataFrame para quedarse solo con filas que cumplan ciertas condiciones en columnas binarias.
     Por ejemplo: {"positivity_ok": 1, "unitarity_ok": 1, "perturbativity_ok": [0,1]}.
-    
-    Parámetros:
-        df (pd.DataFrame): DataFrame a filtrar.
-        conditions (Dict[str, Union[int, List[int]]]): Diccionario donde cada clave es un nombre de columna,
-            y el valor es un entero o lista de enteros que se consideran válidos.
-            
-    Retorna:
-        pd.DataFrame: DataFrame con las filas que satisfacen todas las condiciones.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a filtrar.
+    conditions : Dict[str, Union[int, List[int]]]
+        Diccionario donde cada clave es un nombre de columna,
+        y el valor es un entero o lista de enteros que se consideran válidos.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame con las filas que satisfacen todas las condiciones.
     """
     print('\tFilas antes de filtrar:', len(df))
     mask = pd.Series(True, index=df.index)
@@ -209,12 +244,17 @@ def save_dataframe(
 ) -> None:
     """
     Guarda el DataFrame en disco en el formato especificado (parquet o csv).
-    
-    Parámetros:
-        df (pd.DataFrame): DataFrame a guardar.
-        output_path (str): Ruta de salida, e.g. "../output/data.parquet" o "../output/data.csv".
-        format (str): "parquet" o "csv". Por defecto, "parquet".
-        **kwargs: Parámetros adicionales para pandas.DataFrame.to_parquet o to_csv.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame a guardar.
+    output_path : str
+        Ruta de salida, e.g. "../output/data.parquet" o "../output/data.csv".
+    format : str, optional
+        "parquet" o "csv". Por defecto, "parquet".
+    **kwargs
+        Parámetros adicionales para pandas.DataFrame.to_parquet o to_csv.
     """
     if format == "parquet":
         df.to_parquet(output_path, index=False, **kwargs)
@@ -238,16 +278,24 @@ def run_pipeline(
       3. Filtra filas con errores prohibidos.
       4. (Opcional) Filtra filas según condiciones binarias.
       5. Guarda el DataFrame resultante en disco.
-    
-    Parámetros:
-        file_pattern (str): Patrón glob para localizar archivos de entrada.
-        prohibited_errors (List[str]): Lista de mensajes de error a filtrar.
-        valid_conditions (Dict[str, Union[int, List[int]]]): Condiciones para filtrar columnas binarias.
-        output_path (str): Ruta donde se guardará el DataFrame procesado.
-        output_format (str): "parquet" o "csv".
-    
-    Retorna:
-        pd.DataFrame: DataFrame final después de filtrados.
+
+    Parameters
+    ----------
+    file_pattern : str
+        Patrón glob para localizar archivos de entrada.
+    prohibited_errors : List[str], optional
+        Lista de mensajes de error a filtrar.
+    valid_conditions : Dict[str, Union[int, List[int]]], optional
+        Condiciones para filtrar columnas binarias.
+    output_path : str, optional
+        Ruta donde se guardará el DataFrame procesado. Por defecto "processed_data.parquet".
+    output_format : str, optional
+        "parquet" o "csv". Por defecto "parquet".
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame final después de filtrados.
     """
     # 1) Encontrar archivos
     files = find_files(file_pattern)

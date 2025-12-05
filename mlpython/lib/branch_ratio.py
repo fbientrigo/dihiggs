@@ -21,23 +21,25 @@ def physpoint(
     Envía un punto al “oracle” físico con parámetros fijos y devuelve los
     resultados si la ejecución es exitosa.
 
-    Parámetros:
-        mphi (np.float64):
-            Masa del estado φ (m_phi) en GeV.
-        m12_2 (np.float64):
-            Parámtero m12^2 en GeV^2.
-        mA (np.float64, opcional):
-            Masa del estado A (m_A) en GeV. Por defecto 300.0 GeV.
-        sin_ba (np.float64, opcional):
-            Valor de sin(β - α). Por defecto, `sin_ba_default`.
-        tan_beta (np.float64, opcional):
-            Valor de tan(β). Por defecto, `tan_beta_default`.
+    Parameters
+    ----------
+    mphi : np.float64
+        Masa del estado φ (m_phi) en GeV.
+    m12_2 : np.float64
+        Parámtero m12^2 en GeV^2.
+    mA : np.float64, optional
+        Masa del estado A (m_A) en GeV. Por defecto 300.0 GeV.
+    sin_ba : np.float64, optional
+        Valor de sin(β - α). Por defecto, `sin_ba_default`.
+    tan_beta : np.float64, optional
+        Valor de tan(β). Por defecto, `tan_beta_default`.
 
-    Retorna:
-        dict o None:
-            Un diccionario con resultados del oracle (branching ratios,
-            condiciones de chequeo, anchos parciales, etc.), o None si la
-            ejecución falla internamente.
+    Returns
+    -------
+    dict or None
+        Un diccionario con resultados del oracle (branching ratios,
+        condiciones de chequeo, anchos parciales, etc.), o None si la
+        ejecución falla internamente.
     """
     # Construir vector de parámetros en el orden esperado por el oracle:
     # [m_phi, m_A, sin(β - α), tan(β), λ6, λ7, m12^2]
@@ -58,25 +60,30 @@ def simulate_curve(
     Genera una curva de branching ratios y anchos totales para múltiples valores de m_phi,
     ejecutando `physpoint` en cada punto y recopilando resultados.
 
-    Parámetros:
-        mphi_values (Iterable[np.float64]):
-            Lista o array de valores de m_phi a evaluar.
-        mA (float):
-            Masa del estado A (m_A) en GeV (fijo para toda la curva).
-        m12 (float):
-            Valor de m12^2 en GeV^2 (fijo para toda la curva).
-        lambda6_val (float):
-            Valor de λ6 a usar (sobrescribe el global).
-        lambda7_val (float):
-            Valor de λ7 a usar (sobrescribe el global).
-        sin_ba (float):
-            Valor de sin(β - α) (fijo para toda la curva).
-        tan_beta (float):
-            Valor de tan(β) (fijo para toda la curva).
+    Parameters
+    ----------
+    mphi_values : Iterable[np.float64]
+        Lista o array de valores de m_phi a evaluar.
+    mA : float
+        Masa del estado A (m_A) en GeV (fijo para toda la curva).
+    m12 : float
+        Valor de m12^2 en GeV^2 (fijo para toda la curva).
+    lambda6_val : float
+        Valor de λ6 a usar (sobrescribe el global).
+    lambda7_val : float
+        Valor de λ7 a usar (sobrescribe el global).
+    sin_ba : float
+        Valor de sin(β - α) (fijo para toda la curva).
+    tan_beta : float
+        Valor de tan(β) (fijo para toda la curva).
 
-    Retorna:
-        List[Dict]:
-            Lista de diccionarios, uno por cada m_phi, con la forma:
+    Returns
+    -------
+    List[Dict]
+        Lista de diccionarios, uno por cada m_phi, con la forma:
+        
+        .. code-block:: text
+
             {
                 'mphi': valor de m_phi,
                 'br': {
@@ -99,7 +106,8 @@ def simulate_curve(
                     'tan_beta': tan_beta
                 }
             }
-            Sólo se añade a la lista si `physpoint` devuelve un dict no nulo.
+
+        Sólo se añade a la lista si `physpoint` devuelve un dict no nulo.
     """
     results: List[Dict] = []
 
@@ -157,22 +165,24 @@ def make_title(params: Dict[str, float], subplot_tag: str = "(d)") -> str:
     Construye el título del gráfico a partir de los parámetros físicos,
     formateando expresiones LaTeX para mostrar en matplotlib.
 
-    Parámetros:
-        params (Dict[str, float]):
-            Diccionario con las claves:
-                - 'mA'       : Masa m_A en GeV
-                - 'm12'      : Valor de m12^2 en GeV^2
-                - 'lambda6'  : Valor de λ6
-                - 'lambda7'  : Valor de λ7
-                - 'sin_ba'   : Valor de sin(β - α)
-                - 'tan_beta' : Valor de tan(β)
-        subplot_tag (str, opcional):
-            Etiqueta corta para indicar subpanel en figura, p.ej. "(a)", "(b)", etc.
+    Parameters
+    ----------
+    params : Dict[str, float]
+        Diccionario con las claves:
+            - 'mA'       : Masa m_A en GeV
+            - 'm12'      : Valor de m12^2 en GeV^2
+            - 'lambda6'  : Valor de λ6
+            - 'lambda7'  : Valor de λ7
+            - 'sin_ba'   : Valor de sin(β - α)
+            - 'tan_beta' : Valor de tan(β)
+    subplot_tag : str, optional
+        Etiqueta corta para indicar subpanel en figura, p.ej. "(a)", "(b)", etc.
 
-    Retorna:
-        str:
-            Cadena formateada con expresiones LaTeX y valores numéricos
-            listos para asignar como título en matplotlib.
+    Returns
+    -------
+    str
+        Cadena formateada con expresiones LaTeX y valores numéricos
+        listos para asignar como título en matplotlib.
     """
     mA_val = params['mA']
     m12_val = params['m12']
@@ -198,19 +208,22 @@ def plot_branchings(results: List[Dict], subplot_tag: str = "(d)") -> None:
     (positivity, unitarity, perturbativity). Además, incluye un subgráfico
     con la evolución del ancho total Γ(φ) en escala log.
 
-    Parámetros:
-        results (List[Dict]):
-            Lista de diccionarios generados por `simulate_curve`, cada uno con:
-                - 'mphi'        : valor de m_phi
-                - 'br'          : dict con keys 'gaga', 'Zga', 'bb'
-                - 'total_width' : ancho total Γ(φ)
-                - 'flags'       : dict con keys 'positivity', 'unitarity', 'perturbativity'
-                - 'params'      : diccionario de parámetros (usado para el título)
-        subplot_tag (str, opcional):
-            Etiqueta corta para indicar subpanel en la figura.
+    Parameters
+    ----------
+    results : List[Dict]
+        Lista de diccionarios generados por `simulate_curve`, cada uno con:
+            - 'mphi'        : valor de m_phi
+            - 'br'          : dict con keys 'gaga', 'Zga', 'bb'
+            - 'total_width' : ancho total Γ(φ)
+            - 'flags'       : dict con keys 'positivity', 'unitarity', 'perturbativity'
+            - 'params'      : diccionario de parámetros (usado para el título)
+    subplot_tag : str, optional
+        Etiqueta corta para indicar subpanel en la figura.
 
-    Retorna:
-        None. Muestra la figura con matplotlib.
+    Returns
+    -------
+    None
+        Muestra la figura con matplotlib.
     """
     # Extraer arrays de m_phi y branching ratios
     mphi_list = [r['mphi'] for r in results]
@@ -369,7 +382,8 @@ def plot_branchings_and_lifetime(
     subplot_tag: str = "(d)",
     lifetime_unit: str = "mm",     # "mm", "cm" o "m"
     lifetime_log: bool = True,     # True: escala log en vida media
-    width_log: bool = True         # True: escala log en decay width
+    width_log: bool = True,         # True: escala log en decay width
+    br_log: bool = False        # True: escala log en branching ratios
 ):
     """
     Plotea:
@@ -381,6 +395,7 @@ def plot_branchings_and_lifetime(
       lifetime_unit: unidad para cτ ("mm","cm","m")
       lifetime_log: si True, y-axis de cτ en log
       width_log:    si True, y-axis de Γ en log
+      br_log:       si True, y-axis de BR en log
     """
     # --- Extraer datos ----
     mphi       = np.array([r['mphi'] for r in results])
@@ -436,9 +451,13 @@ def plot_branchings_and_lifetime(
                           s=30, zorder=5)
     ax_br.set_xlabel(r'$m_\phi\,[\mathrm{GeV}]$')
     ax_br.set_ylabel('Branching Ratio')
-    ax_br.set_ylim(0,1)
     ax_br.legend(loc='upper left', fontsize=8)
     ax_br.set_title(subplot_tag, loc='left', fontsize=12)
+    if br_log:
+        ax_br.set_yscale('log')
+    else:
+        ax_br.set_ylim(0,1)
+
 
     # 2) Decay width (fila 0,col 1)
     ax_w = fig.add_subplot(gs[0,1])

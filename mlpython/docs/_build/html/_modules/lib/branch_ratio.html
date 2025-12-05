@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lib.branch_ratio &#8212; mlpython 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.branch_ratio</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.oracle</span><span class="w"> </span><span class="kn">import</span> <span class="n">safe_run_oracle</span>
+
+<span class="c1"># Parámetros globales por defecto (pueden modificarse según conveniencia)</span>
+<span class="n">lambda6</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">lambda7</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">sin_ba_default</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">tan_beta_default</span> <span class="o">=</span> <span class="mf">1e7</span>
+
+
+<div class="viewcode-block" id="physpoint">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.physpoint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">physpoint</span><span class="p">(</span>
+    <span class="n">mphi</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+    <span class="n">m12_2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+    <span class="n">mA</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">=</span> <span class="mf">300.0</span><span class="p">,</span>
+    <span class="n">sin_ba</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">=</span> <span class="n">sin_ba_default</span><span class="p">,</span>
+    <span class="n">tan_beta</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">=</span> <span class="n">tan_beta_default</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Envía un punto al “oracle” físico con parámetros fijos y devuelve los</span>
+<span class="sd">    resultados si la ejecución es exitosa.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mphi : np.float64</span>
+<span class="sd">        Masa del estado φ (m_phi) en GeV.</span>
+<span class="sd">    m12_2 : np.float64</span>
+<span class="sd">        Parámtero m12^2 en GeV^2.</span>
+<span class="sd">    mA : np.float64, optional</span>
+<span class="sd">        Masa del estado A (m_A) en GeV. Por defecto 300.0 GeV.</span>
+<span class="sd">    sin_ba : np.float64, optional</span>
+<span class="sd">        Valor de sin(β - α). Por defecto, `sin_ba_default`.</span>
+<span class="sd">    tan_beta : np.float64, optional</span>
+<span class="sd">        Valor de tan(β). Por defecto, `tan_beta_default`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict or None</span>
+<span class="sd">        Un diccionario con resultados del oracle (branching ratios,</span>
+<span class="sd">        condiciones de chequeo, anchos parciales, etc.), o None si la</span>
+<span class="sd">        ejecución falla internamente.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Construir vector de parámetros en el orden esperado por el oracle:</span>
+    <span class="c1"># [m_phi, m_A, sin(β - α), tan(β), λ6, λ7, m12^2]</span>
+    <span class="n">param_vector</span> <span class="o">=</span> <span class="p">[</span><span class="n">mphi</span><span class="p">,</span> <span class="n">mA</span><span class="p">,</span> <span class="n">sin_ba</span><span class="p">,</span> <span class="n">tan_beta</span><span class="p">,</span> <span class="n">lambda6</span><span class="p">,</span> <span class="n">lambda7</span><span class="p">,</span> <span class="n">m12_2</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">safe_run_oracle</span><span class="p">(</span><span class="n">param_vector</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="simulate_curve">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.simulate_curve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_curve</span><span class="p">(</span>
+    <span class="n">mphi_values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span>
+    <span class="n">mA</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">m12</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">lambda6_val</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">lambda7_val</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">sin_ba</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">tan_beta</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Genera una curva de branching ratios y anchos totales para múltiples valores de m_phi,</span>
+<span class="sd">    ejecutando `physpoint` en cada punto y recopilando resultados.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mphi_values : Iterable[np.float64]</span>
+<span class="sd">        Lista o array de valores de m_phi a evaluar.</span>
+<span class="sd">    mA : float</span>
+<span class="sd">        Masa del estado A (m_A) en GeV (fijo para toda la curva).</span>
+<span class="sd">    m12 : float</span>
+<span class="sd">        Valor de m12^2 en GeV^2 (fijo para toda la curva).</span>
+<span class="sd">    lambda6_val : float</span>
+<span class="sd">        Valor de λ6 a usar (sobrescribe el global).</span>
+<span class="sd">    lambda7_val : float</span>
+<span class="sd">        Valor de λ7 a usar (sobrescribe el global).</span>
+<span class="sd">    sin_ba : float</span>
+<span class="sd">        Valor de sin(β - α) (fijo para toda la curva).</span>
+<span class="sd">    tan_beta : float</span>
+<span class="sd">        Valor de tan(β) (fijo para toda la curva).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    List[Dict]</span>
+<span class="sd">        Lista de diccionarios, uno por cada m_phi, con la forma:</span>
+<span class="sd">        </span>
+<span class="sd">        .. code-block:: text</span>
+
+<span class="sd">            {</span>
+<span class="sd">                &#39;mphi&#39;: valor de m_phi,</span>
+<span class="sd">                &#39;br&#39;: {</span>
+<span class="sd">                    &#39;gaga&#39;: BR(φ → γγ),</span>
+<span class="sd">                    &#39;Zga&#39;: BR(φ → Zγ),</span>
+<span class="sd">                    &#39;bb&#39;:  BR(φ → bᵦ)</span>
+<span class="sd">                },</span>
+<span class="sd">                &#39;total_width&#39;: ancho total Γ(φ) en GeV,</span>
+<span class="sd">                &#39;flags&#39;: {</span>
+<span class="sd">                    &#39;positivity&#39;: 0 o 1,</span>
+<span class="sd">                    &#39;unitarity&#39;:  0 o 1,</span>
+<span class="sd">                    &#39;perturbativity&#39;: 0 o 1</span>
+<span class="sd">                },</span>
+<span class="sd">                &#39;params&#39;: {</span>
+<span class="sd">                    &#39;mA&#39;:      mA,</span>
+<span class="sd">                    &#39;m12&#39;:     m12,</span>
+<span class="sd">                    &#39;lambda6&#39;: lambda6_val,</span>
+<span class="sd">                    &#39;lambda7&#39;: lambda7_val,</span>
+<span class="sd">                    &#39;sin_ba&#39;:  sin_ba,</span>
+<span class="sd">                    &#39;tan_beta&#39;: tan_beta</span>
+<span class="sd">                }</span>
+<span class="sd">            }</span>
+
+<span class="sd">        Sólo se añade a la lista si `physpoint` devuelve un dict no nulo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Actualizar valores globales de λ6 y λ7 antes de simular</span>
+    <span class="k">global</span> <span class="n">lambda6</span><span class="p">,</span> <span class="n">lambda7</span>
+    <span class="n">lambda6</span> <span class="o">=</span> <span class="n">lambda6_val</span>
+    <span class="n">lambda7</span> <span class="o">=</span> <span class="n">lambda7_val</span>
+
+    <span class="k">for</span> <span class="n">mphi</span> <span class="ow">in</span> <span class="n">mphi_values</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">physpoint</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">mphi</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">m12</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">mA</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">sin_ba</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">tan_beta</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Si el oracle devolvió None (ejecución fallida), se omite este punto</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Extraer branching ratios; usar NaN o 0 si la clave no existe</span>
+        <span class="n">br_gaga</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;branching_ratio_h2_gaga&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">total_width</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w_total_h2&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">br_Zga</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w_h2_Zga&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_width</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_width</span> <span class="ow">and</span> <span class="n">total_width</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">br_bb</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;w_h2_bb&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_width</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_width</span> <span class="ow">and</span> <span class="n">total_width</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s1">&#39;mphi&#39;</span><span class="p">:</span> <span class="n">mphi</span><span class="p">,</span>
+            <span class="s1">&#39;br&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;gaga&#39;</span><span class="p">:</span> <span class="n">br_gaga</span><span class="p">,</span>
+                <span class="s1">&#39;Zga&#39;</span><span class="p">:</span> <span class="n">br_Zga</span><span class="p">,</span>
+                <span class="s1">&#39;bb&#39;</span><span class="p">:</span>  <span class="n">br_bb</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;total_width&#39;</span><span class="p">:</span> <span class="n">total_width</span><span class="p">,</span>
+            <span class="s1">&#39;flags&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;positivity&#39;</span><span class="p">:</span>     <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;positivity_ok&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="s1">&#39;unitarity&#39;</span><span class="p">:</span>      <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;unitarity_ok&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="s1">&#39;perturbativity&#39;</span><span class="p">:</span> <span class="n">out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;perturbativity_ok&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;mA&#39;</span><span class="p">:</span>       <span class="n">mA</span><span class="p">,</span>
+                <span class="s1">&#39;m12&#39;</span><span class="p">:</span>      <span class="n">m12</span><span class="p">,</span>
+                <span class="s1">&#39;lambda6&#39;</span><span class="p">:</span>  <span class="n">lambda6_val</span><span class="p">,</span>
+                <span class="s1">&#39;lambda7&#39;</span><span class="p">:</span>  <span class="n">lambda7_val</span><span class="p">,</span>
+                <span class="s1">&#39;sin_ba&#39;</span><span class="p">:</span>   <span class="n">sin_ba</span><span class="p">,</span>
+                <span class="s1">&#39;tan_beta&#39;</span><span class="p">:</span> <span class="n">tan_beta</span>
+            <span class="p">}</span>
+        <span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+
+<div class="viewcode-block" id="make_title">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.make_title">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_title</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">subplot_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;(d)&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construye el título del gráfico a partir de los parámetros físicos,</span>
+<span class="sd">    formateando expresiones LaTeX para mostrar en matplotlib.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    params : Dict[str, float]</span>
+<span class="sd">        Diccionario con las claves:</span>
+<span class="sd">            - &#39;mA&#39;       : Masa m_A en GeV</span>
+<span class="sd">            - &#39;m12&#39;      : Valor de m12^2 en GeV^2</span>
+<span class="sd">            - &#39;lambda6&#39;  : Valor de λ6</span>
+<span class="sd">            - &#39;lambda7&#39;  : Valor de λ7</span>
+<span class="sd">            - &#39;sin_ba&#39;   : Valor de sin(β - α)</span>
+<span class="sd">            - &#39;tan_beta&#39; : Valor de tan(β)</span>
+<span class="sd">    subplot_tag : str, optional</span>
+<span class="sd">        Etiqueta corta para indicar subpanel en figura, p.ej. &quot;(a)&quot;, &quot;(b)&quot;, etc.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Cadena formateada con expresiones LaTeX y valores numéricos</span>
+<span class="sd">        listos para asignar como título en matplotlib.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mA_val</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;mA&#39;</span><span class="p">]</span>
+    <span class="n">m12_val</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;m12&#39;</span><span class="p">]</span>
+    <span class="n">l6</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;lambda6&#39;</span><span class="p">]</span>
+    <span class="n">l7</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;lambda7&#39;</span><span class="p">]</span>
+    <span class="n">sinba</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;sin_ba&#39;</span><span class="p">]</span>
+    <span class="n">tanbeta</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;tan_beta&#39;</span><span class="p">]</span>
+
+    <span class="n">title</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">rf</span><span class="s2">&quot;$\sin(\beta - \alpha) = &quot;</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sinba</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">+</span>
+        <span class="sa">r</span><span class="s2">&quot; \quad \epsilon_A = \frac</span><span class="si">{1}</span><span class="s2">{&quot;</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tanbeta</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span> <span class="o">+</span>
+        <span class="sa">rf</span><span class="s2">&quot;\quad \Delta\lambda&#39; = </span><span class="si">{</span><span class="n">l6</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> &quot;</span> <span class="o">+</span>
+        <span class="sa">rf</span><span class="s2">&quot;\quad m_\phi &lt; m_</span><span class="se">{{</span><span class="s2">H^\pm</span><span class="se">}}</span><span class="s2"> = m_A = </span><span class="si">{</span><span class="n">mA_val</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">\,$&quot;</span> <span class="o">+</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">subplot_tag</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">title</span></div>
+
+
+
+<div class="viewcode-block" id="plot_branchings">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.plot_branchings">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_branchings</span><span class="p">(</span><span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">],</span> <span class="n">subplot_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;(d)&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Grafica las curvas de branching ratios (φ → γγ, φ → Zγ, φ → b b̄) junto con</span>
+<span class="sd">    marcadores que resaltan los puntos donde se cumplen las condiciones físicas</span>
+<span class="sd">    (positivity, unitarity, perturbativity). Además, incluye un subgráfico</span>
+<span class="sd">    con la evolución del ancho total Γ(φ) en escala log.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    results : List[Dict]</span>
+<span class="sd">        Lista de diccionarios generados por `simulate_curve`, cada uno con:</span>
+<span class="sd">            - &#39;mphi&#39;        : valor de m_phi</span>
+<span class="sd">            - &#39;br&#39;          : dict con keys &#39;gaga&#39;, &#39;Zga&#39;, &#39;bb&#39;</span>
+<span class="sd">            - &#39;total_width&#39; : ancho total Γ(φ)</span>
+<span class="sd">            - &#39;flags&#39;       : dict con keys &#39;positivity&#39;, &#39;unitarity&#39;, &#39;perturbativity&#39;</span>
+<span class="sd">            - &#39;params&#39;      : diccionario de parámetros (usado para el título)</span>
+<span class="sd">    subplot_tag : str, optional</span>
+<span class="sd">        Etiqueta corta para indicar subpanel en la figura.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        Muestra la figura con matplotlib.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extraer arrays de m_phi y branching ratios</span>
+    <span class="n">mphi_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;mphi&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+    <span class="n">brs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;gaga&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="s1">&#39;gaga&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">],</span>
+        <span class="s1">&#39;Zga&#39;</span><span class="p">:</span>  <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="s1">&#39;Zga&#39;</span><span class="p">]</span>  <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">],</span>
+        <span class="s1">&#39;bb&#39;</span><span class="p">:</span>   <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="s1">&#39;bb&#39;</span><span class="p">]</span>   <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+    <span class="p">}</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+    <span class="c1"># 1) Marcar puntos válidos donde se cumplen las 3 condiciones físicas</span>
+    <span class="k">for</span> <span class="n">channel</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;gaga&#39;</span><span class="p">,</span> <span class="s1">&#39;Zga&#39;</span><span class="p">,</span> <span class="s1">&#39;bb&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;purple&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]):</span>
+        <span class="n">valid_x</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">valid_y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">flags</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;flags&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">flags</span><span class="p">[</span><span class="s1">&#39;positivity&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">flags</span><span class="p">[</span><span class="s1">&#39;unitarity&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">flags</span><span class="p">[</span><span class="s1">&#39;perturbativity&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">valid_x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;mphi&#39;</span><span class="p">])</span>
+                <span class="n">valid_y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="n">channel</span><span class="p">])</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+            <span class="n">valid_x</span><span class="p">,</span>
+            <span class="n">valid_y</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span>
+            <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>
+            <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+            <span class="n">s</span><span class="o">=</span><span class="mi">30</span>
+        <span class="p">)</span>
+
+    <span class="c1"># 2) Trazar curvas continuas de BR para cada canal</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">,</span> <span class="n">brs</span><span class="p">[</span><span class="s1">&#39;gaga&#39;</span><span class="p">],</span> <span class="s1">&#39;r--&#39;</span><span class="p">,</span>    <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$\phi \to \gamma\gamma$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">,</span> <span class="n">brs</span><span class="p">[</span><span class="s1">&#39;Zga&#39;</span><span class="p">],</span>  <span class="s1">&#39;purple&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$\phi \to Z\gamma$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">,</span> <span class="n">brs</span><span class="p">[</span><span class="s1">&#39;bb&#39;</span><span class="p">],</span>   <span class="s1">&#39;b:&#39;</span><span class="p">,</span>     <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$\phi \to b\bar</span><span class="si">{b}</span><span class="s1">$&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Configuración de ejes principales</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$m_\phi$ [GeV]&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Branching Ratio&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper right&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 3) Subgráfico (inset) para ancho total Γ(φ)</span>
+    <span class="n">total_widths</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;total_width&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+    <span class="n">inset_ax</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">inset_axes</span><span class="p">([</span><span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.70</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">])</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">,</span> <span class="n">total_widths</span><span class="p">,</span> <span class="s1">&#39;k:&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Elegir ticks uniformes en m_phi</span>
+    <span class="n">x_ticks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">mphi_list</span><span class="p">),</span> <span class="n">num</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x_ticks</span><span class="p">)</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">x_ticks</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+
+    <span class="c1"># Ticks logarítmicos para ancho total</span>
+    <span class="n">min_tw</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">tw</span> <span class="k">for</span> <span class="n">tw</span> <span class="ow">in</span> <span class="n">total_widths</span> <span class="k">if</span> <span class="n">tw</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+    <span class="n">max_tw</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">total_widths</span><span class="p">)</span>
+    <span class="n">y_ticks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">min_tw</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">max_tw</span><span class="p">)),</span> <span class="n">num</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="n">y_ticks</span><span class="p">)</span>
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">.1e</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">y_ticks</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+
+    <span class="n">inset_ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\Gamma$ [GeV]&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+    <span class="c1"># 4) Título principal con parámetros físicos</span>
+    <span class="n">title_str</span> <span class="o">=</span> <span class="n">make_title</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;params&#39;</span><span class="p">],</span> <span class="n">subplot_tag</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title_str</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+
+<span class="c1"># get format for plot_branchings_and_lifetime</span>
+<div class="viewcode-block" id="get_branching_format_from_df">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.get_branching_format_from_df">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_branching_format_from_df</span><span class="p">(</span><span class="n">df_physical</span><span class="p">,</span>
+    <span class="n">total_width_h2_name</span> <span class="o">=</span> <span class="s2">&quot;total_width&quot;</span><span class="p">,</span>
+    <span class="n">branching_ratio_h2_gaga_name</span> <span class="o">=</span> <span class="s2">&quot;br_gaga&quot;</span><span class="p">,</span>
+    <span class="n">width_h2_Zga_name</span> <span class="o">=</span> <span class="s2">&quot;width_Zga&quot;</span><span class="p">,</span>
+    <span class="n">width_h2_bb_name</span> <span class="o">=</span> <span class="s2">&quot;width_bb&quot;</span><span class="p">,</span>
+    <span class="n">m12_name</span> <span class="o">=</span> <span class="s2">&quot;m12&quot;</span><span class="p">):</span>
+
+    <span class="c1"># -- internal ----</span>
+    <span class="n">fixed_mA</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s2">&quot;mA&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_mA</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;There should be only one unique value of mA in the DF&quot;</span>
+    <span class="n">fixed_mA</span> <span class="o">=</span> <span class="n">fixed_mA</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Get the single value</span>
+    <span class="n">fixed_lambda6</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s2">&quot;lambda6&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_lambda6</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;There should be only one unique&quot;</span>
+    <span class="n">fixed_lambda6</span> <span class="o">=</span> <span class="n">fixed_lambda6</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Get the single value</span>
+    <span class="n">fixed_lambda7</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s2">&quot;lambda7&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_lambda7</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;There should be only one unique&quot;</span>
+    <span class="n">fixed_lambda7</span> <span class="o">=</span> <span class="n">fixed_lambda7</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Get the single value</span>
+    <span class="n">fixed_sin_ba</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s2">&quot;sin_ba&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_sin_ba</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;There should be only one unique value of sin_ba in the DF&quot;</span>
+    <span class="n">fixed_sin_ba</span> <span class="o">=</span> <span class="n">fixed_sin_ba</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Get the single value</span>
+    <span class="n">fixed_tan_beta</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s2">&quot;tan_beta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">fixed_tan_beta</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;There should be only one unique value of tan_beta in the DF&quot;</span>
+    <span class="n">fixed_tan_beta</span> <span class="o">=</span> <span class="n">fixed_tan_beta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Get the single value</span>
+
+
+    <span class="c1"># ---  Ordenar por m_phi y extraer mphi / m12_2 ---</span>
+    <span class="n">df_physical</span> <span class="o">=</span> <span class="n">df_physical</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;m_phi&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Vector de valores de m_phi (ordenados ascendentemente)</span>
+    <span class="n">mphi_values</span> <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="s1">&#39;m_phi&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+    <span class="c1"># Vector de valores de m12_2 correspondientes a cada m_phi</span>
+    <span class="n">m12_values</span>  <span class="o">=</span> <span class="n">df_physical</span><span class="p">[</span><span class="n">m12_name</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+
+
+
+
+    <span class="c1"># --- Paso  Empaquetar cada fila en el formato esperado por plot_branchings ---</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df_physical</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="c1"># Extraer anchos y branching ratios</span>
+        <span class="n">total_w</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">total_width_h2_name</span><span class="p">]</span>
+        <span class="c1"># Si total_width es cero o NaN, evitar división por cero</span>
+        <span class="k">if</span> <span class="n">total_w</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">total_w</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">total_w</span><span class="p">):</span>
+            <span class="n">br_Zga</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">br_bb</span>  <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">br_Zga</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">width_h2_Zga_name</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_w</span>
+            <span class="n">br_bb</span>  <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="n">width_h2_bb_name</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_w</span>
+
+        <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;mphi&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;m_phi&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;br&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;gaga&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">branching_ratio_h2_gaga_name</span><span class="p">]),</span>
+                <span class="s1">&#39;Zga&#39;</span><span class="p">:</span>  <span class="nb">float</span><span class="p">(</span><span class="n">br_Zga</span><span class="p">),</span>
+                <span class="s1">&#39;bb&#39;</span><span class="p">:</span>   <span class="nb">float</span><span class="p">(</span><span class="n">br_bb</span><span class="p">)</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;total_width&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_w</span><span class="p">),</span>
+            <span class="s1">&#39;flags&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;positivity&#39;</span><span class="p">:</span>     <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;positivity_ok&#39;</span><span class="p">]),</span>
+                <span class="s1">&#39;unitarity&#39;</span><span class="p">:</span>      <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;unitarity_ok&#39;</span><span class="p">]),</span>
+                <span class="s1">&#39;perturbativity&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;perturbativity_ok&#39;</span><span class="p">])</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;mA&#39;</span><span class="p">:</span>       <span class="n">fixed_mA</span><span class="p">,</span>
+                <span class="s1">&#39;m12&#39;</span><span class="p">:</span>      <span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">m12_name</span><span class="p">]),</span>
+                <span class="s1">&#39;lambda6&#39;</span><span class="p">:</span>  <span class="n">fixed_lambda6</span><span class="p">,</span>
+                <span class="s1">&#39;lambda7&#39;</span><span class="p">:</span>  <span class="n">fixed_lambda7</span><span class="p">,</span>
+                <span class="s1">&#39;sin_ba&#39;</span><span class="p">:</span>   <span class="n">fixed_sin_ba</span><span class="p">,</span>
+                <span class="s1">&#39;tan_beta&#39;</span><span class="p">:</span> <span class="n">fixed_tan_beta</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.gridspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridSpec</span>
+
+<div class="viewcode-block" id="plot_branchings_and_lifetime">
+<a class="viewcode-back" href="../../lib.html#lib.branch_ratio.plot_branchings_and_lifetime">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_branchings_and_lifetime</span><span class="p">(</span>
+    <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">],</span>
+    <span class="n">subplot_tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;(d)&quot;</span><span class="p">,</span>
+    <span class="n">lifetime_unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mm&quot;</span><span class="p">,</span>     <span class="c1"># &quot;mm&quot;, &quot;cm&quot; o &quot;m&quot;</span>
+    <span class="n">lifetime_log</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>     <span class="c1"># True: escala log en vida media</span>
+    <span class="n">width_log</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>         <span class="c1"># True: escala log en decay width</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plotea:</span>
+<span class="sd">     - Branching ratios (izq)</span>
+<span class="sd">     - Decay width Γ(φ) (arriba derecha)</span>
+<span class="sd">     - Vida media cτ = ħc/Γ (abajo derecha)</span>
+
+<span class="sd">    Parámetros adicionales:</span>
+<span class="sd">      lifetime_unit: unidad para cτ (&quot;mm&quot;,&quot;cm&quot;,&quot;m&quot;)</span>
+<span class="sd">      lifetime_log: si True, y-axis de cτ en log</span>
+<span class="sd">      width_log:    si True, y-axis de Γ en log</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># --- Extraer datos ----</span>
+    <span class="n">mphi</span>       <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;mphi&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span>
+    <span class="n">brs</span>        <span class="o">=</span> <span class="p">{</span><span class="n">ch</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="n">ch</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span>
+                  <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;gaga&#39;</span><span class="p">,</span><span class="s1">&#39;Zga&#39;</span><span class="p">,</span><span class="s1">&#39;bb&#39;</span><span class="p">]}</span>
+    <span class="n">total_width</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;total_width&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span>
+
+    <span class="c1"># --- Vida media base en mm ---</span>
+    <span class="n">hbar</span> <span class="o">=</span> <span class="mf">6.582119569e-25</span>    <span class="c1"># GeV·s</span>
+    <span class="n">c</span>    <span class="o">=</span> <span class="mf">2.99792458e11</span>      <span class="c1"># mm/s</span>
+    <span class="n">c_tau_mm</span> <span class="o">=</span> <span class="n">hbar</span> <span class="o">*</span> <span class="n">c</span> <span class="o">/</span> <span class="n">total_width</span>  <span class="c1"># mm</span>
+
+    <span class="c1"># --- Conversión de unidades ---</span>
+    <span class="n">unit_factors</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mm&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s2">&quot;cm&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">lifetime_unit</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unit_factors</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown lifetime_unit &#39;</span><span class="si">{</span><span class="n">lifetime_unit</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+    <span class="n">c_tau</span> <span class="o">=</span> <span class="n">c_tau_mm</span> <span class="o">*</span> <span class="n">unit_factors</span><span class="p">[</span><span class="n">lifetime_unit</span><span class="p">]</span>
+    <span class="n">y_label_tau</span> <span class="o">=</span> <span class="sa">rf</span><span class="s2">&quot;$c\tau\,[</span><span class="si">{</span><span class="n">lifetime_unit</span><span class="si">}</span><span class="s2">]$&quot;</span>
+
+    <span class="c1"># --- Preparar figura ---</span>
+    <span class="n">global_title</span> <span class="o">=</span> <span class="n">make_title</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;params&#39;</span><span class="p">])</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="n">global_title</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">0.98</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">top</span><span class="o">=</span><span class="mf">0.85</span><span class="p">)</span>
+
+    <span class="n">gs</span> <span class="o">=</span> <span class="n">GridSpec</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span>
+                  <span class="n">width_ratios</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">height_ratios</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+                  <span class="n">wspace</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+
+    <span class="c1"># 1) Branching ratios (col 0)</span>
+    <span class="n">ax_br</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">styles</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;gaga&#39;</span><span class="p">:</span><span class="s1">&#39;--&#39;</span><span class="p">,</span><span class="s1">&#39;Zga&#39;</span><span class="p">:</span><span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="s1">&#39;bb&#39;</span><span class="p">:</span><span class="s1">&#39;:&#39;</span><span class="p">}</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;gaga&#39;</span><span class="p">:</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="s1">&#39;Zga&#39;</span><span class="p">:</span><span class="s1">&#39;purple&#39;</span><span class="p">,</span><span class="s1">&#39;bb&#39;</span><span class="p">:</span><span class="s1">&#39;b&#39;</span><span class="p">}</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;gaga&#39;</span><span class="p">:</span> <span class="sa">r</span><span class="s1">&#39;$\phi\to \gamma\gamma$&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Zga&#39;</span><span class="p">:</span>  <span class="sa">r</span><span class="s1">&#39;$\phi\to Z\gamma$&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;bb&#39;</span><span class="p">:</span>   <span class="sa">r</span><span class="s1">&#39;$\phi\to b\bar</span><span class="si">{b}</span><span class="s1">$&#39;</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;gaga&#39;</span><span class="p">,</span><span class="s1">&#39;Zga&#39;</span><span class="p">,</span><span class="s1">&#39;bb&#39;</span><span class="p">]:</span>
+        <span class="n">ax_br</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">mphi</span><span class="p">,</span> <span class="n">brs</span><span class="p">[</span><span class="n">ch</span><span class="p">],</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="n">styles</span><span class="p">[</span><span class="n">ch</span><span class="p">],</span>
+            <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">ch</span><span class="p">],</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">labels</span><span class="p">[</span><span class="n">ch</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="p">[(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;mphi&#39;</span><span class="p">],</span> <span class="n">r</span><span class="p">[</span><span class="s1">&#39;br&#39;</span><span class="p">][</span><span class="n">ch</span><span class="p">])</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span>
+                 <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;flags&#39;</span><span class="p">][</span><span class="n">f</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;positivity&#39;</span><span class="p">,</span><span class="s1">&#39;unitarity&#39;</span><span class="p">,</span><span class="s1">&#39;perturbativity&#39;</span><span class="p">])]</span>
+        <span class="k">if</span> <span class="n">valid</span><span class="p">:</span>
+            <span class="n">vx</span><span class="p">,</span> <span class="n">vy</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">valid</span><span class="p">)</span>
+            <span class="n">ax_br</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">vx</span><span class="p">,</span> <span class="n">vy</span><span class="p">,</span>
+                          <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">ch</span><span class="p">],</span>
+                          <span class="n">edgecolors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span>
+                          <span class="n">s</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">ax_br</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$m_\phi\,[\mathrm</span><span class="si">{GeV}</span><span class="s1">]$&#39;</span><span class="p">)</span>
+    <span class="n">ax_br</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Branching Ratio&#39;</span><span class="p">)</span>
+    <span class="n">ax_br</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax_br</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">ax_br</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">subplot_tag</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+
+    <span class="c1"># 2) Decay width (fila 0,col 1)</span>
+    <span class="n">ax_w</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">ax_w</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi</span><span class="p">,</span> <span class="n">total_width</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">width_log</span><span class="p">:</span>
+        <span class="n">ax_w</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+    <span class="n">ax_w</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$m_\phi\,[\mathrm</span><span class="si">{GeV}</span><span class="s1">]$&#39;</span><span class="p">)</span>
+    <span class="n">ax_w</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\Gamma(\phi)\,[\mathrm</span><span class="si">{GeV}</span><span class="s1">]$&#39;</span><span class="p">)</span>
+    <span class="n">ax_w</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Decay Width&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># 3) Vida media (fila 1,col 1)</span>
+    <span class="n">ax_tau</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">ax_tau</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">mphi</span><span class="p">,</span> <span class="n">c_tau</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">lifetime_log</span><span class="p">:</span>
+        <span class="n">ax_tau</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+    <span class="n">ax_tau</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$m_\phi\,[\mathrm</span><span class="si">{GeV}</span><span class="s1">]$&#39;</span><span class="p">)</span>
+    <span class="n">ax_tau</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">y_label_tau</span><span class="p">)</span>
+    <span class="n">ax_tau</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Lifetime $c\tau = \hbar c / \Gamma$&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">mlpython</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../lib.html">Library Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Fabi.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

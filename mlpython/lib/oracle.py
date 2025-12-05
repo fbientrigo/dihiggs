@@ -16,6 +16,22 @@ def run_oracle_batch(param_list, nthreads, executable_path=EXECUTABLE_PATH, debu
     Llama al binario en modo paralelo, entregándole nthreads
     y un array de param_list (lista de listas de 7 floats).
     Devuelve la lista de dicts resultantes.
+
+    Parameters
+    ----------
+    param_list : list of list of float
+        Lista de listas, donde cada sublista contiene los 7 parámetros.
+    nthreads : int
+        Número de hilos a utilizar.
+    executable_path : Path, optional
+        Ruta al ejecutable. Por defecto EXECUTABLE_PATH.
+    debug : bool, optional
+        Si es True, imprime información de depuración.
+
+    Returns
+    -------
+    list of dict
+        Lista de diccionarios con los resultados.
     """
     flat_args = ["--nthreads", str(nthreads)]
     for params in param_list:
@@ -49,13 +65,22 @@ def run_oracle_batch(param_list, nthreads, executable_path=EXECUTABLE_PATH, debu
 
 def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
     """
-    [mphi, mA, sin_ba, tan_beta, lambda6, lambda7, m12_2]
-    
     Ejecuta el binario Oracle con una lista de parámetros (7 floats) y devuelve el dict JSON.
-    Los parametros:
-        double m_phi, double mA, double sin_ba, double tan_beta,
-                        double lambda6, double lambda7, double m12
-    donde m_12 es resumido para escribir m_(12)^2
+
+    Parameters
+    ----------
+    params : list of float
+        Lista de 7 parámetros: [mphi, mA, sin_ba, tan_beta, lambda6, lambda7, m12_2].
+        Donde m12_2 es m_12^2.
+    executable_path : Path, optional
+        Ruta al ejecutable. Por defecto EXECUTABLE_PATH.
+    debug : bool, optional
+        Si es True, imprime información de depuración.
+
+    Returns
+    -------
+    dict
+        Diccionario con los resultados de la ejecución o error.
     """
     cmd = [str(executable_path)] + list(map(str, params))
 
@@ -87,6 +112,16 @@ def run_oracle(params, executable_path=EXECUTABLE_PATH, debug=False):
 def safe_run_oracle(params):
     """
     Llama a run_oracle y devuelve salida uniforme con NaNs en caso de error.
+
+    Parameters
+    ----------
+    params : list of float
+        Lista de 7 parámetros.
+
+    Returns
+    -------
+    dict
+        Diccionario con claves estandarizadas y valores NaN si hubo error.
     """
     output = run_oracle(params)
     expected_keys = {
