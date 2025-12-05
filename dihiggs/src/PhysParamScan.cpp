@@ -171,7 +171,9 @@ void perform_param_scan(
     const double sa = sb * cba - cb * sin_ba;
     const double beta  = std::atan(tan_beta);
     const double alpha = beta - std::asin(sin_ba);
-
+    THDM model; 
+    SM sm; 
+    model.set_SM(sm);
     #pragma omp parallel
     {
         // Buffers y contadores locales
@@ -180,9 +182,7 @@ void perform_param_scan(
         vector<vector<double>> buffer;
         buffer.reserve(50); // Batch size para flush
 
-        THDM model; 
-        SM sm; 
-        model.set_SM(sm);
+
 
         #pragma omp for schedule(dynamic)
         for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
