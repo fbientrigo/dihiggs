@@ -36,6 +36,39 @@ struct ParamSet {
 };
 
 static double g_bestBR = -1.0;
+//
+
+/**
+ * @file PhysScanWithFixings.cpp
+ * @brief Escaneo de parámetros m_phi y lambda1 con parámetros físicos fijos.
+ *
+ * Refactored to use Analytical Inversion Strategy for m12^2 based on lambda1.
+ * Included Real-Time Statistical Monitoring (VPPM & PPS) with optimized granularity.
+ */
+
+#include "THDM.h"
+#include "Constraints.h"
+#include "DecayTable.h"
+#include "ParamUtils.hpp"
+
+#include <iostream>
+#include <fstream>
+#include <sstream>   // <--- NUEVO: para buffer de texto por hilo
+#include <cmath>
+#include <iomanip>
+#include <omp.h>
+#include <vector>
+#include <chrono>
+#include <atomic> // [MONITORING] Necesario para contadores thread-safe sin bloqueos
+
+using namespace std;
+using namespace std::chrono;
+
+
+
+using Clock    = std::chrono::high_resolution_clock;
+using Duration = std::chrono::duration<double>;
+
 
 void perform_param_scan_fixings(
     double mphi_min, double mphi_max, int N_mphi,
@@ -68,14 +101,14 @@ void perform_param_scan_fixings(
     // [MONITORING] Variables estadísticas globales y temporizadores
     long long total_tasks = (long long)N_mphi * (long long)N_lam1;
     std::atomic<long long> global_attempts(0); // Total puntos calculados (válidos + inválidos)
-    std::atomic<long long> global_valid(0);    // Total puntos guardados
-    
+    std::atomic<long long> global_valid(0);    // Total puntos guardados en CSV
+    std::atomic<long long> global_triple_ok(0); // [TRIPLE_OK] puntos con pos&&uni&&pert
+
     auto start_time       = Clock::now();
     auto last_report_time = start_time;
 
-    // [HPC ADJUSTMENT] Configuración de granularidad de reporte y flush
-    const double REPORT_INTERVAL_SEC = 2.5; // Reportar cada 0.5s para feedback rápido
-    const int    BATCH_SIZE          = 200;  // Forzar escritura/reporte cada 50 puntos válidos por hilo
+    const double REPORT_INTERVAL_SEC = 2.5;
+    const int    BATCH_SIZE          = 200;
 
     cout << "step_lam1=" << step_lam1 << endl;
     cout << "step_mphi=" << step_mphi << endl;
@@ -98,20 +131,17 @@ void perform_param_scan_fixings(
     // Angles for reporting/logging
     const double beta  = std::atan(tan_beta);
     const double alpha = beta - std::asin(sin_ba);
-    
+
     // Set Model
     THDM model;
     SM sm; model.set_SM(sm);
                 
     #pragma omp parallel
     {
-        // [MONITORING] Contador local para evitar contención atómica frecuente
-        long long local_attempts = 0;
+        long long local_attempts   = 0;
+        long long local_valid      = 0;
+        long long local_triple_ok  = 0; // [TRIPLE_OK] contador local
 
-        // Contador de puntos válidos acumulados en este hilo desde el último flush
-        long long local_valid = 0;
-
-        // Buffer de texto local por hilo (pipe local)
         std::ostringstream local_buffer;
         local_buffer.setf(std::ios::scientific);
         local_buffer << std::setprecision(6);
@@ -127,34 +157,25 @@ void perform_param_scan_fixings(
 
                 double lambda1 = lam1_min + i_l1 * step_lam1;
 
-                // Step C: Analytical Inversion (m12^2 Calculation)
-                // m12^2 = [ (m_phi^2 ca^2 + mh^2 sa^2)/(v^2 cb^2) - 1.5*l6*tb + 0.5*l7*tb^3 - l1 ] * (v^2 cb^2 / tb)
                 double term_mass = (m_phi*m_phi * ca*ca + mh*mh * sa*sa);
                 double term_l6   = 1.5 * lambda6 * tan_beta;
                 double term_l7   = 0.5 * lambda7 * std::pow(tan_beta, 3);
                 
-                // Pre-factor sin multiplicar por el último término geométrico
                 double pre_factor = (term_mass / (VEV*VEV * cb*cb)) - term_l6 + term_l7 - lambda1;
 
                 double m12_sq = pre_factor * (VEV*VEV * cb*cb / tan_beta);
 
-                // Step 3: Validation & Model Setting
-                // Calculate lambda2 con el m12_sq calculado
                 double l2 = calc_lambda2(mh, m_phi, m12_sq,
                                          sa, ca, sb, cb,
                                          tan_beta, lambda6, lambda7, VEV);
 
-                // Filter: Check Perturbativity of lambda2
                 if (std::abs(l2) > 4 * PI) continue;
 
-
-                // Usamos m12_sq calculado
                 bool pset = model.set_param_phys(
                     mh, m_phi, mA_fixed, mA_fixed,
                     sin_ba, lambda6, lambda7,
                     m12_sq, tan_beta
                 );
-                
                 if (!pset) continue;
 
                 model.set_yukawas_type(1);
@@ -171,6 +192,11 @@ void perform_param_scan_fixings(
                 bool uni  = check.check_unitarity();
                 bool pert = check.check_perturbativity();
 
+                // [TRIPLE_OK] contar sólo los que pasan las 3
+                if (pos && uni && pert) {
+                    ++local_triple_ok;
+                }
+
                 DecayTable tab(model);
                 double w_bb     = tab.get_gamma_hdd(2,3,3);
                 double w_tautau = tab.get_gamma_hll(2,3,3);
@@ -183,7 +209,6 @@ void perform_param_scan_fixings(
                 double w_tot    = tab.get_gammatot_h(2);
                 double br_gaga  = (w_tot > 1e-15) ? w_gaga / w_tot : 0.0;
 
-                // Guardar fila en buffer de TEXTO local (pipe por hilo)
                 local_buffer
                     << m_phi   << "," << mA_fixed << "," << alpha  << "," << beta    << ","
                     << lambda6 << "," << lambda7  << "," << m12_sq << ","
@@ -200,26 +225,23 @@ void perform_param_scan_fixings(
 
                 ++local_valid;
 
-                // [HPC FLUSH] Si el buffer local se llena, forzamos escritura y reporte
-                // Esto mantiene sincronizados: flush a disco + logging.
                 if (local_valid >= BATCH_SIZE) {
                     #pragma omp critical
                     {
-                        // Volcar bloque de texto completo
                         results << local_buffer.str();
 
-                        // Actualizar contadores globales
                         global_valid    += local_valid;
                         global_attempts += local_attempts;
+                        global_triple_ok += local_triple_ok; // [TRIPLE_OK] flush al global
 
-                        // Check timer y hacer logging SOLO aquí, acoplado al flush
                         auto now  = Clock::now();
                         Duration diff = now - last_report_time;
                         
                         if (diff.count() > REPORT_INTERVAL_SEC) {
                             long long current_attempts = global_attempts.load();
                             long long current_valid    = global_valid.load();
-                            
+                            long long current_triple   = global_triple_ok.load();
+
                             double total_elapsed = Duration(now - start_time).count();
                             
                             double pps    = (total_elapsed > 0)
@@ -236,24 +258,25 @@ void perform_param_scan_fixings(
                                       << "[ " << std::fixed << std::setprecision(1)
                                       << progress << "% ] "
                                       << "Speed: " << (long)pps << " pts/s | "
-                                      << "Valid: " << (long)vppm << "/min | "
-                                      << "Found: " << current_valid << "/"
+                                      << "ValidCSV: " << (long)vppm << "/min | "
+                                      << "FoundCSV: " << current_valid << "/"
                                       << current_attempts
+                                      << " | TripleOK: " << current_triple
                                       << "   " << std::flush;
                             
                             last_report_time = now;
                         }
-                    } // fin critical
+                    }
 
-                    // Reset buffer y contadores locales después del flush
                     local_buffer.str("");
                     local_buffer.clear();
-                    local_valid    = 0;
-                    local_attempts = 0;
+                    local_valid      = 0;
+                    local_attempts   = 0;
+                    local_triple_ok  = 0; // [TRIPLE_OK] reset local
                 }
 
-            } // Fin loop interno lam1
-        } // Fin loop externo m_phi
+            } // i_l1
+        } // i_phi
 
         // [LIMPIEZA FINAL] Volcar remanentes al terminar el hilo
         #pragma omp critical
@@ -265,28 +288,37 @@ void perform_param_scan_fixings(
             if (local_attempts > 0) {
                 global_attempts += local_attempts;
             }
+            if (local_triple_ok > 0) {
+                global_triple_ok += local_triple_ok; // [TRIPLE_OK] remanente
+            }
         }
-    } // End parallel
+    } // parallel
 
-    // [MONITORING] Reporte final
     auto total_time = Duration(Clock::now() - start_time).count();
-    long long final_attempts = global_attempts.load();
-    long long final_valid    = global_valid.load();
+    long long final_attempts  = global_attempts.load();
+    long long final_valid     = global_valid.load();
+    long long final_triple_ok = global_triple_ok.load(); // [TRIPLE_OK]
 
     std::cout << "\n\n--- Scan Finalizado ---" << endl;
-    std::cout << "Total Attempts: "      << final_attempts << endl;
-    std::cout << "Total Valid Points: "  << final_valid    << endl;
-    std::cout << "Total Time: "          << total_time     << " s" << endl;
+    std::cout << "Total Attempts: "         << final_attempts  << endl;
+    std::cout << "Total CSV Rows: "        << final_valid     << endl;
+    std::cout << "Total Triple-OK Points: "<< final_triple_ok << endl;
+    std::cout << "Total Time: "            << total_time      << " s" << endl;
     if (total_time > 0) {
         std::cout << "Average Speed: "
                   << (long)(final_attempts / total_time) << " pts/s" << endl;
-        std::cout << "Final Valid Rate: "
-                  << (long)(final_valid / (total_time/60.0)) << " valid/min" << endl;
+        std::cout << "Final Valid Rate (CSV): "
+                  << (long)(final_valid / (total_time/60.0)) << " rows/min" << endl;
     }
+
+    // [TRIPLE_OK] Línea final limpia para bash / pipeline
+    std::cout << "TRIPLE_OK_POINTS " << final_triple_ok << std::endl;
 
     results.close();
 }
 
+
+//
 int main(int argc, char* argv[]) {
     if (argc != 13) {
         cerr << "Uso: " << argv[0]
