@@ -9,7 +9,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/dihiggs/app/PhysParamScan",
-        "args": ["0.csv", "3", "10", "1"],
+        "args": ["0.csv", "3", "100", "3", "10"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

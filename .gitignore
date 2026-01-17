@@ -3,6 +3,8 @@
 */ubenv/
 datasets
 app/*
+.agent
+.vscode
 
 # ignorar datasets de HB/HS pesados
 datasets/*
