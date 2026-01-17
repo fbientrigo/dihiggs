@@ -31,7 +31,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Run PhysScanWithFixings_speed_test for preset configs"
     )
-    parser.add_argument("--exe", default="./app/PhysScanWithFixings_speed_test",
+    parser.add_argument("--exe", default="./app/PhysScanWithFixings",
                         help="Path to the executable")
     parser.add_argument("--config", required=True,
                         help="CSV file with predefined parameter sets")
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
 # Ejemplo de ejecución
 #./batch_scan.py \
-#  --exe ./app/PhysScanWithFixings_speed_test \
+#  --exe ./app/PhysScanWithFixings \
 #  --config configs.csv \
 #  --output-dir results
 #
