@@ -1020,19 +1020,19 @@ void THDM::get_param_phys(double &m_h,double &m_H, double &m_A, double &m_Hp,
 void THDM::get_param_higgs(double &Lambda1, double &Lambda2, double &Lambda3,
 			   double &Lambda4, double &Lambda5, double &Lambda6,
 			   double &Lambda7, double &m_Hp) {
-
-  double sb=sin(beta);
-  double s2b=sin(2.*beta);
-  double s3b=sin(3.*beta);
-  double s2b2=s2b*s2b;
-  double sb2=sb*sb;
-  double sb4=sb2*sb2;
-  double cb=cos(beta);
-  double c2b=cos(2.*beta);
-  double c3b=cos(3.*beta);
-  double cb2=cb*cb;
-  double cb4=cb2*cb2;
-  double tb=tan(beta);
+                        // tan beta grande
+  double sb=sin(beta);      // 1
+  double s2b=sin(2.*beta);  // 2/t  
+  double s3b=sin(3.*beta);  // 3s - 4s^3 = 3 - 4 = -1
+  double s2b2=s2b*s2b;      // 4/t^2  ~ 0
+  double sb2=sb*sb;         // 1
+  double sb4=sb2*sb2;      // 1
+  double cb=cos(beta);      // 1/t 
+  double c2b=cos(2.*beta); //cb2-sb2 = 1/t^2 - 1  ~ -1
+  double c3b=cos(3.*beta); // 4 c3 - 3c = 4/t^3 - 3/t  ~ -3/t
+  double cb2=cb*cb;       // 1/t^2
+  double cb4=cb2*cb2;     // 1/t^4
+  double tb=tan(beta);  
 
   double lambda345=lambda[3]+lambda[4]+lambda[5];
 
