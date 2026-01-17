@@ -18,13 +18,11 @@
             }
         }
     },
-    "remoteUser": "vscode",
-    // Estas variables estarán disponibles en tu terminal automáticamente
+    // CAMBIO IMPORTANTE: Ahora usamos el usuario nativo de la imagen
+    "remoteUser": "ubuntu", 
     "containerEnv": {
         "HB_DATASET": "/workspaces/dihiggs/datasets/HBDataset",
         "HS_DATASET": "/workspaces/dihiggs/datasets/HSDataset"
     },
-    // Comandos para ejecutar DESPUÉS de que el contenedor se cree.
-    // Aquí automatizamos la compilación tediosa.
     "postCreateCommand": "bash .devcontainer/post-install.sh"
 }
