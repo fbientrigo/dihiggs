@@ -1,0 +1,30 @@
+{
+    "name": "DiHiggs C++ & Python Env",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "twxs.cmake",
+                "mhutchie.git-graph"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/bin/python3"
+            }
+        }
+    },
+    "remoteUser": "vscode",
+    // Estas variables estarán disponibles en tu terminal automáticamente
+    "containerEnv": {
+        "HB_DATASET": "/workspaces/dihiggs/datasets/HBDataset",
+        "HS_DATASET": "/workspaces/dihiggs/datasets/HSDataset"
+    },
+    // Comandos para ejecutar DESPUÉS de que el contenedor se cree.
+    // Aquí automatizamos la compilación tediosa.
+    "postCreateCommand": "bash .devcontainer/post-install.sh"
+}
