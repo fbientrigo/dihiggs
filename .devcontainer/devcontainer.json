@@ -19,7 +19,7 @@
         }
     },
     // CAMBIO IMPORTANTE: Ahora usamos el usuario nativo de la imagen
-    "remoteUser": "ubuntu", 
+    "remoteUser": "vscode",
     "containerEnv": {
         "HB_DATASET": "/workspaces/dihiggs/datasets/HBDataset",
         "HS_DATASET": "/workspaces/dihiggs/datasets/HSDataset"
