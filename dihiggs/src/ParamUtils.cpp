@@ -263,6 +263,8 @@ double calc_lambda1(double mh, double mH,
                           double m12_2,
                           double sa, double ca, double sb, double cb, double tan_beta,
                           double lam6, double lam7, double VEV) {
+    (void)sb; // shut up compiler warnings for unused
+
     // Términos de lambda 1
     double term1 = (mH*mH * ca*ca + mh*mh * sa*sa) / (VEV*VEV * cb*cb);
     double term2 = 1.5 * lam6 * tan_beta;
@@ -276,7 +278,8 @@ double calc_lambda2(double mh, double mH,
                           double m12_2,
                           double sa, double ca, double sb, double cb, double tan_beta,
                           double lam6, double lam7, double VEV) {
-
+    (void)cb; // shut up compiler warnings for unused
+    
     double ct = 1.0/tan_beta;
 
     // Términos de lambda_2
