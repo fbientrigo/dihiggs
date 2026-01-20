@@ -35,6 +35,7 @@ mlpython/data_train/
 *.pth
 *.ckpt
 *.so
+*.o
 *.dll
 2hdmc/Demo
 2hdmc/CalcGen
