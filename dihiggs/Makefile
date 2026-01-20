@@ -1,110 +1,85 @@
-# Nombre del compilador
-CXX = g++
+# =============================================================================
+# DIHIGGS CORE MAKEFILE - VERSION ROBUSTA CI/CD
+# =============================================================================
 
-# Directorio donde está este Makefile
+CXX      := g++
+SHELL    := /bin/bash
+
 MAKEFILE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-
-# Root del repo: un nivel por encima de dihiggs/
 REPO_ROOT    := $(abspath $(MAKEFILE_DIR)/..)
 
-# Prefijo de instalación de HiggsTools relativo al repo
-HIGGSTOOLS_PREFIX ?= $(REPO_ROOT)/higgstools/installation
+# Directorios
+SRC_DIR      := src
+OBJ_DIR      := obj
+BIN_DIR      := app
+LIB_DIR      := lib
 
+# Dependencias (HiggsTools & 2HDMC)
+HIGGSTOOLS_PREFIX ?= $(REPO_ROOT)/higgstools/installation
 HIGGSTOOLS_INC    := $(HIGGSTOOLS_PREFIX)/include
 HIGGSTOOLS_LIB    := $(HIGGSTOOLS_PREFIX)/lib
+THDMC_SRC         := ../2hdmc/src
+THDMC_LIB         := ../2hdmc/lib
 
-# Flags de compilación
-# CXXFLAGS     = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -O2 -Wall
+# Flags
+CXXFLAGS := -I$(THDMC_SRC) -I$(HIGGSTOOLS_INC) -I$(SRC_DIR)
+CXXFLAGS += -fopenmp -std=gnu++17 -Wall -Wextra -Wpedantic -O0 -g
+LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
+            -L$(THDMC_LIB) -l2HDMC \
+            -L$(HIGGSTOOLS_LIB) -lHiggsTools \
+            -lgsl -lgslcblas -lm \
+            -Wl,-rpath,$(HIGGSTOOLS_LIB)
 
-# Para debugging, usa estas líneas en lugar de la anterior:
-CXXFLAGS = -I../2hdmc/src -I$(HIGGSTOOLS_INC) -fopenmp -std=gnu++17 -Wall -O0 -g
+# Fuentes y Objetos
+MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
+               $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
+               $(SRC_DIR)/PhysScanWithFixings.cpp)
+COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp
 
-CXXFLAGS += -Wextra -Wpedantic
+# Generación de rutas de objetos
+MAIN_OBJS   := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))
+COMMON_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(COMMON_SRCS))
+BINARIES    := $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%,$(MAIN_SRCS))
+TARGET_LIB  := $(LIB_DIR)/libdihiggs.a
 
-SPEED_FLAGS  = -DSPEED_TEST
+# =============================================================================
+# REGLAS DE CONSTRUCCIÓN
+# =============================================================================
 
-# Flags de enlazado (ajusta si necesitas más librerías)
-LDFLAGS = -L../2hdmc/lib -l2HDMC \
-          -L$(HIGGSTOOLS_LIB) -lHiggsTools -lgsl -lgslcblas -lm \
-          -Wl,-rpath,$(HIGGSTOOLS_LIB)
+.PHONY: all clean cleanall directories
 
-# Directorios
-SRC_DIR = src
-OBJ_DIR = obj
-BIN_DIR = app
+# Forzamos que 'directories' ocurra antes de cualquier otra cosa
+all: directories
+	@$(MAKE) $(TARGET_LIB)
+	@$(MAKE) $(BINARIES)
+	@echo "[INFO] Build complete."
 
-# ============ 
-# Archivos fuente con main (cada uno genera un ejecutable).
-# ============ 
-MAIN_SRCS = \
-  PhysParamScan.cpp \
-  Oracle.cpp \
-  HBHS_testing.cpp \
-  PostProcessHBHS.cpp \
-  PhysScanWithFixings.cpp
+# Regla de la Librería Estática
+$(TARGET_LIB): $(COMMON_OBJS)
+	@echo "[AR] Creating static library $@"
+	@mkdir -p $(LIB_DIR)
+	@ar rcs $@ $^
 
-# ============ 
-# Archivos fuente comunes (sin main).
-# ============ 
-COMMON_SRCS = \
-  ParamUtils.cpp
+# Regla de enlace de Ejecutables
+$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(TARGET_LIB)
+	@echo "[LD] Linking executable $@"
+	@mkdir -p $(BIN_DIR)
+	@$(CXX) -fopenmp $< -o $@ $(LDFLAGS)
 
-# Lista completa de fuentes
-SRCS = $(MAIN_SRCS:%=$(SRC_DIR)/%) $(COMMON_SRCS:%=$(SRC_DIR)/%)
+# REGLA CRÍTICA: Compilación de .cpp a .o
+# Se elimina la dependencia de pipe '|' y se añade 'mkdir -p' interno
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@echo "[CXX] Compiling $<"
+	@if [ ! -f $< ]; then echo "[ERROR] Source file $< not found"; exit 1; fi
+	@mkdir -p $(dir $@)
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Objetos normales
-OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+directories:
+	@mkdir -p $(BIN_DIR) $(OBJ_DIR) $(LIB_DIR)
 
-# Objeto especializado para speed test
-# OBJ_SPEED = $(OBJ_DIR)/PhysScanWithFixings_speed_test.o
-
-# ============ 
-# Binarios resultantes
-# ============ 
-BINARIES = \
-  $(BIN_DIR)/PhysParamScan \
-  $(BIN_DIR)/Oracle \
-  $(BIN_DIR)/HBHS_testing \
-  $(BIN_DIR)/PostProcessHBHS \
-  $(BIN_DIR)/PhysScanWithFixings \
-
-
-# # Binario adicional de speed test
-# SPEED_BINARIES = \
-#   $(BIN_DIR)/PhysScanWithFixings_speed_test
-
-# Regla principal
-all: $(BIN_DIR) $(OBJ_DIR) $(BINARIES)
-
-# ---- Regla de enlace de cada ejecutable normal ----
-$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/ParamUtils.o
-	$(CXX) -fopenmp $^ -o $@ $(LDFLAGS)
-
-# ---- Regla de enlace del speed test ----
-# $(BIN_DIR)/PhysScanWithFixings_speed_test: $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o
-# 	$(CXX) -fopenmp $(OBJ_SPEED) $(OBJ_DIR)/ParamUtils.o -o $@ $(LDFLAGS)
-
-# ---- Compilación genérica de .cpp -> .o ----
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# ---- Compilación específica para speed test (mismo .cpp, distinta bandera) ----
-# $(OBJ_DIR)/PhysScanWithFixings_speed_test.o: $(SRC_DIR)/PhysScanWithFixings.cpp | $(OBJ_DIR)
-# 	$(CXX) $(CXXFLAGS) $(SPEED_FLAGS) -c $< -o $@
-
-# Crear directorios si no existen
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
-# Limpieza
 clean:
-	rm -rf $(OBJ_DIR)/*.o $(BINARIES)
+	@echo "[CLEAN] Removing objects and binaries"
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) $(LIB_DIR)
 
 cleanall: clean
-	rm -rf $(BIN_DIR)/*
-	rm -rf data/*
-
-.PHONY: all clean cleanall
+	@rm -rf data/*

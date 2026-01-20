@@ -60,7 +60,7 @@ double calc_lambda2(double mh, double mphi, double m12,
 inline bool check_lambda(double l){ return (l > 0.0 && l < LMAX); }
 
 // ===== Paso físico "seguro" Δ =====
-inline double delta_safe(double /*sa*/, double /*ca*/, double sb, double cb, double tanb){
+inline double delta_safe(double /*sa*/, double /*ca*/, double /*sb*/, double cb, double tanb){
     const double cotb = 1.0 / tanb;
     const double term = cotb * cb*cb; // + tanb * sb*sb;
     return 4.0 * PI * VEV * VEV * term;  // GeV^2
