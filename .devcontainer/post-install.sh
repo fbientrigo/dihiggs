@@ -41,7 +41,14 @@ fi
 
 # 4. Compilación final del proyecto (Paso 5 del README)
 echo "Compilando proyecto principal..."
-# make clean # Opcional
-make
+if [ -d "dihiggs" ]; then     # Verificación defensiva
+    cd dihiggs                # <--- FIX: Entrar al directorio
+    make clean                # Buena práctica para limpiar builds previos
+    make                      # Ahora sí encontrará el Makefile
+    cd ..                     # Volver a la raíz (opcional, pero limpio)
+else
+    echo "Error: No se encuentra la carpeta 'dihiggs' para compilar."
+    exit 1
+fi
 
 echo "¡Entorno listo para la física de partículas!"
