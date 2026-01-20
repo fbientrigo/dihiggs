@@ -5,11 +5,12 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
-
 jobs:
   build-and-test:
-    name: Build & Test (DevContainer)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: 📥 Checkout Code
