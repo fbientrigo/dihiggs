@@ -44,7 +44,7 @@ echo "Compilando proyecto principal..."
 if [ -d "dihiggs" ]; then     # Verificación defensiva
     cd dihiggs                # <--- FIX: Entrar al directorio
     make clean                # Buena práctica para limpiar builds previos
-    make                      # Ahora sí encontrará el Makefile
+    make all                     # Ahora sí encontrará el Makefile
     cd ..                     # Volver a la raíz (opcional, pero limpio)
 else
     echo "Error: No se encuentra la carpeta 'dihiggs' para compilar."
