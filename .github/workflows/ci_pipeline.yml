@@ -7,30 +7,36 @@ on:
 
 jobs:
   # ----------------------------------------------------------------
-  # JOB 1: BUILD CORE (El pesado)
+  # JOB 1: BUILD CORE (Construye Binarios e Imagen Docker)
   # ----------------------------------------------------------------
   build_core:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Necesario para guardar caché del contenedor
+      packages: write # Necesario para SUBIR la imagen al registro (cache)
 
     steps:
-      - name: 📥 Checkout
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      # Construimos el contenedor y compilamos el código C++
+      # FIX 1: Autenticación explícita en el registro de contenedores
+      - name: 🔐 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # FIX 2: push: 'true' (como string)
       - name: 🐳 Build Core in DevContainer
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
-          # Subimos la imagen a GHCR para que los siguientes jobs la bajen rápido
           imageName: ghcr.io/${{ github.repository }}/devcontainer-image
           cacheFrom: ghcr.io/${{ github.repository }}/devcontainer-image
-          push: true 
+          push: 'true' 
           runCmd: bash .github/scripts/ci_build_core.sh
 
-      # Empaquetamos los binarios para pasarlos a los siguientes jobs
       - name: 📤 Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -38,49 +44,49 @@ jobs:
           path: |
             dihiggs/lib/libdihiggs.a
             tests/unit/dihiggs_unit_tests
-            # También necesitamos las librerías externas si no están instaladas en sistema
-            # Pero como usamos el mismo contenedor, ya estarán en /usr/local o en el repo
           retention-days: 1
 
   # ----------------------------------------------------------------
-  # JOB 2: TEST MATRIX (Paralelización)
+  # JOB 2: TEST MATRIX (Ejecución Paralela)
   # ----------------------------------------------------------------
   run_tests:
-    needs: build_core # Espera a que termine el build
+    needs: build_core
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
-    
+      packages: read # Necesario para BAJAR la imagen del registro
+
     strategy:
       fail-fast: false
       matrix:
-        # Aquí defines tus trabajos paralelos
-        test-suite: [unit, oracle] 
+        test-suite: [unit, oracle]
 
     steps:
-      - name: 📥 Checkout
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      # Descargamos los binarios compilados en el paso anterior
+      # FIX 1: Autenticación también necesaria aquí para bajar la imagen cacheada
+      - name: 🔐 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 📥 Download Binaries
         uses: actions/download-artifact@v4
         with:
           name: compiled-binaries
 
-      # Restauramos permisos de ejecución (se pierden al subir/bajar artifacts)
       - name: 🔧 Fix Permissions
         run: |
           chmod +x tests/unit/dihiggs_unit_tests
 
-      # Ejecutamos el test correspondiente usando la IMAGEN CACHEADA
-      # No reconstruye nada, solo arranca y corre.
+      # FIX 2: push: 'never' (como string)
       - name: 🚀 Run ${{ matrix.test-suite }} Tests
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
-          # Usamos la imagen creada en el paso anterior
           cacheFrom: ghcr.io/${{ github.repository }}/devcontainer-image
-          push: never
-          # Pasamos el argumento de la matriz al script
+          push: 'never'
           runCmd: bash .github/scripts/ci_run_tests.sh ${{ matrix.test-suite }}
