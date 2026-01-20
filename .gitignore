@@ -89,3 +89,4 @@ dihiggs/app/outcsv/tb8000/chunk_01.csv
 dihiggs/app/outcsv/tb8000/timings.json
 mlpython/0b1_samplings.ipynb
 
+tests/unit/run_tests
