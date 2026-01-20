@@ -39,23 +39,24 @@ LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
 # SOURCES & OBJECTS
 # =============================================================================
 
-# Files containing 'main' functions (generate executables)
+# Archivos con 'main' (ahora con el prefijo del directorio)
 MAIN_SRCS := \
-  PhysParamScan.cpp \
-  Oracle.cpp \
-  HBHS_testing.cpp \
-  PostProcessHBHS.cpp \
-  PhysScanWithFixings.cpp
+  $(SRC_DIR)/PhysParamScan.cpp \
+  $(SRC_DIR)/Oracle.cpp \
+  $(SRC_DIR)/HBHS_testing.cpp \
+  $(SRC_DIR)/PostProcessHBHS.cpp \
+  $(SRC_DIR)/PhysScanWithFixings.cpp
 
-# Common logic files (packaged into static library)
-# TODO: Move Oracle logic (without main) here in the future for testing
+# Archivos comunes para la librería (ahora con el prefijo del directorio)
 COMMON_SRCS := \
-  ParamUtils.cpp
+  $(SRC_DIR)/ParamUtils.cpp
 
-# Define paths
-MAIN_OBJS   := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))
-COMMON_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(COMMON_SRCS))
-BINARIES    := $(patsubst %.cpp,$(BIN_DIR)/%,$(MAIN_SRCS))
+# Ajustamos la generación de OBJS para que mantengan la estructura de nombres
+MAIN_OBJS   := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))
+COMMON_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(COMMON_SRCS))
+
+# Los binarios resultantes
+BINARIES    := $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%,$(MAIN_SRCS))
 
 # The Main Static Library
 TARGET_LIB  := $(LIB_DIR)/libdihiggs.a
