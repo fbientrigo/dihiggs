@@ -1,31 +1,48 @@
-# tests/unit/Makefile
+# =============================================================================
+# DIHIGGS UNIT TESTS MAKEFILE
+# =============================================================================
 
-# Compilador y Flags (Copiamos lo básico de tu Makefile principal)
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O0 -g
-# Importante: Incluir la carpeta src del proyecto principal
-INCLUDES = -I../../dihiggs/src
+CXX      := g++
+REPO_ROOT := ../..
 
-# Librerías necesarias (Matemáticas es vital para ParamUtils)
-LDFLAGS = -lm 
+# Include paths (Core Src + Dependencies headers)
+INCLUDES := -I$(REPO_ROOT)/dihiggs/src \
+            -I$(REPO_ROOT)/2hdmc/src \
+            -I$(REPO_ROOT)/higgstools/installation/include
 
-# Si en el futuro ParamUtils usa GSL, descomenta esto:
-# LDFLAGS += -lgsl -lgslcblas
+# Compilation Flags (Must match Core flags essentially)
+CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g $(INCLUDES)
 
-# Archivos
-TEST_SRCS = test_main.cpp test_ParamUtils.cpp
-# El código fuente que estamos probando (fuera de la carpeta de tests)
-IMPL_SRCS = ../../dihiggs/src/ParamUtils.cpp
+# Library Paths
+LIB_CORE      := $(REPO_ROOT)/dihiggs/lib
+LIB_2HDMC     := $(REPO_ROOT)/2hdmc/lib
+LIB_HIGGSTOOLS:= $(REPO_ROOT)/higgstools/installation/lib
 
-# Binario de salida
-TARGET = run_tests
+# Link against the Core Static Library
+LDFLAGS  := -L$(LIB_CORE) -ldihiggs \
+            -L$(LIB_2HDMC) -l2HDMC \
+            -L$(LIB_HIGGSTOOLS) -lHiggsTools \
+            -lgsl -lgslcblas -lm \
+            -Wl,-rpath,$(LIB_HIGGSTOOLS)
+
+# Sources
+TEST_SRCS := test_main.cpp test_ParamUtils.cpp
+TARGET    := dihiggs_unit_tests
+
+.PHONY: all clean run
 
 all: $(TARGET)
 
-$(TARGET): $(TEST_SRCS) $(IMPL_SRCS)
-	@echo "🧪 Compilando Tests Unitarios..."
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@ $(LDFLAGS)
-	@echo "✅ Compilación exitosa. Ejecuta ./$(TARGET)"
+$(TARGET): $(TEST_SRCS)
+	@echo "[TEST-BUILD] Compiling Unit Tests..."
+	@# Note: We depend on the main lib being built first. 
+	@# Ideally, the CI script calls 'make' in root first.
+	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "[TEST-BUILD] Success: ./$(TARGET)"
+
+run: $(TARGET)
+	@echo "[TEST-RUN] Executing..."
+	@./$(TARGET) -s
 
 clean:
-	rm -f $(TARGET)
+	@rm -f $(TARGET)
