@@ -1,0 +1,27 @@
+# .github/workflows/ci_pipeline.yml
+name: DiHiggs DevContainer CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (DevContainer)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Build and Run in DevContainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          cacheFrom: ghcr.io/${{ github.repository }}/devcontainer-cache
+          push: never
+          
+          # NOTA: Cambiamos la ruta al script aquí
+          runCmd: |
+            bash .github/scripts/ci_test.sh
