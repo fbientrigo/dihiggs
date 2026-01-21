@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
+# python reqs
+COPY requirements.txt /tmp/requirements.txt
+
 # 2. Creación del usuario 'vscode' (Estándar para DevContainers)
 # Como en Ubuntu 22.04 el UID 1000 está libre, lo creamos explícitamente.
 ARG USERNAME=vscode

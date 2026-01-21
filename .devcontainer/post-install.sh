@@ -51,4 +51,24 @@ else
     exit 1
 fi
 
+echo "Proyectos C++ compilados exitosamente."
+
+echo "--- Iniciando configuración de Python ---"
+
+# 1. Instalar requerimientos si el archivo existe
+if [ -f "/tmp/requirements.txt" ]; then
+    echo "Instalando dependencias de Python..."
+    pip3 install --no-cache-dir --user -r /tmp/requirements.txt
+elif [ -f ".devcontainer/requirements.txt" ]; then
+    pip3 install --no-cache-dir --user -r .devcontainer/requirements.txt
+fi
+
+# 2. Verificar ROOT (Grado científico: validamos el entorno)
+if python3 -c "import ROOT; print('ROOT import exitoso')" &> /dev/null; then
+    echo "Entorno de ROOT validado correctamente."
+else
+    echo "ADVERTENCIA: ROOT no se puede importar en Python. Revisa el PYTHONPATH."
+fi
+
+echo "--- Configuración completada ---"
 echo "¡Entorno listo para la física de partículas!"

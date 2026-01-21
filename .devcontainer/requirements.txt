@@ -1,0 +1,9 @@
+backports.tarfile==1.2.0
+importlib-metadata==8.0.0
+ipykernel==6.30.0
+jaraco.collections==5.1.0
+pip-chill==1.0.3
+scikit-learn==1.7.1
+seaborn==0.13.2
+sphinx==9.0.0
+tomli==2.0.1
