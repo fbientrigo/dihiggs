@@ -1,5 +1,10 @@
 #pragma once
 
+// Activar/desactivar benchmarking I/O vs Cálculos
+#ifndef BENCHMARK_IO
+#define BENCHMARK_IO 1
+#endif
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -91,6 +96,8 @@ struct FixedParameters {
     double mA, sin_ba, tan_beta, lambda6, lambda7;
 };
 
+#include <mutex> // Para proteger acumuladores de tiempo
+
 // =============================================================
 //  Clase ScanMonitor (HPC Real-Time Monitoring)
 // =============================================================
@@ -108,6 +115,12 @@ public:
     // si se llama concurrentemente, ya que imprime en std::cerr.
     void update_valid_and_report(long long n_valid);
 
+    // Registra tiempo gastado en I/O (en segundos). Thread-safe.
+    void record_io_time(double seconds);
+
+    // Registra tiempo gastado en cálculos (en segundos). Thread-safe.
+    void record_calc_time(double seconds);
+
     // Imprime el resumen final
     void finish();
 
@@ -115,6 +128,11 @@ private:
     long long total_tasks;
     std::atomic<long long> global_attempts;
     std::atomic<long long> global_valid;
+    
+    // Acumuladores de tiempo para benchmarking I/O vs Cálculos
+    double total_io_time;
+    double total_calc_time;
+    std::mutex time_mutex; // Mutex para proteger los acumuladores de tiempo
     
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     std::chrono::time_point<std::chrono::high_resolution_clock> last_report_time;

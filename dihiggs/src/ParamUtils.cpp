@@ -379,7 +379,7 @@ void parse_json_config(
 // =============================================================
 
 ScanMonitor::ScanMonitor(long long total) 
-    : total_tasks(total), global_attempts(0), global_valid(0) {
+    : total_tasks(total), global_attempts(0), global_valid(0), total_io_time(0.0), total_calc_time(0.0) {
     start_time = std::chrono::high_resolution_clock::now();
     last_report_time = start_time;
 }
@@ -387,6 +387,20 @@ ScanMonitor::ScanMonitor(long long total)
 void ScanMonitor::record_attempts(long long n) {
     // Operación atómica simple, segura para llamar desde múltiples hilos sin locks
     global_attempts += n;
+}
+
+void ScanMonitor::record_io_time(double seconds) {
+#if BENCHMARK_IO
+    std::lock_guard<std::mutex> lock(time_mutex);
+    total_io_time += seconds;
+#endif
+}
+
+void ScanMonitor::record_calc_time(double seconds) {
+#if BENCHMARK_IO
+    std::lock_guard<std::mutex> lock(time_mutex);
+    total_calc_time += seconds;
+#endif
 }
 
 void ScanMonitor::update_valid_and_report(long long n_valid) {
@@ -432,6 +446,8 @@ void ScanMonitor::finish() {
     
     long long final_attempts = global_attempts.load();
     long long final_valid = global_valid.load();
+    double final_io_time = total_io_time;
+    double final_calc_time = total_calc_time;
 
     std::cout << "\n\n--- Scan Finalizado (ScanMonitor) ---" << std::endl;
     std::cout << "Total Attempts:    " << final_attempts << std::endl;
@@ -442,4 +458,24 @@ void ScanMonitor::finish() {
         std::cout << "Average Speed:     " << (long)(final_attempts / total_time) << " pts/s" << std::endl;
         std::cout << "Final Valid Rate:  " << (long)(final_valid / (total_time / 60.0)) << " valid/min" << std::endl;
     }
+
+    // Benchmarking I/O vs Cálculos
+#if BENCHMARK_IO
+    double total_measured = final_io_time + final_calc_time;
+    if (total_measured > 0) {
+        double io_percent = (final_io_time / total_measured) * 100.0;
+        double calc_percent = (final_calc_time / total_measured) * 100.0;
+        std::cout << "\n--- Benchmarking I/O vs Cálculos ---" << std::endl;
+        std::cout << "Tiempo I/O:        " << final_io_time << " s (" << std::fixed << std::setprecision(2) << io_percent << "%)" << std::endl;
+        std::cout << "Tiempo Cálculos:   " << final_calc_time << " s (" << calc_percent << "%)" << std::endl;
+        std::cout << "Tiempo Total Medido: " << total_measured << " s" << std::endl;
+        if (total_time > total_measured) {
+            double other_time = total_time - total_measured;
+            double other_percent = (other_time / total_time) * 100.0;
+            std::cout << "Tiempo Otro:       " << other_time << " s (" << other_percent << "%)" << std::endl;
+        }
+    } else {
+        std::cout << "\n--- Benchmarking: No se registraron tiempos I/O o Cálculos ---" << std::endl;
+    }
+#endif
 }

@@ -217,6 +217,9 @@ void perform_param_scan(
 
                 const double m12 = m12_min + (m12_max - m12_min) * ( (N_m12==1)? 0.0 : (double)i_m12 / (N_m12 - 1) );
 
+                // [BENCHMARK] Inicio cálculos
+                auto calc_start = Clock::now();
+
                 // Validaciones rápidas
                 const double l1 = calc_lambda1(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
                 const double l2 = calc_lambda2(mh, m_phi, m12, sa, ca, sb, cb, tan_beta, lambda6, lambda7, VEV);
@@ -253,6 +256,11 @@ void perform_param_scan(
                 double lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g;
                 model.get_param_gen(lam1, lam2, lam3, lam4, lam5, lam6_g, lam7_g, m12_2_g, tanb_g);
 
+                // [BENCHMARK] Fin cálculos
+                auto calc_end = Clock::now();
+                Duration calc_elapsed = calc_end - calc_start;
+                monitor.record_calc_time(calc_elapsed.count());
+
                 buffer.push_back(std::vector<double>{
                     m_phi, mA_fixed, alpha, beta, lambda6, lambda7, m12,
                     sin_ba, tan_beta,
@@ -265,6 +273,9 @@ void perform_param_scan(
 
                 // [MONITORING] Flush si el buffer está lleno
                 if (buffer.size() >= 50) {
+                    // [BENCHMARK] Inicio I/O
+                    auto io_start = Clock::now();
+
                     #pragma omp critical
                     {
                         for (const auto &row : buffer) {
@@ -273,6 +284,11 @@ void perform_param_scan(
                         monitor.update_valid_and_report(buffer.size());
                         buffer.clear();
                     }
+
+                    // [BENCHMARK] Fin I/O
+                    auto io_end = Clock::now();
+                    Duration io_elapsed = io_end - io_start;
+                    monitor.record_io_time(io_elapsed.count());
                 }
             } // Fin m12 loop
         } // Fin m_phi loop
@@ -280,6 +296,9 @@ void perform_param_scan(
         // Limpieza final del hilo
         if (local_attempts > 0) monitor.record_attempts(local_attempts);
         if (local_skipped > 0) global_skipped += local_skipped;
+
+        // [BENCHMARK] Inicio I/O final
+        auto io_start = Clock::now();
 
         #pragma omp critical
         {
@@ -291,6 +310,11 @@ void perform_param_scan(
                 buffer.clear();
             }
         }
+
+        // [BENCHMARK] Fin I/O final
+        auto io_end = Clock::now();
+        Duration io_elapsed = io_end - io_start;
+        monitor.record_io_time(io_elapsed.count());
     } // Fin parallel
 
     monitor.finish();
