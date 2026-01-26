@@ -1,0 +1,78 @@
+[2026-01-21 14:50:12] [INIT] Forzando OMP_NUM_THREADS = 8
+[2026-01-21 14:50:12] [INIT] Iniciando orquestación de escaneo.
+[2026-01-21 14:50:12] [CONF] m_phi: [130.0, 290.0] (N=15)
+[2026-01-21 14:50:12] [CONF] lam_1: [0.0, 12.0] (N=10)
+[2026-01-21 14:50:12] [CONF] Constantes: mA=300.0, sin(b-a)=0.999, l6=0.1, l7=0.0
+[2026-01-21 14:50:12] [CONF] TanBeta List: [10, 50, 100, 200, 500, 1000, 1500, 2000]
+[2026-01-21 14:50:12] [RUN ] (1/8) Procesando TanBeta=10 ...
+[2026-01-21 14:50:13] [DONE] TanBeta=10 completado en 0.95s. Intentos: 150, TripleOK: 45
+[2026-01-21 14:50:13] [RUN ] (2/8) Procesando TanBeta=50 ...
+[2026-01-21 14:50:14] [DONE] TanBeta=50 completado en 1.12s. Intentos: 150, TripleOK: 45
+[2026-01-21 14:50:14] [RUN ] (3/8) Procesando TanBeta=100 ...
+[2026-01-21 14:50:15] [DONE] TanBeta=100 completado en 0.94s. Intentos: 150, TripleOK: 45
+[2026-01-21 14:50:15] [RUN ] (4/8) Procesando TanBeta=200 ...
+[2026-01-21 14:50:16] [DONE] TanBeta=200 completado en 1.02s. Intentos: 150, TripleOK: 45
+[2026-01-21 14:50:16] [RUN ] (5/8) Procesando TanBeta=500 ...
+[2026-01-21 14:50:17] [DONE] TanBeta=500 completado en 0.94s. Intentos: 150, TripleOK: 24
+[2026-01-21 14:50:17] [RUN ] (6/8) Procesando TanBeta=1000 ...
+[2026-01-21 14:50:18] [DONE] TanBeta=1000 completado en 0.98s. Intentos: 150, TripleOK: 12
+[2026-01-21 14:50:18] [RUN ] (7/8) Procesando TanBeta=1500 ...
+[2026-01-21 14:50:19] [DONE] TanBeta=1500 completado en 1.01s. Intentos: 150, TripleOK: 9
+[2026-01-21 14:50:19] [RUN ] (8/8) Procesando TanBeta=2000 ...
+[2026-01-21 14:50:20] [DONE] TanBeta=2000 completado en 0.98s. Intentos: 150, TripleOK: 6
+[2026-01-21 14:50:20] ------------------------------------------------------------
+[2026-01-21 14:50:20] [FIN ] Orquestación finalizada.
+[2026-01-21 14:50:20]        Tiempo Total Ejecución: 7.96 s (0.13 min)
+[2026-01-21 14:50:20]        Total Puntos Calculados: 1200
+[2026-01-21 14:50:20]        Velocidad Promedio:      0.00663 segundos/punto
+[2026-01-21 14:50:20]        Throughput:              542669 puntos/hora
+[2026-01-21 14:50:20] ------------------------------------------------------------
+[2026-01-21 14:50:31] [INIT] Forzando OMP_NUM_THREADS = 10
+[2026-01-21 14:50:31] [INIT] Iniciando orquestación de escaneo.
+[2026-01-21 14:50:31] [CONF] m_phi: [130.0, 290.0] (N=15)
+[2026-01-21 14:50:31] [CONF] lam_1: [0.0, 12.0] (N=1000)
+[2026-01-21 14:50:31] [CONF] Constantes: mA=300.0, sin(b-a)=0.999, l6=0.1, l7=0.0
+[2026-01-21 14:50:31] [CONF] TanBeta List: [10, 50, 100, 200, 500, 1000, 1500, 2000]
+[2026-01-21 14:50:31] [SKIP] (1/8) TanBeta=10 ya existe en scan_results_nightly/tb_00010/scan_tb_10.csv
+[2026-01-21 14:50:31] [SKIP] (2/8) TanBeta=50 ya existe en scan_results_nightly/tb_00050/scan_tb_50.csv
+[2026-01-21 14:50:31] [SKIP] (3/8) TanBeta=100 ya existe en scan_results_nightly/tb_00100/scan_tb_100.csv
+[2026-01-21 14:50:31] [SKIP] (4/8) TanBeta=200 ya existe en scan_results_nightly/tb_00200/scan_tb_200.csv
+[2026-01-21 14:50:31] [SKIP] (5/8) TanBeta=500 ya existe en scan_results_nightly/tb_00500/scan_tb_500.csv
+[2026-01-21 14:50:31] [SKIP] (6/8) TanBeta=1000 ya existe en scan_results_nightly/tb_01000/scan_tb_1000.csv
+[2026-01-21 14:50:31] [SKIP] (7/8) TanBeta=1500 ya existe en scan_results_nightly/tb_01500/scan_tb_1500.csv
+[2026-01-21 14:50:31] [SKIP] (8/8) TanBeta=2000 ya existe en scan_results_nightly/tb_02000/scan_tb_2000.csv
+[2026-01-21 14:50:31] ------------------------------------------------------------
+[2026-01-21 14:50:31] [FIN ] Orquestación finalizada.
+[2026-01-21 14:50:31]        Tiempo Total Ejecución: 0.00 s (0.00 min)
+[2026-01-21 14:50:31]        Total Puntos Calculados: 0
+[2026-01-21 14:50:31]        No se procesaron puntos nuevos (¿todo skippeado?).
+[2026-01-21 14:50:31] ------------------------------------------------------------
+[2026-01-21 14:50:35] [INIT] Forzando OMP_NUM_THREADS = 10
+[2026-01-21 14:50:35] [INIT] Iniciando orquestación de escaneo.
+[2026-01-21 14:50:35] [CONF] m_phi: [130.0, 290.0] (N=15)
+[2026-01-21 14:50:35] [CONF] lam_1: [0.0, 12.0] (N=1000)
+[2026-01-21 14:50:35] [CONF] Constantes: mA=300.0, sin(b-a)=0.999, l6=0.1, l7=0.0
+[2026-01-21 14:50:35] [CONF] TanBeta List: [10, 50, 100, 200, 500, 1000, 1500, 2000]
+[2026-01-21 14:50:35] [RUN ] (1/8) Procesando TanBeta=10 ...
+[2026-01-21 14:52:17] [DONE] TanBeta=10 completado en 101.50s. Intentos: 15000, TripleOK: 5241
+[2026-01-21 14:52:17] [RUN ] (2/8) Procesando TanBeta=50 ...
+[2026-01-21 14:53:57] [DONE] TanBeta=50 completado en 100.38s. Intentos: 15000, TripleOK: 5201
+[2026-01-21 14:53:57] [RUN ] (3/8) Procesando TanBeta=100 ...
+[2026-01-21 14:55:38] [DONE] TanBeta=100 completado en 100.43s. Intentos: 15000, TripleOK: 5211
+[2026-01-21 14:55:38] [RUN ] (4/8) Procesando TanBeta=200 ...
+[2026-01-21 14:57:20] [DONE] TanBeta=200 completado en 102.03s. Intentos: 15000, TripleOK: 5210
+[2026-01-21 14:57:20] [RUN ] (5/8) Procesando TanBeta=500 ...
+[2026-01-21 14:59:01] [DONE] TanBeta=500 completado en 101.25s. Intentos: 15000, TripleOK: 2773
+[2026-01-21 14:59:01] [RUN ] (6/8) Procesando TanBeta=1000 ...
+[2026-01-21 15:00:41] [DONE] TanBeta=1000 completado en 100.36s. Intentos: 15000, TripleOK: 1390
+[2026-01-21 15:00:41] [RUN ] (7/8) Procesando TanBeta=1500 ...
+[2026-01-21 15:02:22] [DONE] TanBeta=1500 completado en 100.45s. Intentos: 15000, TripleOK: 1046
+[2026-01-21 15:02:22] [RUN ] (8/8) Procesando TanBeta=2000 ...
+[2026-01-21 15:04:03] [DONE] TanBeta=2000 completado en 101.51s. Intentos: 15000, TripleOK: 695
+[2026-01-21 15:04:03] ------------------------------------------------------------
+[2026-01-21 15:04:03] [FIN ] Orquestación finalizada.
+[2026-01-21 15:04:03]        Tiempo Total Ejecución: 807.92 s (13.47 min)
+[2026-01-21 15:04:03]        Total Puntos Calculados: 120000
+[2026-01-21 15:04:03]        Velocidad Promedio:      0.00673 segundos/punto
+[2026-01-21 15:04:03]        Throughput:              534707 puntos/hora
+[2026-01-21 15:04:03] ------------------------------------------------------------
