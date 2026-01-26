@@ -132,9 +132,7 @@ void perform_param_scan_fixings(
     const double beta  = std::atan(tan_beta);
     const double alpha = beta - std::asin(sin_ba);
 
-    // Set Model
-    THDM model;
-    SM sm; model.set_SM(sm);
+
                 
     #pragma omp parallel
     {
@@ -148,7 +146,10 @@ void perform_param_scan_fixings(
 
         #pragma omp for schedule(dynamic)
         for(int i_phi = 0; i_phi < N_mphi; ++i_phi) {
-
+            // Set Model
+            THDM model;
+            SM sm; 
+            model.set_SM(sm);
             double m_phi = mphi_min + i_phi * step_mphi;
 
             for(int i_l1 = 0; i_l1 < N_lam1; ++i_l1) {

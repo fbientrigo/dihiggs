@@ -1,74 +1,80 @@
 #!/bin/bash
-set -e # Detener si hay error
+set -e
 
-echo "Iniciando configuración post-creación..."
+echo "--- Iniciando configuración de entorno (Modo: $(whoami)) ---"
 
-# 1. Compilar 2HDMC (Paso 3 del README)
-echo "Compilando 2HDMC..."
+# DETECCIÓN DE ENTORNO:
+# Si somos root (EUID 0), no usamos sudo. Si somos usuario, usamos sudo.
+if [ "$EUID" -eq 0 ]; then
+    SUDO_CMD=""
+    PIP_FLAGS="--no-cache-dir" # Instalación global
+    echo ">> Ejecutando como ROOT (Build de Apptainer/Docker)"
+else
+    SUDO_CMD="sudo"
+    PIP_FLAGS="--no-cache-dir --user" # Instalación local de usuario
+    echo ">> Ejecutando como USUARIO (VS Code DevContainer)"
+fi
+
+# 1. Compilar 2HDMC
+echo ">> Compilando 2HDMC..."
 if [ -d "2hdmc" ]; then
     cd 2hdmc
-    make clean
-    make
+    make clean && make
     cd ..
 else
-    echo "Carpeta 2hdmc no encontrada."
+    echo "!! Carpeta 2hdmc no encontrada."
 fi
 
-# 2. Instalar HiggsTools (Paso 4 del README)
-echo "Configurando HiggsTools..."
-# Asumimos que la carpeta higgstools ya viene en tu repo según lo que subiste
+# 2. Instalar HiggsTools
+echo ">> Configurando HiggsTools..."
 if [ -d "higgstools" ]; then
     cd higgstools
-    # Limpiamos builds previos por si acaso
     rm -rf build
     mkdir -p build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=../installation
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
     make -j$(nproc)
-    sudo make install
+    
+    # Aquí usamos la variable dinámica SUDO_CMD
+    echo "Instalando en /usr/local..."
+    $SUDO_CMD make install
     cd ../..
 else
-    echo "!!  Carpeta higgstools no encontrada. Clonando..."
-    git clone https://gitlab.com/higgstools/higgstools.git
-    # (Aquí podrías repetir los pasos de compilación si se clona de cero)
+    echo "!! Carpeta higgstools no encontrada."
 fi
 
-# 3. Descargar Datasets (Paso 5 del README)
-echo "Descargando Datasets..."
+# 3. Descargar Datasets (Opcional, a veces es mejor no meter datos en la imagen)
 if [ -f "get_datasets.sh" ]; then
     chmod +x get_datasets.sh
     ./get_datasets.sh
 fi
 
-# 4. Compilación final del proyecto (Paso 5 del README)
-echo "Compilando proyecto principal..."
-if [ -d "dihiggs" ]; then     # Verificación defensiva
-    cd dihiggs                # <--- FIX: Entrar al directorio
-    make clean                # Buena práctica para limpiar builds previos
-    make all                     # Ahora sí encontrará el Makefile
-    cd ..                     # Volver a la raíz (opcional, pero limpio)
+# 4. Compilación del proyecto principal
+echo ">> Compilando DiHiggs..."
+if [ -d "dihiggs" ]; then
+    cd dihiggs
+    make clean && make all
+    cd ..
+fi
+
+echo "--- Configuración de Python ---"
+
+# Instalación de librerías
+# Buscamos el requirements en la ruta estándar del repo o en /tmp si Docker lo puso ahí
+REQ_FILE="requirements.txt"
+[ -f ".devcontainer/requirements.txt" ] && REQ_FILE=".devcontainer/requirements.txt"
+[ -f "/tmp/requirements.txt" ] && REQ_FILE="/tmp/requirements.txt"
+
+if [ -f "$REQ_FILE" ]; then
+    echo "Instalando dependencias desde $REQ_FILE..."
+    # pip3 install respeta los flags definidos arriba (global vs user)
+    pip3 install $PIP_FLAGS -r "$REQ_FILE"
+fi
+
+# Validación final
+if python3 -c "import ROOT" &> /dev/null; then
+    echo "✅ ROOT importado correctamente."
 else
-    echo "Error: No se encuentra la carpeta 'dihiggs' para compilar."
-    exit 1
+    echo "⚠️  Advertencia: No se pudo importar ROOT (¿Está configurado PYTHONPATH?)"
 fi
 
-echo "Proyectos C++ compilados exitosamente."
-
-echo "--- Iniciando configuración de Python ---"
-
-# 1. Instalar requerimientos si el archivo existe
-if [ -f "/tmp/requirements.txt" ]; then
-    echo "Instalando dependencias de Python..."
-    pip3 install --no-cache-dir --user -r /tmp/requirements.txt
-elif [ -f ".devcontainer/requirements.txt" ]; then
-    pip3 install --no-cache-dir --user -r .devcontainer/requirements.txt
-fi
-
-# 2. Verificar ROOT (Grado científico: validamos el entorno)
-if python3 -c "import ROOT; print('ROOT import exitoso')" &> /dev/null; then
-    echo "Entorno de ROOT validado correctamente."
-else
-    echo "ADVERTENCIA: ROOT no se puede importar en Python. Revisa el PYTHONPATH."
-fi
-
-echo "--- Configuración completada ---"
-echo "¡Entorno listo para la física de partículas!"
+echo "✅✅ Configuración completada exitosamente."
