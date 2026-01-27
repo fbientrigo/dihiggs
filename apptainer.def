@@ -1,0 +1,39 @@
+Bootstrap: docker-archive
+From: dihiggs-base.tar
+
+# SECCIÓN NUEVA: Necesaria para que --build-arg funcione
+%arguments
+    FAST_BUILD=false
+
+%files
+    # Copiamos TODO el repo al interior del contenedor
+    . /workspaces/dihiggs
+
+%post
+    # Preparar entorno
+    export DEBIAN_FRONTEND=noninteractive
+    
+    # Pasamos el argumento como variable de entorno al script
+    export FAST_BUILD={{ FAST_BUILD }}
+    
+    # Ir al directorio de trabajo
+    cd /workspaces/dihiggs
+    
+    # Ejecutar el Script Maestro
+    bash .devcontainer/post-install.sh
+    
+    # Limpieza final
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%environment
+    export LC_ALL=C
+    export PYTHONPATH=/workspaces/dihiggs:$PYTHONPATH
+    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+%runscript
+    exec "$@"
+
+%labels
+    Author DiHiggs-Team
+    Version 2.0-DRY
