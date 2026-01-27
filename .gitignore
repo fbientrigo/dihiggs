@@ -37,6 +37,7 @@ mlpython/data_train/
 *.so
 *.o
 *.dll
+# executables from 2hdmc
 2hdmc/Demo
 2hdmc/CalcGen
 2hdmc/CalcHiggs
@@ -59,6 +60,8 @@ dihiggs/app/PostProcessHBHS
 2hdmc/CalcMSSM
 2hdmc/CalcPhys
 2hdmc/Demo
+
+# Executables
 dihiggs/app/HBHS_testing
 dihiggs/app/Oracle
 dihiggs/app/PhysParamScan
@@ -66,9 +69,13 @@ dihiggs/app/PhysScanWithFixings
 dihiggs/app/PostProcessHBHS
 dihiggs/obj/*.o
 2hdmc/CalcGen
+# CSVs
 dihiggs/app/outcsv/*
 mlpython/0b1_samplings.ipynb
 
 tests/unit/run_tests
 tests/unit/dihiggs_unit_tests
+
+# Apptainer container
+*.sif
 dihiggs-base.tar
