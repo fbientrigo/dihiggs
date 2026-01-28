@@ -85,20 +85,24 @@ jobs:
           cat apptainer.def
 
       - name: Build SIF via Docker (Privileged)
-        # CORRECCIÓN: Usamos la imagen de Docker Hub (apptainer/apptainer)
-        # en lugar de quay.io para evitar el error de autorización.
+        # SOLUCIÓN INVESTIGADA:
+        # Usamos 'kaczmarj/apptainer', que es la imagen estándar de la comunidad
+        # para correr Apptainer dentro de Docker en CI.
+        # Se aloja en Docker Hub, evitando los problemas de auth de quay.io.
         run: |
           docker run --privileged --rm \
             -v ${{ github.workspace }}:/work \
             -w /work \
-            apptainer/apptainer:1.3.0 \
+            kaczmarj/apptainer:latest \
             bash -c "
-              # Login dentro del contenedor para poder descargar de GHCR
-              echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin docker://${{ env.REGISTRY }} && \
-              # Construir la imagen
+              # Paso A: Login en GHCR (dentro del contenedor)
+              # Apptainer necesita credenciales para bajar tu imagen base docker://
+              apptainer remote login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} docker://${{ env.REGISTRY }}
+              
+              # Paso B: Construir
+              # Construimos el .sif usando la definición parcheada
               apptainer build dihiggs.sif apptainer.def
             "
-
       - name: Upload SIF artifact
         uses: actions/upload-artifact@v4
         with:
