@@ -13,16 +13,14 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # TRABAJO 1: Construir la imagen base Docker y subirla al registry
   build-and-push-docker:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     outputs:
-      # Exportamos el tag exacto para usarlo en el siguiente job
       version_tag: ${{ steps.meta.outputs.version }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,6 +57,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # TRABAJO 2: Convertir esa imagen Docker a Apptainer (.sif) y guardar el artifact
   build-apptainer:
     needs: build-and-push-docker
     runs-on: ubuntu-latest
@@ -72,33 +71,34 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Apptainer
-        uses: eWaterCycle/setup-apptainer@v2
-        with:
-          apptainer-version: '1.3.0'
-
-      - name: Login to GHCR (Apptainer)
+      - name: Patch Apptainer Definition
+        # Modificamos el archivo .def para que apunte a la imagen Docker que acabamos de crear
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin docker://${{ env.REGISTRY }}
-
-      - name: Patch Apptainer Definition for CI
-        # ESTE PASO ES LA CLAVE: Cambia local (tar) a remoto (docker://)
-        run: |
-          # 1. Cambiar el agente de Bootstrap de 'docker-archive' a 'docker'
+          # 1. Cambiar agente a 'docker'
           sed -i 's/Bootstrap: docker-archive/Bootstrap: docker/' apptainer.def
           
-          # 2. Definir la imagen exacta que acabamos de construir
-          # Reemplazamos la linea 'From: ...' completa
+          # 2. Inyectar la URL exacta de la imagen del registry
           DOCKER_FULL_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
           sed -i "s|From: dihiggs-base.tar|From: $DOCKER_FULL_REF|" apptainer.def
           
-          echo "--- Contenido del apptainer.def parcheado ---"
+          echo "--- apptainer.def final ---"
           cat apptainer.def
 
-      - name: Build SIF
+      - name: Build SIF via Docker (Privileged)
+        # ESTA ES LA SOLUCIÓN:
+        # Usamos un contenedor Docker con permisos privilegiados para ejecutar el build de Apptainer.
+        # Esto evita el error "mount namespace" del runner de GitHub.
         run: |
-          # Ahora construimos sin argumentos complejos porque el 'From' ya está en el archivo
-          apptainer build dihiggs.sif apptainer.def
+          docker run --privileged --rm \
+            -v ${{ github.workspace }}:/work \
+            -w /work \
+            quay.io/apptainer/apptainer:1.3.0 \
+            bash -c "
+              # Login dentro del contenedor para poder descargar de GHCR
+              echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin docker://${{ env.REGISTRY }} && \
+              # Construir la imagen
+              apptainer build dihiggs.sif apptainer.def
+            "
 
       - name: Upload SIF artifact
         uses: actions/upload-artifact@v4
