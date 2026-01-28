@@ -85,14 +85,13 @@ jobs:
           cat apptainer.def
 
       - name: Build SIF via Docker (Privileged)
-        # ESTA ES LA SOLUCIÓN:
-        # Usamos un contenedor Docker con permisos privilegiados para ejecutar el build de Apptainer.
-        # Esto evita el error "mount namespace" del runner de GitHub.
+        # CORRECCIÓN: Usamos la imagen de Docker Hub (apptainer/apptainer)
+        # en lugar de quay.io para evitar el error de autorización.
         run: |
           docker run --privileged --rm \
             -v ${{ github.workspace }}:/work \
             -w /work \
-            quay.io/apptainer/apptainer:1.3.0 \
+            apptainer/apptainer:1.3.0 \
             bash -c "
               # Login dentro del contenedor para poder descargar de GHCR
               echo ${{ secrets.GITHUB_TOKEN }} | apptainer remote login -u ${{ github.actor }} --password-stdin docker://${{ env.REGISTRY }} && \
