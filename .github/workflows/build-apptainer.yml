@@ -97,8 +97,8 @@ jobs:
 
       - name: Build SIF
         run: |
-          # Ahora construimos sin argumentos complejos porque el 'From' ya está en el archivo
-          apptainer build dihiggs.sif apptainer.def
+          # Usamos --fakeroot para evitar el error de privilegios en GitHub Runners
+          apptainer build --fakeroot dihiggs.sif apptainer.def
 
       - name: Upload SIF artifact
         uses: actions/upload-artifact@v4
