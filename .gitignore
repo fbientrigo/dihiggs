@@ -6,6 +6,8 @@ app/*
 .agent
 .vscode
 
+*.csv
+
 # ignorar datasets de HB/HS pesados
 datasets/*
 
