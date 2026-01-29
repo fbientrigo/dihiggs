@@ -79,3 +79,5 @@ tests/unit/dihiggs_unit_tests
 # Apptainer container
 *.sif
 dihiggs-base.tar
+mlpython/valid_points_extended.csv
+.gitignore
