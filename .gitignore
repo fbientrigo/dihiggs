@@ -13,12 +13,6 @@ datasets/*
 higgstools/installation
 higgstools/build
 
-higgstools/examples/example_data/*.csv filter=lfs diff=lfs merge=lfs -text
-
-# datasets de entrenamiento locales
-mlpython/data_train/
-!mlpython/data_train/.gitkeep
-
 # artefactos grandes opcionales (si no quieres versionarlos)
 # results/**        # <- descomenta si prefieres que NO entren por defecto
 # mlpython/outs/**  # idem
@@ -81,3 +75,6 @@ tests/unit/dihiggs_unit_tests
 dihiggs-base.tar
 mlpython/valid_points_extended.csv
 .gitignore
+mlpython/06_valid_points/elite_candidates_report.csv
+mlpython/valid_points_extended.csv
+
