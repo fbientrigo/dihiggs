@@ -57,7 +57,6 @@ import json
 import os
 import platform
 import re
-import shutil
 import socket
 import subprocess
 import sys
@@ -288,157 +287,6 @@ def detect_git_info(start_dir: Path) -> Dict[str, Optional[str]]:
     }
 
 
-def grid_signature(grid: "ScanGrid") -> str:
-    """
-    Build a stable signature for the effective scan grid.
-
-    This is used to ensure checkpoints are only reused when the grid truly matches.
-    """
-    return (
-        f"mphi={grid.mphi_min:.4f}-{grid.mphi_max:.4f}-N{grid.n_mphi}"
-        f"|lam1={grid.lam1_min:.4f}-{grid.lam1_max:.4f}-N{grid.n_lam1}"
-    )
-
-
-def parse_n_lam1_map(s: Optional[str]) -> Dict[float, int]:
-    """
-    Parse a per-tanbeta n_lam1 mapping from a string.
-
-    Format: "10000:200,15000:400"
-    Keys are tanbeta values (float), values are n_lam1 (int).
-    """
-    if not s:
-        return {}
-    s = s.strip()
-    if not s:
-        return {}
-
-    mapping: Dict[float, int] = {}
-    parts = [p.strip() for p in s.split(",") if p.strip()]
-    for p in parts:
-        if ":" not in p:
-            raise ValueError(f"Invalid --n-lam1-map entry (missing ':'): {p}")
-        k_str, v_str = [x.strip() for x in p.split(":", 1)]
-        k = float(k_str)
-        v = int(v_str)
-        if v <= 0:
-            raise ValueError(f"Invalid --n-lam1-map value (must be >0): {p}")
-        mapping[k] = v
-    return mapping
-
-
-def pick_n_lam1_for_tb(tb: float, default_n_lam1: int, mapping: Dict[float, int]) -> int:
-    """
-    Select effective n_lam1 for a given tanbeta.
-
-    If mapping is provided, match by float closeness; otherwise use default.
-    """
-    if not mapping:
-        return default_n_lam1
-    for k, v in mapping.items():
-        if abs(tb - k) < 1e-9:
-            return v
-    return default_n_lam1
-
-
-def load_json_best_effort(path: Path) -> Optional[Dict[str, Any]]:
-    """Load JSON file; return None if missing or invalid."""
-    try:
-        if not path.exists():
-            return None
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-
-def candidate_grid_sig_from_meta(tb_dir: Path) -> Optional[str]:
-    """Try to get grid signature from scan_meta.json next to the CSV."""
-    meta = load_json_best_effort(tb_dir / "scan_meta.json")
-    if not meta:
-        return None
-    sig = meta.get("grid_signature")
-    if isinstance(sig, str) and sig.strip():
-        # Only reuse if it was actually completed successfully.
-        if meta.get("event") == "done":
-            return sig.strip()
-    return None
-
-
-def candidate_grid_sig_from_manifest(run_dir: Path) -> Optional[str]:
-    """Fallback: infer grid signature from run_manifest.json in the run directory."""
-    mani = load_json_best_effort(run_dir / "run_manifest.json")
-    if not mani:
-        return None
-    sg = mani.get("scan_grid") or {}
-    try:
-        g = ScanGrid(
-            mphi_min=float(sg["mphi_min"]),
-            mphi_max=float(sg["mphi_max"]),
-            n_mphi=int(sg["n_mphi"]),
-            lam1_min=float(sg["lam1_min"]),
-            lam1_max=float(sg["lam1_max"]),
-            n_lam1=int(sg["n_lam1"]),
-        )
-        return grid_signature(g)
-    except Exception:
-        return None
-
-
-def find_previous_csv_matching_grid(
-    fixed_dir: Path,
-    current_run_dir: Path,
-    tb_tag: str,
-    desired_grid_sig: str,
-) -> Optional[Path]:
-    """
-    Look for an existing CSV for this tanbeta in ANY previous run under the same fixed_dir,
-    but only accept it if its grid signature matches desired_grid_sig.
-
-    Expected pattern:
-      fixed_dir/
-        run_.../
-          tb_.../
-            scan_tb_<tb_tag>.csv
-            scan_meta.json (preferred)
-        ...
-    """
-    pattern = f"run_*/tb_*/scan_tb_{tb_tag}.csv"
-    candidates = list(fixed_dir.glob(pattern))
-
-    best: Optional[Tuple[float, Path]] = None  # (mtime, path)
-
-    for csv_path in candidates:
-        try:
-            # Exclude current run directory
-            if str(csv_path).startswith(str(current_run_dir)):
-                continue
-
-            # Basic sanity: non-empty file
-            st = csv_path.stat()
-            if st.st_size <= 0:
-                continue
-
-            tb_dir = csv_path.parent
-            run_dir = tb_dir.parent
-
-            sig = candidate_grid_sig_from_meta(tb_dir)
-            if sig is None:
-                sig = candidate_grid_sig_from_manifest(run_dir)
-
-            if sig != desired_grid_sig:
-                continue
-
-            mtime = st.st_mtime
-            if best is None or mtime > best[0]:
-                best = (mtime, csv_path)
-
-        except Exception:
-            continue
-
-    return best[1] if best else None
-
-
 @dataclass(frozen=True)
 class ScanGrid:
     """Container for scan-grid parameters."""
@@ -523,24 +371,6 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
-    # Resume policy
-    p.add_argument(
-        "--resume-scope",
-        type=str,
-        default="fixed",
-        choices=["run", "fixed"],
-        help=(
-            "Checkpoint scope: 'run' only checks within current run_dir; "
-            "'fixed' also reuses checkpoints from previous runs under the same fixed_dir "
-            "(matching effective grid signature). Default: fixed."
-        ),
-    )
-    p.add_argument(
-        "--materialize",
-        action="store_true",
-        help="If reusing a previous-run checkpoint, copy the CSV into the current run folder.",
-    )
-
     # Fixed hyperparameters (experiment-level)
     p.add_argument("--mA", type=float, default=DEFAULT_MA, help="Fixed mA (also mHp).")
     p.add_argument("--sin-ba", type=float, default=DEFAULT_SIN_BA, help="Fixed sin(b-a).")
@@ -562,15 +392,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_N_LAM1,
         help="Number of lambda_1 points. Default: 666. Use 10 for tests.",
-    )
-    p.add_argument(
-        "--n-lam1-map",
-        type=str,
-        default=None,
-        help=(
-            "Optional per-tanbeta override for n_lam1. Format: '10000:200,15000:400'. "
-            "If a tanbeta is not listed, falls back to --n-lam1."
-        ),
     )
 
     # TanBeta list
@@ -664,7 +485,7 @@ def main() -> int:
         return 2
 
     # Prepare scan settings
-    base_grid = ScanGrid(
+    grid = ScanGrid(
         mphi_min=args.mphi_min,
         mphi_max=args.mphi_max,
         n_mphi=args.n_mphi,
@@ -681,12 +502,6 @@ def main() -> int:
     tanbeta_list = parse_csv_floats(args.tanbeta)
     if not tanbeta_list:
         print("[ERROR] Empty --tanbeta list.", file=sys.stderr)
-        return 2
-
-    try:
-        n_lam1_map = parse_n_lam1_map(args.n_lam1_map)
-    except Exception as e:
-        print(f"[ERROR] Failed to parse --n-lam1-map: {e}", file=sys.stderr)
         return 2
 
     # Environment (OpenMP)
@@ -730,20 +545,16 @@ def main() -> int:
         log_message(f"[CONF] OMP_NUM_THREADS = {args.threads}", log_path)
     log_message(f"[CONF] dry_run = {args.dry_run}", log_path)
     log_message(f"[CONF] force   = {args.force}", log_path)
-    log_message(f"[CONF] resume_scope = {args.resume_scope}", log_path)
-    log_message(f"[CONF] materialize  = {args.materialize}", log_path)
 
     log_message(
         f"[CONF] fixed: mA={fixed.mA}, sin(b-a)={fixed.sin_ba}, l6={fixed.lambda6}, l7={fixed.lambda7}",
         log_path,
     )
     log_message(
-        f"[CONF] grid: m_phi=[{base_grid.mphi_min}, {base_grid.mphi_max}] (N={base_grid.n_mphi}), "
-        f"lam1=[{base_grid.lam1_min}, {base_grid.lam1_max}] (N={base_grid.n_lam1})",
+        f"[CONF] grid: m_phi=[{grid.mphi_min}, {grid.mphi_max}] (N={grid.n_mphi}), "
+        f"lam1=[{grid.lam1_min}, {grid.lam1_max}] (N={grid.n_lam1})",
         log_path,
     )
-    if n_lam1_map:
-        log_message(f"[CONF] n_lam1_map = {n_lam1_map}", log_path)
     log_message(f"[CONF] tanbeta_list = {tanbeta_list}", log_path)
 
     # Write initial manifest
@@ -770,8 +581,6 @@ def main() -> int:
             "dry_run": args.dry_run,
             "force": args.force,
             "omp_num_threads": args.threads,
-            "resume_scope": args.resume_scope,
-            "materialize": args.materialize,
         },
         "fixed_params": {
             "mA": fixed.mA,
@@ -780,13 +589,12 @@ def main() -> int:
             "lambda7": fixed.lambda7,
         },
         "scan_grid": {
-            "mphi_min": base_grid.mphi_min,
-            "mphi_max": base_grid.mphi_max,
-            "n_mphi": base_grid.n_mphi,
-            "lam1_min": base_grid.lam1_min,
-            "lam1_max": base_grid.lam1_max,
-            "n_lam1": base_grid.n_lam1,
-            "n_lam1_map": args.n_lam1_map,
+            "mphi_min": grid.mphi_min,
+            "mphi_max": grid.mphi_max,
+            "n_mphi": grid.n_mphi,
+            "lam1_min": grid.lam1_min,
+            "lam1_max": grid.lam1_max,
+            "n_lam1": grid.n_lam1,
             "tanbeta_list": tanbeta_list,
         },
         "summary": {},  # filled at end
@@ -803,103 +611,41 @@ def main() -> int:
     tasks_skipped = 0
     tasks_failed = 0
 
-    fixed_dir = run_dir.parent  # campaign/fixed_.../
     for idx, tb in enumerate(tanbeta_list, start=1):
         folder_name, tb_tag = format_tanbeta_folder(tb)
         current_dir = run_dir / folder_name
         current_dir.mkdir(parents=True, exist_ok=True)
 
         output_csv = current_dir / f"scan_tb_{tb_tag}.csv"
-        meta_path = current_dir / "scan_meta.json"
-
-        n_lam1_eff = pick_n_lam1_for_tb(tb=tb, default_n_lam1=base_grid.n_lam1, mapping=n_lam1_map)
-        eff_grid = ScanGrid(
-            mphi_min=base_grid.mphi_min,
-            mphi_max=base_grid.mphi_max,
-            n_mphi=base_grid.n_mphi,
-            lam1_min=base_grid.lam1_min,
-            lam1_max=base_grid.lam1_max,
-            n_lam1=n_lam1_eff,
-        )
-        eff_sig = grid_signature(eff_grid)
 
         # resumability
-        if not args.force:
-            if output_csv.exists():
-                tasks_skipped += 1
-                log_message(
-                    f"[SKIP] ({idx}/{total_tasks}) tanbeta={tb} exists: {output_csv} | grid_sig={eff_sig}",
-                    log_path,
-                )
-                append_jsonl(
-                    jsonl_path,
-                    {
-                        "event": "skip",
-                        "utc": utc_now_iso(),
-                        "index": idx,
-                        "total": total_tasks,
-                        "tanbeta": tb,
-                        "tb_tag": tb_tag,
-                        "output_csv": str(output_csv),
-                        "grid_signature": eff_sig,
-                        "n_lam1_effective": n_lam1_eff,
-                        "reason": "exists_and_force_false",
-                    },
-                )
-                continue
+        if output_csv.exists() and not args.force:
+            tasks_skipped += 1
+            log_message(f"[SKIP] ({idx}/{total_tasks}) tanbeta={tb} exists: {output_csv}", log_path)
+            append_jsonl(
+                jsonl_path,
+                {
+                    "event": "skip",
+                    "utc": utc_now_iso(),
+                    "index": idx,
+                    "total": total_tasks,
+                    "tanbeta": tb,
+                    "output_csv": str(output_csv),
+                    "reason": "exists_and_force_false",
+                },
+            )
+            continue
 
-            if args.resume_scope == "fixed":
-                prev_csv = find_previous_csv_matching_grid(
-                    fixed_dir=fixed_dir,
-                    current_run_dir=run_dir,
-                    tb_tag=tb_tag,
-                    desired_grid_sig=eff_sig,
-                )
-                if prev_csv is not None and prev_csv.exists():
-                    tasks_skipped += 1
-                    log_message(
-                        f"[SKIP] ({idx}/{total_tasks}) tanbeta={tb} found in previous run: {prev_csv} | grid_sig={eff_sig}",
-                        log_path,
-                    )
-
-                    if args.materialize:
-                        try:
-                            shutil.copy2(prev_csv, output_csv)
-                            log_message(f"[LINK] copied previous CSV into current run: {output_csv}", log_path)
-                        except Exception as e:
-                            log_message(f"[WARN] materialize failed ({e}); continuing without copy.", log_path)
-
-                    append_jsonl(
-                        jsonl_path,
-                        {
-                            "event": "skip",
-                            "utc": utc_now_iso(),
-                            "index": idx,
-                            "total": total_tasks,
-                            "tanbeta": tb,
-                            "tb_tag": tb_tag,
-                            "output_csv": str(output_csv),
-                            "grid_signature": eff_sig,
-                            "n_lam1_effective": n_lam1_eff,
-                            "reason": "found_in_previous_run_under_same_fixed_dir_matching_grid",
-                            "previous_csv": str(prev_csv),
-                        },
-                    )
-                    continue
-
-        log_message(
-            f"[RUN ] ({idx}/{total_tasks}) tanbeta={tb} -> {output_csv.name} | n_lam1={n_lam1_eff} | grid_sig={eff_sig}",
-            log_path,
-        )
+        log_message(f"[RUN ] ({idx}/{total_tasks}) tanbeta={tb} -> {output_csv.name}", log_path)
 
         cmd = [
             str(executable),
-            f"{eff_grid.mphi_min:.4f}",
-            f"{eff_grid.mphi_max:.4f}",
-            str(eff_grid.n_mphi),
-            f"{eff_grid.lam1_min:.4f}",
-            f"{eff_grid.lam1_max:.4f}",
-            str(eff_grid.n_lam1),
+            f"{grid.mphi_min:.4f}",
+            f"{grid.mphi_max:.4f}",
+            str(grid.n_mphi),
+            f"{grid.lam1_min:.4f}",
+            f"{grid.lam1_max:.4f}",
+            str(grid.n_lam1),
             f"{fixed.mA:.4f}",
             f"{fixed.sin_ba:.4f}",
             f"{tb:.4f}",
@@ -918,11 +664,8 @@ def main() -> int:
                     "index": idx,
                     "total": total_tasks,
                     "tanbeta": tb,
-                    "tb_tag": tb_tag,
                     "cmd": cmd,
                     "output_csv": str(output_csv),
-                    "grid_signature": eff_sig,
-                    "n_lam1_effective": n_lam1_eff,
                 },
             )
             continue
@@ -939,14 +682,11 @@ def main() -> int:
                 "index": idx,
                 "total": total_tasks,
                 "tanbeta": tb,
-                "tb_tag": tb_tag,
                 "output_csv": str(output_csv),
                 "elapsed_sec": elapsed,
                 "returncode": result.returncode,
                 "attempts": attempts,
                 "triple_ok_points": triple_ok,
-                "grid_signature": eff_sig,
-                "n_lam1_effective": n_lam1_eff,
             }
 
             if result.returncode == 0:
@@ -958,36 +698,6 @@ def main() -> int:
                     log_path,
                 )
                 record["event"] = "done"
-
-                # Write per-task metadata to support cross-run checkpoints with varying effective grids
-                safe_write_json(
-                    meta_path,
-                    {
-                        "event": "done",
-                        "utc": utc_now_iso(),
-                        "tanbeta": tb,
-                        "tb_tag": tb_tag,
-                        "output_csv": str(output_csv),
-                        "grid_signature": eff_sig,
-                        "grid": {
-                            "mphi_min": eff_grid.mphi_min,
-                            "mphi_max": eff_grid.mphi_max,
-                            "n_mphi": eff_grid.n_mphi,
-                            "lam1_min": eff_grid.lam1_min,
-                            "lam1_max": eff_grid.lam1_max,
-                            "n_lam1": eff_grid.n_lam1,
-                        },
-                        "fixed_params": {
-                            "mA": fixed.mA,
-                            "sin_ba": fixed.sin_ba,
-                            "lambda6": fixed.lambda6,
-                            "lambda7": fixed.lambda7,
-                        },
-                        "attempts": attempts,
-                        "triple_ok_points": triple_ok,
-                    },
-                )
-
             else:
                 tasks_failed += 1
                 log_message(f"[FAIL] tanbeta={tb} code={result.returncode}", log_path)
@@ -996,43 +706,10 @@ def main() -> int:
                 stdout_path = current_dir / "stdout.log"
                 stderr_path.write_text(result.stderr or "", encoding="utf-8")
                 stdout_path.write_text(result.stdout or "", encoding="utf-8")
-                log_message(
-                    f"[FAIL] wrote stdout/stderr logs to: {stdout_path.name}, {stderr_path.name}",
-                    log_path,
-                )
+                log_message(f"[FAIL] wrote stdout/stderr logs to: {stdout_path.name}, {stderr_path.name}", log_path)
                 record["event"] = "fail"
                 record["stderr_path"] = str(stderr_path)
                 record["stdout_path"] = str(stdout_path)
-
-                # Best-effort meta for failures (does not count as checkpointable)
-                safe_write_json(
-                    meta_path,
-                    {
-                        "event": "fail",
-                        "utc": utc_now_iso(),
-                        "tanbeta": tb,
-                        "tb_tag": tb_tag,
-                        "output_csv": str(output_csv),
-                        "grid_signature": eff_sig,
-                        "grid": {
-                            "mphi_min": eff_grid.mphi_min,
-                            "mphi_max": eff_grid.mphi_max,
-                            "n_mphi": eff_grid.n_mphi,
-                            "lam1_min": eff_grid.lam1_min,
-                            "lam1_max": eff_grid.lam1_max,
-                            "n_lam1": eff_grid.n_lam1,
-                        },
-                        "fixed_params": {
-                            "mA": fixed.mA,
-                            "sin_ba": fixed.sin_ba,
-                            "lambda6": fixed.lambda6,
-                            "lambda7": fixed.lambda7,
-                        },
-                        "returncode": result.returncode,
-                        "stderr_path": str(stderr_path),
-                        "stdout_path": str(stdout_path),
-                    },
-                )
 
             append_jsonl(jsonl_path, record)
 
@@ -1048,41 +725,10 @@ def main() -> int:
                     "index": idx,
                     "total": total_tasks,
                     "tanbeta": tb,
-                    "tb_tag": tb_tag,
                     "output_csv": str(output_csv),
                     "elapsed_sec": elapsed,
                     "exception": repr(e),
                     "cmd": cmd,
-                    "grid_signature": eff_sig,
-                    "n_lam1_effective": n_lam1_eff,
-                },
-            )
-
-            # Best-effort meta for crashes (does not count as checkpointable)
-            safe_write_json(
-                meta_path,
-                {
-                    "event": "crash",
-                    "utc": utc_now_iso(),
-                    "tanbeta": tb,
-                    "tb_tag": tb_tag,
-                    "output_csv": str(output_csv),
-                    "grid_signature": eff_sig,
-                    "grid": {
-                        "mphi_min": eff_grid.mphi_min,
-                        "mphi_max": eff_grid.mphi_max,
-                        "n_mphi": eff_grid.n_mphi,
-                        "lam1_min": eff_grid.lam1_min,
-                        "lam1_max": eff_grid.lam1_max,
-                        "n_lam1": eff_grid.n_lam1,
-                    },
-                    "fixed_params": {
-                        "mA": fixed.mA,
-                        "sin_ba": fixed.sin_ba,
-                        "lambda6": fixed.lambda6,
-                        "lambda7": fixed.lambda7,
-                    },
-                    "exception": repr(e),
                 },
             )
 
