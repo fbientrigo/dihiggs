@@ -192,6 +192,7 @@ void perform_param_scan_fixings(
                 bool pos  = check.check_positivity();
                 bool uni  = check.check_unitarity();
                 bool pert = check.check_perturbativity();
+                bool stab = check.check_stability(); // is my point stable or metastable? the minimum of v has to be reached
 
                 // [TRIPLE_OK] contar sólo los que pasan las 3
                 if (pos && uni && pert) {
