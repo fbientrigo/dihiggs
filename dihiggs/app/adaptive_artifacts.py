@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 from pathlib import Path
@@ -11,7 +12,7 @@ JsonDict = dict[str, object]
 PathLike = str | Path
 
 
-_RUN_DIR_RE = re.compile(r"^\s*\[PATH\]\s+run_dir\s*=\s*(?P<path>.+?)\s*$")
+_RUN_DIR_RE = re.compile(r"\[PATH\]\s+run_dir\s*=\s*(?P<path>.+?)\s*$")
 
 
 def parse_task_summary_jsonl(path: PathLike) -> list[JsonDict]:
@@ -104,6 +105,101 @@ def _parse_attempts(value: object) -> int:
     return 0
 
 
+def _is_one_flag(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return value == 1
+    if isinstance(value, float):
+        return value == 1.0
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return False
+        try:
+            return float(s) == 1.0
+        except Exception:
+            return False
+    return False
+
+
+def strict_valid_count_from_csv(path: str | Path) -> int:
+    try:
+        p = Path(path)
+    except Exception:
+        return 0
+
+    try:
+        if not p.exists() or not p.is_file():
+            return 0
+        count = 0
+        with p.open("r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                pos = row.get("positivity_ok")
+                uni = row.get("unitarity_ok")
+                per = row.get("perturbativity_ok")
+                if _is_one_flag(pos) and _is_one_flag(uni) and _is_one_flag(per):
+                    count += 1
+        return count
+    except Exception:
+        return 0
+
+
+def _parse_axis_count_from_grid_signature(grid_signature: object, axis: str) -> int:
+    if not isinstance(grid_signature, str):
+        return 0
+    axis_esc = re.escape(axis)
+    m = re.search(rf"(?:^|\|){axis_esc}=[^|]*-N(?P<n>\d+)(?:\||$)", grid_signature)
+    if not m:
+        return 0
+    try:
+        return max(0, int(m.group("n")))
+    except Exception:
+        return 0
+
+
+def _parse_record_path(record: JsonDict, primary_key: str, fallback_key: str) -> Path | None:
+    raw_primary = record.get(primary_key)
+    raw_fallback = record.get(fallback_key)
+    raw = raw_primary if raw_primary else raw_fallback
+    if raw is None:
+        return None
+    if isinstance(raw, Path):
+        return raw
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return None
+        return Path(s)
+    return None
+
+
+def successes_trials_from_task_record(record: dict[str, object]) -> tuple[int, int]:
+    rec = record
+    event = rec.get("event")
+
+    n_lam1_effective = _parse_attempts(rec.get("n_lam1_effective"))
+    n_mphi = _parse_axis_count_from_grid_signature(rec.get("grid_signature"), "mphi")
+    inferred_trials = n_mphi * n_lam1_effective
+
+    if event == "skip":
+        csv_path = _parse_record_path(rec, "previous_csv", "output_csv")
+        successes = strict_valid_count_from_csv(csv_path) if csv_path is not None else 0
+        return successes, inferred_trials
+
+    if event == "done":
+        successes = parse_triple_ok_points(rec.get("triple_ok_points"))
+        trials = _parse_attempts(rec.get("attempts"))
+        if trials <= 0:
+            trials = inferred_trials
+        return successes, trials
+
+    return 0, 0
+
+
 def summarize_task_summary(records: Iterable[JsonDict]) -> tuple[int, int]:
     attempts_total = 0
     triple_ok_total = 0
@@ -124,7 +220,7 @@ def parse_run_dir_from_orchestrator_output(text: str) -> Path | None:
     if not text:
         return None
     for line in text.splitlines():
-        m = _RUN_DIR_RE.match(line)
+        m = _RUN_DIR_RE.search(line)
         if not m:
             continue
         raw = (m.group("path") or "").strip()

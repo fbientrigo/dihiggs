@@ -132,3 +132,42 @@ def allocate_budget(
         budgets[bid] += int(extra)
 
     return budgets
+
+
+def allocate_budget_per_tanbeta(
+    bins: Iterable[Mapping[str, object]],
+    successes_by_tb_by_bin: Mapping[str, Mapping[str, int]],
+    trials_by_tb_by_bin: Mapping[str, Mapping[str, int]],
+    total_budget_per_tb: int,
+    floor_points: int,
+    alpha: float = 1.0,
+    beta: float = 1.0,
+) -> dict[str, dict[str, int]]:
+    bins_list = list(bins)
+
+    tb_tags = sorted(set(successes_by_tb_by_bin.keys()) | set(trials_by_tb_by_bin.keys()))
+    budgets_by_tb: dict[str, dict[str, int]] = {}
+
+    for tb_tag in tb_tags:
+        successes_raw = successes_by_tb_by_bin.get(tb_tag, {})
+        trials_raw = trials_by_tb_by_bin.get(tb_tag, {})
+
+        successes_by_bin: dict[str, int] = {}
+        trials_by_bin: dict[str, int] = {}
+        for b in bins_list:
+            bid = b.get("id")
+            if isinstance(bid, str) and bid:
+                successes_by_bin[bid] = int(successes_raw.get(bid, 0))
+                trials_by_bin[bid] = int(trials_raw.get(bid, 0))
+
+        budgets_by_tb[tb_tag] = allocate_budget(
+            bins=bins_list,
+            successes_by_bin=successes_by_bin,
+            trials_by_bin=trials_by_bin,
+            total_budget=total_budget_per_tb,
+            floor_points=floor_points,
+            alpha=alpha,
+            beta=beta,
+        )
+
+    return budgets_by_tb
