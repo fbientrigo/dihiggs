@@ -136,6 +136,47 @@ def test_skip_event_recovers_valids_from_csv_for_budgeting(tmp_path: Path):
     assert trials == 15 * 2
 
 
+def test_skip_event_prefers_scan_meta_over_csv(tmp_path: Path):
+    from dihiggs.app import adaptive_artifacts
+
+    out_csv = tmp_path / "task_output.csv"
+    with out_csv.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(
+            f,
+            fieldnames=["positivity_ok", "unitarity_ok", "perturbativity_ok", "dummy"],
+        )
+        w.writeheader()
+        for i in range(3):
+            w.writerow(
+                {
+                    "positivity_ok": 1,
+                    "unitarity_ok": 1,
+                    "perturbativity_ok": 1,
+                    "dummy": f"ok{i}",
+                }
+            )
+
+    meta_path = tmp_path / "scan_meta.json"
+    meta_path.write_text(
+        '{"event":"done","triple_ok_points":"7"}\n',
+        encoding="utf-8",
+    )
+
+    record: dict[str, object] = {
+        "event": "skip",
+        "output_csv": str(out_csv),
+        "previous_csv": None,
+        "n_lam1_effective": 2,
+        "grid_signature": "mphi=130.0000-290.0000-N15|lam1=0.0-0.5-N2",
+        "tanbeta": 10.0,
+        "tb_tag": "10",
+    }
+
+    successes, trials = adaptive_artifacts.successes_trials_from_task_record(record)
+    assert successes == 7
+    assert trials == 15 * 2
+
+
 def test_parse_run_dir_from_timestamped_orchestrator_output():
     from dihiggs.app import adaptive_artifacts
 

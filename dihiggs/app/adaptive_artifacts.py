@@ -177,6 +177,23 @@ def _parse_record_path(record: JsonDict, primary_key: str, fallback_key: str) ->
     return None
 
 
+def _triple_ok_points_from_scan_meta(csv_path: Path) -> int | None:
+    try:
+        meta_path = Path(csv_path).parent / "scan_meta.json"
+        if not meta_path.exists():
+            return None
+        with meta_path.open("r", encoding="utf-8") as f:
+            obj = cast(object, json.load(f))
+        if not isinstance(obj, dict):
+            return None
+        d = cast(dict[object, object], obj)
+        if "triple_ok_points" not in d:
+            return None
+        return parse_triple_ok_points(d.get("triple_ok_points"))
+    except Exception:
+        return None
+
+
 def successes_trials_from_task_record(record: dict[str, object]) -> tuple[int, int]:
     rec = record
     event = rec.get("event")
@@ -187,7 +204,12 @@ def successes_trials_from_task_record(record: dict[str, object]) -> tuple[int, i
 
     if event == "skip":
         csv_path = _parse_record_path(rec, "previous_csv", "output_csv")
-        successes = strict_valid_count_from_csv(csv_path) if csv_path is not None else 0
+        if csv_path is None:
+            return 0, inferred_trials
+        meta_successes = _triple_ok_points_from_scan_meta(csv_path)
+        if meta_successes is not None:
+            return int(meta_successes), inferred_trials
+        successes = strict_valid_count_from_csv(csv_path)
         return successes, inferred_trials
 
     if event == "done":
