@@ -7,6 +7,7 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
+from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
 from typing import Protocol, TypeAlias, cast
@@ -37,6 +38,8 @@ class _Artifacts(Protocol):
 
     def summarize_task_summary(self, records: object) -> tuple[int, int]: ...
 
+    def successes_trials_from_task_record(self, record: dict[str, object]) -> tuple[int, int]: ...
+
     def parse_run_dir_from_orchestrator_output(self, text: str) -> Path | None: ...
 
     def read_omp_num_threads_from_manifest(self, run_dir: Path) -> int | None: ...
@@ -65,6 +68,17 @@ class _Policy(Protocol):
         alpha: float = 1.0,
         beta: float = 1.0,
     ) -> dict[str, int]: ...
+
+    def allocate_budget_per_tanbeta(
+        self,
+        bins: object,
+        successes_by_tb_by_bin: dict[str, dict[str, int]],
+        trials_by_tb_by_bin: dict[str, dict[str, int]],
+        total_budget_per_tb: int,
+        floor_points: int,
+        alpha: float = 1.0,
+        beta: float = 1.0,
+    ) -> dict[str, dict[str, int]]: ...
 
 
 adaptive_artifacts = cast(_Artifacts, cast(object, _ARTIFACTS))
@@ -114,6 +128,7 @@ def _build_orchestrator_command(
     lam1_max: float,
     n_lam1: int,
     run_name: str,
+    n_lam1_map: str | None = None,
 ) -> list[str]:
     cmd: list[str] = [
         sys.executable,
@@ -136,6 +151,9 @@ def _build_orchestrator_command(
         str(int(n_lam1)),
     ]
 
+    if n_lam1_map is not None:
+        cmd.extend(["--n-lam1-map", str(n_lam1_map)])
+
     if ocfg.threads is not None:
         cmd.extend(["--threads", str(int(ocfg.threads))])
     if ocfg.orchestrator_dry_run:
@@ -151,6 +169,31 @@ def _read_bin_metrics_from_run_dir(run_dir: Path) -> tuple[int, int]:
     records = adaptive_artifacts.parse_task_summary_jsonl(run_dir / "task_summary.jsonl")
     attempts_total, triple_ok_total = adaptive_artifacts.summarize_task_summary(records)
     return int(attempts_total), int(triple_ok_total)
+
+
+def _tb_sort_key(tb_tag: str) -> tuple[int, float | str]:
+    try:
+        return (0, float(tb_tag))
+    except ValueError:
+        return (1, tb_tag)
+
+
+def _sorted_tb_tags(tb_tags: Iterable[str]) -> list[str]:
+    tags = [str(x) for x in tb_tags]
+    tags.sort(key=_tb_sort_key)
+    return tags
+
+
+def _read_per_tb_bin_metrics_from_run_dir(run_dir: Path) -> tuple[dict[str, int], dict[str, int]]:
+    records = adaptive_artifacts.parse_task_summary_jsonl(run_dir / "task_summary.jsonl")
+    successes_by_tb: dict[str, int] = {}
+    trials_by_tb: dict[str, int] = {}
+    for rec in records:
+        tb_tag = str(rec.get("tb_tag", ""))
+        succ, trials = adaptive_artifacts.successes_trials_from_task_record(rec)
+        successes_by_tb[tb_tag] = int(successes_by_tb.get(tb_tag, 0) + int(succ))
+        trials_by_tb[tb_tag] = int(trials_by_tb.get(tb_tag, 0) + int(trials))
+    return successes_by_tb, trials_by_tb
 
 
 def _write_iteration_checkpoint(
@@ -271,6 +314,9 @@ def main() -> int:
 
     successes_by_bin: dict[str, int] = {str(b["id"]): 0 for b in bins}
     trials_by_bin: dict[str, int] = {str(b["id"]): 0 for b in bins}
+
+    successes_by_tb_by_bin: dict[str, dict[str, int]] = {}
+    trials_by_tb_by_bin: dict[str, dict[str, int]] = {}
     bin_run_dirs: dict[str, str] = {}
     bin_run_names: dict[str, str] = {}
 
@@ -288,14 +334,30 @@ def main() -> int:
     for iter_index_1based in range(1, int(args.n_iters) + 1):
         if iter_index_1based == 1:
             budgets = {str(b["id"]): int(args.n_coarse) for b in bins}
+            budgets_by_tb_by_bin: dict[str, dict[str, int]] | None = None
         else:
-            budgets = adaptive_policy.allocate_budget(
-                bins=bins,
-                successes_by_bin=successes_by_bin,
-                trials_by_bin=trials_by_bin,
-                total_budget=int(args.total_budget),
-                floor_points=int(args.floor_points),
-            )
+            if successes_by_tb_by_bin:
+                tb_tags = _sorted_tb_tags(successes_by_tb_by_bin.keys())
+                budgets_by_tb_by_bin = adaptive_policy.allocate_budget_per_tanbeta(
+                    bins=bins,
+                    successes_by_tb_by_bin=successes_by_tb_by_bin,
+                    trials_by_tb_by_bin=trials_by_tb_by_bin,
+                    total_budget_per_tb=int(args.total_budget),
+                    floor_points=int(args.floor_points),
+                )
+                budgets = {}
+                for b in bins:
+                    bid = str(b["id"])
+                    budgets[bid] = int(sum(int(budgets_by_tb_by_bin.get(tb, {}).get(bid, 0)) for tb in tb_tags))
+            else:
+                budgets_by_tb_by_bin = {}
+                budgets = adaptive_policy.allocate_budget(
+                    bins=bins,
+                    successes_by_bin=successes_by_bin,
+                    trials_by_bin=trials_by_bin,
+                    total_budget=int(args.total_budget),
+                    floor_points=int(args.floor_points),
+                )
 
         proposals: list[dict[str, object]] = []
         commands: list[list[str]] = []
@@ -313,12 +375,24 @@ def main() -> int:
             proposal_id = _proposal_id(iter_index_1based, bidx)
             run_name = _run_name(ocfg.run_name_prefix, iter_index_1based, bidx)
 
+            n_lam1_map: str | None = None
+            if iter_index_1based >= 2 and budgets_by_tb_by_bin is not None:
+                tb_tags = _sorted_tb_tags(budgets_by_tb_by_bin.keys())
+                if tb_tags:
+                    parts: list[str] = []
+                    for tb_tag in tb_tags:
+                        n_for_tb = int(budgets_by_tb_by_bin.get(tb_tag, {}).get(bid, 0))
+                        parts.append(f"{tb_tag}:{n_for_tb}")
+                    n_lam1_map = ",".join(parts)
+                    n_lam1 = max(1, int(args.floor_points))
+
             cmd = _build_orchestrator_command(
                 ocfg=ocfg,
                 lam1_min=lam1_lo,
                 lam1_max=lam1_hi,
                 n_lam1=n_lam1,
                 run_name=run_name,
+                n_lam1_map=n_lam1_map,
             )
             commands.append(cmd)
 
@@ -362,6 +436,15 @@ def main() -> int:
                 per_prop_state["attempts_total"] = int(attempts_total)
                 per_prop_state["triple_ok_total"] = int(triple_ok_total)
 
+                succ_by_tb, trials_by_tb = _read_per_tb_bin_metrics_from_run_dir(run_dir)
+                per_prop_state["successes_by_tb"] = {str(k): int(v) for k, v in succ_by_tb.items()}
+                per_prop_state["trials_by_tb"] = {str(k): int(v) for k, v in trials_by_tb.items()}
+
+                for tb_tag, succ in succ_by_tb.items():
+                    successes_by_tb_by_bin.setdefault(str(tb_tag), {})[bid] = int(succ)
+                for tb_tag, tr in trials_by_tb.items():
+                    trials_by_tb_by_bin.setdefault(str(tb_tag), {})[bid] = int(tr)
+
                 omp_from_manifest = adaptive_artifacts.read_omp_num_threads_from_manifest(run_dir)
                 if omp_from_manifest is not None:
                     per_prop_state["omp_num_threads_manifest"] = int(omp_from_manifest)
@@ -392,10 +475,26 @@ def main() -> int:
             },
             "bins": bins_json,
             "budgets": {str(k): int(v) for k, v in budgets.items()},
+            "budgets_by_tb_by_bin": (
+                None
+                if budgets_by_tb_by_bin is None
+                else {
+                    str(tb): {str(bid): int(n) for bid, n in per_bin.items()}
+                    for tb, per_bin in budgets_by_tb_by_bin.items()
+                }
+            ),
             "bin_run_dirs": dict(bin_run_dirs),
             "bin_run_names": dict(bin_run_names),
             "trials_by_bin": dict(trials_by_bin),
             "successes_by_bin": dict(successes_by_bin),
+            "trials_by_tb_by_bin": {
+                str(tb): {str(bid): int(n) for bid, n in per_bin.items()}
+                for tb, per_bin in trials_by_tb_by_bin.items()
+            },
+            "successes_by_tb_by_bin": {
+                str(tb): {str(bid): int(n) for bid, n in per_bin.items()}
+                for tb, per_bin in successes_by_tb_by_bin.items()
+            },
             "proposals": per_iter_state_proposals,
         }
 
