@@ -4,7 +4,21 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 .ipynb_checkpoints/
+
+*.cache
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
 
 # Virtual environments
 .venv/
@@ -127,3 +141,9 @@ scripts/archive/
 /higgstools/doc/_static
 /higgstools/.gitignore
 /mlpython/Analysis
+
+# =============================================================================
+# docs (Sphinx build artifacts)
+# =============================================================================
+docs/_build/
+docs/.doctrees/
