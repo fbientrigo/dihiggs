@@ -34,6 +34,24 @@ Efficiently sample a 7-dimensional parameter space, compute Higgs pair branching
 
 ---
 
+## Documentation
+
+Sphinx is already set up for this repo:
+- Config: docs/conf.py (includes myst_parser for .md + sphinx.ext.autodoc for API pages)
+- Doc deps: docs/requirements.txt
+- _build output is already ignored via .gitignore (docs/_build/)
+How to build locally (HTML):
+```
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r docs/requirements.txt
+python -m sphinx -b html -W docs docs/_build/html
+```
+Open: `docs/_build/html/index.html`
+
+---
+
 ## Requirements & Installation
 
 ### Prerequisites
