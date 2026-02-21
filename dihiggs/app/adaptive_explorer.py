@@ -9,8 +9,21 @@ import sys
 from dataclasses import dataclass
 from collections.abc import Iterable
 from pathlib import Path
+
 from types import ModuleType
 from typing import Protocol, TypeAlias, cast
+
+import time
+import logging
+
+# Configuración modular del logger para consola
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] AdaptiveExplorer: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
 
 JSONPrimitive: TypeAlias = None | bool | int | float | str
 JSONValue: TypeAlias = JSONPrimitive | list["JSONValue"] | dict[str, "JSONValue"]
@@ -130,6 +143,9 @@ def _build_orchestrator_command(
     run_name: str,
     n_lam1_map: str | None = None,
 ) -> list[str]:
+    """
+    Compila las instrucciones para ejecutar el orquestador con los parámetros dados. Si n_lam1_map es proporcionado, se incluye en los argumentos.
+    """
     cmd: list[str] = [
         sys.executable,
         str(_orchestrator_path()),
@@ -162,6 +178,7 @@ def _build_orchestrator_command(
 
 
 def _run_orchestrator(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Ejecuta el comando dado para el orquestador y devuelve el resultado. No lanza excepciones por códigos de retorno no cero, sino que captura toda la salida y el código de retorno en el objeto resultante."""
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
@@ -226,6 +243,9 @@ def _do_replay(checkpoint_dir: Path, *, list_commands: bool) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """
+    Establece los argumentos de línea de comandos para el explorador adaptativo. Permite configurar los rangos y presupuestos para lam1, así como los parámetros de ejecución del orquestador. También incluye opciones para reproducir comandos desde un checkpoint existente.
+    """
     p = argparse.ArgumentParser(description="Adaptive lam1 explorer (CLI wrapper over orchestrate_scans.py)")
 
     _ = p.add_argument("--lam1-min", type=float, required=False, default=0.0)
@@ -297,6 +317,9 @@ def main() -> int:
 
     checkpoint_root = Path(args.checkpoint_root)
     checkpoint_root.mkdir(parents=True, exist_ok=True)
+
+    logger.info(f"🚀 Iniciando Exploración Adaptativa: {args.n_iters} iteraciones programadas.")
+    global_t0 = time.perf_counter() # <-- Inicia cronómetro global
 
     ocfg = OrchestratorConfig(
         exec_path=str(args.exec_path),
@@ -404,7 +427,16 @@ def main() -> int:
                 }
             )
 
+            #-- logging --
+            logger.info(f"⏳ Iteración {iter_index_1based}/{args.n_iters} | Bin: {bid} | Presupuesto: {n_lam1} pts...")
+            
+            t0 = time.perf_counter()
             result = _run_orchestrator(cmd)
+            elapsed = time.perf_counter() - t0
+            
+            logger.info(f"✅ {bid} finalizado en {elapsed:.2f}s (RC: {result.returncode})")
+            #--
+
             run_dir = adaptive_artifacts.parse_run_dir_from_orchestrator_output(
                 (result.stdout or "") + "\n" + (result.stderr or "")
             )
@@ -416,6 +448,7 @@ def main() -> int:
                 "status": "DONE",
                 "command": shlex.join(cmd),
                 "returncode": int(result.returncode),
+                "elapsed_sec": float(elapsed),  # logging del tiempo de ejecución del orquestador para este bin
                 "run_name": run_name,
                 "bin_id": bid,
                 "bin_index": bidx,
@@ -506,6 +539,9 @@ def main() -> int:
             commands=commands,
         )
 
+    global_elapsed = time.perf_counter() - global_t0
+    logger.info(f"🎉 Exploración adaptativa completa. Tiempo total: {global_elapsed / 60:.2f} minutos.")
+    
     return 0
 
 
