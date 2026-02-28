@@ -297,7 +297,10 @@ class Args(Protocol):
 
 
 def main() -> int:
-    args = cast(Args, cast(object, build_parser().parse_args()))
+    # 1. Parsea los argumentos conocidos y guarda el resto en 'extra_args'
+    parser = build_parser()
+    parsed_args, extra_args = parser.parse_known_args()
+    args = cast(Args, cast(object, parsed_args))
 
     if args.replay:
         return _do_replay(Path(args.replay), list_commands=bool(args.list_commands))
@@ -408,7 +411,6 @@ def main() -> int:
                         parts.append(f"{tb_tag}:{n_for_tb}")
                     n_lam1_map = ",".join(parts)
                     n_lam1 = max(1, int(args.floor_points))
-
             cmd = _build_orchestrator_command(
                 ocfg=ocfg,
                 lam1_min=lam1_lo,
@@ -417,6 +419,10 @@ def main() -> int:
                 run_name=run_name,
                 n_lam1_map=n_lam1_map,
             )
+            
+            # 2. Inyectar cualquier argumento físico adicional (ej. --tanbeta)
+            cmd.extend(extra_args)
+            
             commands.append(cmd)
 
             proposals.append(
