@@ -96,7 +96,6 @@ print(f"[+] Carga completada en {format_time(t_end_massive)}. Rendimiento real: 
 # Calcular el flag "Triple OK"
 df['is_valid'] = (df['positivity_ok'] == 1) & (df['unitarity_ok'] == 1) & (df['perturbativity_ok'] == 1)
 df_valid = df[df['is_valid']].copy()
-
 # ==============================================================================
 # FASE 3: ESTADÍSTICAS DETALLADAS
 # ==============================================================================
@@ -115,6 +114,7 @@ print(f" -> Fallaron Positividad   : {(df['positivity_ok'] == 0).sum():,}")
 print(f" -> Fallaron Unitariedad   : {(df['unitarity_ok'] == 0).sum():,}")
 print(f" -> Fallaron Perturbatividad: {(df['perturbativity_ok'] == 0).sum():,}")
 
+# --- FIX: Corrección del typo value_counts() ---
 print("\n[+] Top 5 Valores de Lambda_6 con más puntos válidos:")
 print(df_valid['lambda6'].value_counts().head(5))
 
@@ -122,64 +122,67 @@ print("\n[+] Top 5 Valores de tan(beta) con más puntos válidos:")
 print(df_valid['tan_beta'].value_counts().head(5))
 print("="*50 + "\n")
 
+# Liberar memoria de los puntos inválidos que ya no usaremos
+del df
+import gc
+gc.collect()
+
 # ==============================================================================
-# FASE 4: VISUALIZACIÓN EN VIVO (EDA)
+# FASE 4: VISUALIZACIÓN Y GUARDADO DE ALTA CALIDAD (Para la Reunión)
 # ==============================================================================
 if valid_pts == 0:
     print("[-] No hay suficientes puntos válidos para graficar.")
     exit()
 
-print("[*] Generando gráficos de análisis físico...")
+print("[*] Generando y guardando gráficos de alta resolución...")
+
+# Asegurar que el directorio de imágenes del paper exista
+IMG_DIR = "/home/fabi/dihiggs/mlpython/paper_img/reunion_marzo"
+os.makedirs(IMG_DIR, exist_ok=True)
 
 sns.set_theme(style="whitegrid", palette="muted")
 
 # 1. Mapa de Densidad del Espacio de Fase (m_phi vs lam1)
 plt.figure(figsize=(10, 6))
-# Usamos hexbin por si hay millones de puntos (scatter colapsaría)
 hb = plt.hexbin(df_valid['lam1'], df_valid['m_phi'], gridsize=40, cmap='YlGnBu', bins='log', mincnt=1)
 cb = plt.colorbar(hb, label='log10(N puntos válidos)')
 plt.title(r'Distribución de Puntos Válidos: $\lambda_1$ vs $m_\phi$')
 plt.xlabel(r'$\lambda_1$')
 plt.ylabel(r'$m_\phi$ [GeV]')
 plt.tight_layout()
-plt.savefig("lambda1_vs_mphi_hexbin.png", dpi=300)  # Guardamos la figura para referencia futura
-
+out_path1 = os.path.join(IMG_DIR, "1_espacio_fase_hexbin.png")
+plt.savefig(out_path1, dpi=300)
+print(f" [+] Guardado: {out_path1}")
+plt.close()
 
 # 2. Impacto de Lambda_6 sobre el espacio permitido de Lambda_1
 plt.figure(figsize=(12, 6))
-sns.violinplot(data=df_valid, x='lambda6', y='lam1', inner="quartile", scale="width", palette="Set2")
+sns.violinplot(data=df_valid, x='lambda6', y='lam1', inner="quartile", palette="Set2")
 plt.title(r"Rango permitido de $\lambda_1$ condicionado por $\lambda_6$")
 plt.xlabel(r"$\lambda_6$")
 plt.ylabel(r"$\lambda_1$ (Válidos)")
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig("lambda6_vs_lambda1_violin.png", dpi=300)  # Guardamos la figura para referencia futura
+out_path2 = os.path.join(IMG_DIR, "2_simetria_z2_violin.png")
+plt.savefig(out_path2, dpi=300)
+print(f" [+] Guardado: {out_path2}")
+plt.close()
 
-
-# 3. Branching Ratio a Fotones (BR_gaga) en función de tan(beta)
+# 3. Total Width vs BR_gaga (Búsqueda de Vértices Desplazados)
 plt.figure(figsize=(10, 6))
-# Filtramos br_gaga para quitar ceros absolutos que rompen la escala log
 df_br = df_valid[df_valid['br_gaga'] > 1e-15]
-sns.histplot(data=df_br, x='br_gaga', hue='tan_beta', log_scale=True, element="step", fill=False, palette="tab10", bins=50)
-plt.title(r"Distribución del Branching Ratio $h \to \gamma\gamma$")
-plt.xlabel(r"BR($h \to \gamma\gamma$)")
-plt.ylabel("Densidad")
-plt.tight_layout()
-plt.savefig("br_gaga_distribution.png", dpi=300)  # Guardamos la figura para referencia futura
-
-
-# 4. Total Width vs BR_gaga (Para buscar long-lived particles)
-plt.figure(figsize=(10, 6))
 sns.scatterplot(data=df_br, x='total_width', y='br_gaga', alpha=0.3, s=10, edgecolor=None, color='indigo')
 plt.xscale('log')
 plt.yscale('log')
 plt.title(r"Correlación: Anchura Total vs Branching Ratio a $\gamma\gamma$")
 plt.xlabel(r"$\Gamma_{total}$ [GeV]")
 plt.ylabel(r"BR($h \to \gamma\gamma$)")
-plt.axvline(x=1e-10, color='red', linestyle='--', label=r'Región de posibles Long-Lived')
+plt.axvline(x=1e-10, color='red', linestyle='--', label=r'Región Long-Lived ($\Gamma < 10^{-10}$ GeV)')
 plt.legend()
 plt.tight_layout()
-plt.savefig("total_width_vs_br_gaga.png", dpi=300)  # Guardamos la figura para referencia futura
+out_path3 = os.path.join(IMG_DIR, "3_long_lived_particles.png")
+plt.savefig(out_path3, dpi=300)
+print(f" [+] Guardado: {out_path3}")
+plt.close()
 
-
-print("[+] Análisis completado.")
+print("\n[🚀] ¡Todos los gráficos han sido exportados exitosamente para la presentación!")
