@@ -23,6 +23,7 @@ against the manifest and **only rebuilds** when something changed.
 
 from __future__ import annotations
 
+import argparse
 import gc
 import glob
 import hashlib
@@ -76,9 +77,25 @@ def _fmt(seconds: float) -> str:
     return f"{seconds / 3600:.1f}h"
 
 
-def _list_csvs(lake_dir: Path) -> list[str]:
-    """Return sorted list of every CSV inside *lake_dir* (recursive)."""
-    return sorted(glob.glob(str(lake_dir / "**" / "*.csv"), recursive=True))
+def _list_csvs(lake_dir: Path, frac: float = 1.0) -> list[str]:
+    """Return sorted list of every CSV inside *lake_dir* (recursive), optionally sampling a fraction per campaign."""
+    if frac >= 1.0:
+        return sorted(glob.glob(str(lake_dir / "**" / "*.csv"), recursive=True))
+    
+    all_csvs = []
+    campaigns = _list_campaigns(lake_dir)
+    if not campaigns:
+        # Fallback if no subdirectories
+        csvs = sorted(glob.glob(str(lake_dir / "*.csv")))
+        n = max(1, int(len(csvs) * frac)) if csvs else 0
+        return csvs[:n]
+        
+    for camp in campaigns:
+        camp_dir = lake_dir / camp
+        camp_csvs = sorted(glob.glob(str(camp_dir / "**" / "*.csv"), recursive=True))
+        n_take = max(1, int(len(camp_csvs) * frac)) if camp_csvs else 0
+        all_csvs.extend(camp_csvs[:n_take])
+    return all_csvs
 
 
 def _list_campaigns(lake_dir: Path) -> list[str]:
@@ -158,6 +175,7 @@ def build_parquet(
     lake_dir: Path = DATA_LAKE_DIR,
     output: Path = PARQUET_FILE,
     batch_size: int = BATCH_SIZE,
+    frac: float = 1.0,
 ) -> tuple[Path, int]:
     """
     Read all CSVs in *lake_dir* in small batches and write one Parquet file.
@@ -168,7 +186,7 @@ def build_parquet(
 
     Returns (parquet_path, total_rows).
     """
-    csv_files = _list_csvs(lake_dir)
+    csv_files = _list_csvs(lake_dir, frac=frac)
     n_files = len(csv_files)
 
     if n_files == 0:
@@ -201,7 +219,7 @@ def build_parquet(
         if not frames:
             continue
 
-        chunk = pl.concat(frames, how="vertical_relaxed", rechunk=True)
+        chunk = pl.concat(frames, how="diagonal_relaxed", rechunk=True)
         total_rows += chunk.height
 
         chunk_path = chunks_dir / f"chunk_{batch_start:06d}.parquet"
@@ -224,20 +242,32 @@ def build_parquet(
                 f"ETA≈{_fmt(eta)}"
             )
 
-    # ── Phase 2: merge chunks into single Parquet (lazy, ext4-native) ─
-    print(f"\n[consolidate] Phase 2 — merging {len(chunk_paths)} chunks …")
+    # ── Phase 2: merge chunks into single Parquet (DuckDB, ext4-native)
+    print(f"\\n[consolidate] Phase 2 — merging {len(chunk_paths)} chunks (streaming with DuckDB) …")
 
     if not chunk_paths:
         raise RuntimeError("No data was successfully read from the CSVs")
 
-    merged = pl.scan_parquet(
-        [str(p) for p in chunk_paths],
-    ).collect(streaming=True)
-
-    merged.write_parquet(output, compression="zstd")
-    final_rows = merged.height
-    del merged
-    gc.collect()
+    import duckdb
+    
+    # We use DuckDB for the final merge to prevent OOM (Out Of Memory) issues 
+    # when dealing with dozens of millions of rows.
+    con = duckdb.connect(config={'memory_limit': '4GB'})
+    
+    # Using glob pattern for duckdb so it reads all chunks at once efficiently
+    chunks_glob = str(chunks_dir / "*.parquet")
+    
+    # We write directly to the final .parquet file using ZSTD compression
+    query = f"""
+    COPY (
+        SELECT * FROM read_parquet('{chunks_glob}')
+    ) TO '{output}' (FORMAT PARQUET, COMPRESSION 'ZSTD')
+    """
+    con.execute(query)
+    
+    # Get final rows count quickly from DuckDB
+    final_rows = con.execute(f"SELECT count(*) FROM read_parquet('{output}')").fetchone()[0]
+    con.close()
 
     # Clean up chunk files
     for p in chunk_paths:
@@ -257,7 +287,7 @@ def build_parquet(
 # ──────────────────────────────────────────────────────────────────────
 # PUBLIC API
 # ──────────────────────────────────────────────────────────────────────
-def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR) -> bool:
+def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR, frac: float = 1.0) -> bool:
     """
     Return True if the Parquet must be (re)built.
 
@@ -272,7 +302,7 @@ def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR) -> bool:
     if manifest is None:
         return True
 
-    csv_files = _list_csvs(lake_dir)
+    csv_files = _list_csvs(lake_dir, frac=frac)
     campaigns = _list_campaigns(lake_dir)
     fp = _fingerprint(csv_files, campaigns)
 
@@ -286,6 +316,7 @@ def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR) -> bool:
 def ensure_parquet(
     lake_dir: Path = DATA_LAKE_DIR,
     force: bool = False,
+    frac: float = 1.0,
 ) -> Path:
     """
     Ensure the consolidated Parquet exists and is up-to-date.
@@ -293,9 +324,9 @@ def ensure_parquet(
 
     Returns the Path to the Parquet file.
     """
-    if force or needs_rebuild(lake_dir):
-        parquet_path, n_rows = build_parquet(lake_dir)
-        csv_files = _list_csvs(lake_dir)
+    if force or needs_rebuild(lake_dir, frac=frac):
+        parquet_path, n_rows = build_parquet(lake_dir, frac=frac)
+        csv_files = _list_csvs(lake_dir, frac=frac)
         campaigns = _list_campaigns(lake_dir)
         fp = _fingerprint(csv_files, campaigns)
         _save_manifest(fp, len(csv_files), campaigns, n_rows, 0.0)
@@ -312,6 +343,7 @@ def ensure_parquet(
 def get_parquet_path(
     lake_dir: Path = DATA_LAKE_DIR,
     force: bool = False,
+    frac: float = 1.0,
 ) -> Path:
     """
     Convenience wrapper: ensure Parquet exists and return its Path.
@@ -321,15 +353,19 @@ def get_parquet_path(
         >>> pq = get_parquet_path()
         >>> df = pl.scan_parquet(pq)
     """
-    return ensure_parquet(lake_dir, force=force)
+    return ensure_parquet(lake_dir, force=force, frac=frac)
 
 
 # ──────────────────────────────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────────────────────────────
 def main() -> None:
-    force = "--force" in sys.argv
-    parquet = ensure_parquet(force=force)
+    parser = argparse.ArgumentParser(description="One-shot CSV -> Parquet consolidator for di-Higgs lake.")
+    parser.add_argument("--force", action="store_true", help="Force rebuild of Parquet file")
+    parser.add_argument("--frac", type=float, default=1.0, help="Fraction of files to take per campaign (e.g. 0.1 for 10%)")
+    args = parser.parse_args()
+
+    parquet = ensure_parquet(force=args.force, frac=args.frac)
     print(f"\n{'='*60}")
     print(f"Parquet listo para usar:")
     print(f"  {parquet}")

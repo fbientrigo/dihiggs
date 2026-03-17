@@ -80,3 +80,5 @@ mlpython/valid_points_extended.csv
 mlpython/06_valid_points/elite_candidates_report.csv
 mlpython/valid_points_extended.csv
 
+mlpython/2603/analyze_counts.py
+mlpython/2603/column_counts.txt
