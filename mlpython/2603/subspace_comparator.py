@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 import matplotlib.pyplot as plt
 
-import polar_lake_explorer as ple
+import archive_plots.polar_lake_explorer as ple
 import consolidate_lake as cl
 
 # =========================
@@ -202,6 +202,21 @@ def plot_single_comparison(df_total_lazy: pl.LazyFrame, df_subset_lazy: pl.LazyF
     fig.tight_layout()
     return fig
 
+# robust comparison
+def _flag_true_expr(col_name: str):
+    as_num = pl.col(col_name).cast(pl.Float64, strict=False)
+    as_txt = (
+        pl.col(col_name)
+        .cast(pl.Utf8, strict=False)
+        .str.strip_chars()
+        .str.to_lowercase()
+    )
+    return (
+        (as_num >= 0.5) |
+        as_txt.is_in(["1", "1.0", "1.000000000000000", "true", "t"])
+    )
+
+
 import argparse
 from pathlib import Path
 
@@ -248,7 +263,7 @@ def main():
         if col_matched:
             found_filters.append(col_matched)
             # Support both integer 1 and boolean True
-            expr = (pl.col(col_matched) == 1) | (pl.col(col_matched) == True)
+            expr = _flag_true_expr(col_matched)
             if base_filter_expr is None:
                 base_filter_expr = expr
             else:
