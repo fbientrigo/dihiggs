@@ -41,6 +41,8 @@ import polars as pl
 # ──────────────────────────────────────────────────────────────────────
 DATA_LAKE_DIR = Path("/mnt/c/Users/Asus/cern_db/dihiggs_lake")
 
+IGNORE_ERRORS = False
+
 # Output lives on native ext4 → no 9P, no SIGBUS
 OUTPUT_DIR = Path.home() / "cern_db" / "dihiggs_consolidated"
 PARQUET_FILE = OUTPUT_DIR / "dihiggs_lake.parquet"
@@ -58,9 +60,9 @@ SCHEMA_OVERRIDES: dict[str, pl.DataType] = {
     "lam1": pl.Float32,
     "tan_beta": pl.Float32,
     "lambda6": pl.Float32,
-    "positivity_ok": pl.Int8,
-    "unitarity_ok": pl.Int8,
-    "perturbativity_ok": pl.Int8,
+    "positivity_ok": pl.Float32,
+    "unitarity_ok": pl.Float32,
+    "perturbativity_ok": pl.Float32,
     "br_gaga": pl.Float32,
     "total_width": pl.Float32,
 }
@@ -161,7 +163,7 @@ def _read_csv_safe(path: str) -> pl.DataFrame | None:
             path,
             schema_overrides=SCHEMA_OVERRIDES,
             infer_schema_length=200,
-            ignore_errors=True,
+            ignore_errors=IGNORE_ERRORS,
             try_parse_dates=False,
             low_memory=False,     # ← CRITICAL: avoid mmap over 9P!
             rechunk=False,
@@ -220,6 +222,76 @@ def build_parquet(
             continue
 
         chunk = pl.concat(frames, how="diagonal_relaxed", rechunk=True)
+
+        flag_cols = ["positivity_ok", "unitarity_ok", "perturbativity_ok"]
+        present_flags = [c for c in flag_cols if c in chunk.columns]
+
+        # =========================================================
+        # AUDITORÍA 1: estado crudo antes de normalizar
+        # =========================================================
+        if present_flags:
+            print("\n[audit raw flags before normalization]")
+            audit_raw = chunk.select(
+                [pl.len().alias("rows")] +
+                [pl.col(c).null_count().alias(f"{c}_nulls") for c in present_flags] +
+                [pl.col(c).cast(pl.Utf8, strict=False).n_unique().alias(f"{c}_n_unique_as_text") for c in present_flags]
+            )
+            print(audit_raw)
+
+            for c in present_flags:
+                print(f"\n[audit raw top values] {c}")
+                top_vals = (
+                    chunk
+                    .select(pl.col(c).cast(pl.Utf8, strict=False).alias("v"))
+                    .group_by("v")
+                    .len()
+                    .sort("len", descending=True)
+                    .limit(10)
+                )
+                print(top_vals)
+
+        # =========================================================
+        # NORMALIZACIÓN ROBUSTA DE FLAGS
+        # =========================================================
+        if present_flags:
+            chunk = chunk.with_columns([
+                (
+                    pl.when(pl.col(c).is_null())
+                    .then(None)
+                    .when(pl.col(c).cast(pl.Float32, strict=False) >= 0.5)
+                    .then(1)
+                    .otherwise(0)
+                    .cast(pl.Int8)
+                    .alias(c)
+                )
+                for c in present_flags
+            ])
+
+        # =========================================================
+        # AUDITORÍA 2: estado final después de normalizar
+        # =========================================================
+        if present_flags:
+            print("\n[audit normalized flags after normalization]")
+            audit_norm = chunk.select(
+                [pl.len().alias("rows")] +
+                [pl.col(c).null_count().alias(f"{c}_nulls") for c in present_flags] +
+                [pl.col(c).min().alias(f"{c}_min") for c in present_flags] +
+                [pl.col(c).max().alias(f"{c}_max") for c in present_flags]
+            )
+            print(audit_norm)
+
+            for c in present_flags:
+                print(f"\n[audit normalized top values] {c}")
+                top_vals = (
+                    chunk
+                    .select(pl.col(c).cast(pl.Utf8, strict=False).alias("v"))
+                    .group_by("v")
+                    .len()
+                    .sort("len", descending=True)
+                    .limit(10)
+                )
+                print(top_vals)
+
         total_rows += chunk.height
 
         chunk_path = chunks_dir / f"chunk_{batch_start:06d}.parquet"
