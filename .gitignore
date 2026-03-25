@@ -82,3 +82,4 @@ mlpython/valid_points_extended.csv
 
 mlpython/2603/analyze_counts.py
 mlpython/2603/column_counts.txt
+mlpython/Analysis/compare_methods.py

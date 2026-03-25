@@ -34,7 +34,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-import polars as pl
+import polars as pl # pyright: ignore[reportMissingImports]
 
 # ──────────────────────────────────────────────────────────────────────
 # CONFIG
@@ -45,8 +45,16 @@ IGNORE_ERRORS = False
 
 # Output lives on native ext4 → no 9P, no SIGBUS
 OUTPUT_DIR = Path.home() / "cern_db" / "dihiggs_consolidated"
-PARQUET_FILE = OUTPUT_DIR / "dihiggs_lake.parquet"
-MANIFEST_FILE = OUTPUT_DIR / "manifest.json"
+RAW_PARQUET_FILE = OUTPUT_DIR / "dihiggs_lake.parquet"
+RAW_MANIFEST_FILE = OUTPUT_DIR / "manifest_raw.json"
+
+PHYS_PARQUET_FILE = OUTPUT_DIR / "dihiggs_lake_phys_only.parquet"
+PHYS_MANIFEST_FILE = OUTPUT_DIR / "manifest_phys_only.json"
+
+# Mantengo este alias para compatibilidad hacia atrás:
+# por defecto, el parquet "principal" pasa a ser el físicamente filtrado.
+PARQUET_FILE = PHYS_PARQUET_FILE
+MANIFEST_FILE = PHYS_MANIFEST_FILE
 
 # How many CSVs to concat per write-batch (keeps peak RAM ≈ 400-600 MB)
 BATCH_SIZE = 60
@@ -120,31 +128,35 @@ def _fingerprint(csv_files: list[str], campaigns: list[str]) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
-def _load_manifest() -> dict[str, Any] | None:
-    if MANIFEST_FILE.exists():
+def _load_manifest(manifest_path: Path) -> dict[str, Any] | None:
+    if manifest_path.exists():
         try:
-            return json.loads(MANIFEST_FILE.read_text())
+            return json.loads(manifest_path.read_text())
         except Exception:
             return None
     return None
 
 
 def _save_manifest(
+    manifest_path: Path,
+    parquet_path: Path,
     fingerprint: str,
     n_files: int,
     campaigns: list[str],
     n_rows: int,
     elapsed: float,
+    filter_physical: bool,
 ) -> None:
-    MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST_FILE.write_text(
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
         json.dumps(
             {
                 "fingerprint": fingerprint,
                 "n_files": n_files,
                 "campaigns": campaigns,
                 "n_rows": n_rows,
-                "parquet": str(PARQUET_FILE),
+                "parquet": str(parquet_path),
+                "filter_physical": filter_physical,
                 "elapsed_s": round(elapsed, 2),
                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             },
@@ -152,6 +164,14 @@ def _save_manifest(
         )
     )
 
+def _artifact_paths(filter_physical: bool = True) -> tuple[Path, Path]:
+    """
+    Return (parquet_path, manifest_path) according to filtering mode.
+    Default = physically filtered parquet.
+    """
+    if filter_physical:
+        return PHYS_PARQUET_FILE, PHYS_MANIFEST_FILE
+    return RAW_PARQUET_FILE, RAW_MANIFEST_FILE
 
 # ──────────────────────────────────────────────────────────────────────
 # CORE — batch reader (no mmap, RAM-safe)
@@ -168,6 +188,7 @@ def _read_csv_safe(path: str) -> pl.DataFrame | None:
             low_memory=False,     # ← CRITICAL: avoid mmap over 9P!
             rechunk=False,
         )
+    
     except Exception as exc:
         print(f"  ⚠ skip: {os.path.basename(path)} ({exc})")
         return None
@@ -175,9 +196,10 @@ def _read_csv_safe(path: str) -> pl.DataFrame | None:
 
 def build_parquet(
     lake_dir: Path = DATA_LAKE_DIR,
-    output: Path = PARQUET_FILE,
+    output: Path | None = None,
     batch_size: int = BATCH_SIZE,
     frac: float = 1.0,
+    filter_physical: bool = True,
 ) -> tuple[Path, int]:
     """
     Read all CSVs in *lake_dir* in small batches and write one Parquet file.
@@ -188,6 +210,8 @@ def build_parquet(
 
     Returns (parquet_path, total_rows).
     """
+    if output is None:
+        output, _ = _artifact_paths(filter_physical=filter_physical)
     csv_files = _list_csvs(lake_dir, frac=frac)
     n_files = len(csv_files)
 
@@ -320,7 +344,7 @@ def build_parquet(
     if not chunk_paths:
         raise RuntimeError("No data was successfully read from the CSVs")
 
-    import duckdb
+    import duckdb # pyright: ignore[reportMissingImports]
     
     # We use DuckDB for the final merge to prevent OOM (Out Of Memory) issues 
     # when dealing with dozens of millions of rows.
@@ -330,11 +354,24 @@ def build_parquet(
     chunks_glob = str(chunks_dir / "*.parquet")
     
     # We write directly to the final .parquet file using ZSTD compression
-    query = f"""
-    COPY (
-        SELECT * FROM read_parquet('{chunks_glob}')
-    ) TO '{output}' (FORMAT PARQUET, COMPRESSION 'ZSTD')
-    """
+    if filter_physical: 
+        print("[consolidate] Applying physical filter by default: positivity_ok=1 AND unitarity_ok=1 AND perturbativity_ok=1")
+        query = f"""
+        COPY (
+            SELECT *
+            FROM read_parquet('{chunks_glob}')
+            WHERE positivity_ok >= 1
+              AND unitarity_ok >= 1
+              AND perturbativity_ok >= 1
+        ) TO '{output}' (FORMAT PARQUET, COMPRESSION 'ZSTD')
+        """
+    else:
+        print("[consolidate] Writing RAW parquet without physical filtering")
+        query = f"""
+        COPY (
+            SELECT * FROM read_parquet('{chunks_glob}')
+        ) TO '{output}' (FORMAT PARQUET, COMPRESSION 'ZSTD')
+        """
     con.execute(query)
     
     # Get final rows count quickly from DuckDB
@@ -359,7 +396,11 @@ def build_parquet(
 # ──────────────────────────────────────────────────────────────────────
 # PUBLIC API
 # ──────────────────────────────────────────────────────────────────────
-def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR, frac: float = 1.0) -> bool:
+def needs_rebuild(
+    lake_dir: Path = DATA_LAKE_DIR,
+    frac: float = 1.0,
+    filter_physical: bool = True,
+) -> bool:
     """
     Return True if the Parquet must be (re)built.
 
@@ -367,10 +408,13 @@ def needs_rebuild(lake_dir: Path = DATA_LAKE_DIR, frac: float = 1.0) -> bool:
       1. Parquet file exists?
       2. Fingerprint of CSV list + campaigns matches manifest?
     """
-    if not PARQUET_FILE.exists():
+    parquet_path, manifest_path = _artifact_paths(filter_physical=filter_physical)
+
+    if not parquet_path.exists():
         return True
 
-    manifest = _load_manifest()
+    manifest = _load_manifest(manifest_path)
+
     if manifest is None:
         return True
 
@@ -389,6 +433,7 @@ def ensure_parquet(
     lake_dir: Path = DATA_LAKE_DIR,
     force: bool = False,
     frac: float = 1.0,
+    filter_physical: bool = True,
 ) -> Path:
     """
     Ensure the consolidated Parquet exists and is up-to-date.
@@ -396,17 +441,34 @@ def ensure_parquet(
 
     Returns the Path to the Parquet file.
     """
-    if force or needs_rebuild(lake_dir, frac=frac):
-        parquet_path, n_rows = build_parquet(lake_dir, frac=frac)
+    parquet_path_target, manifest_path = _artifact_paths(filter_physical=filter_physical)
+
+    if force or needs_rebuild(lake_dir, frac=frac, filter_physical=filter_physical):
+        parquet_path, n_rows = build_parquet(
+            lake_dir,
+            output=parquet_path_target,
+            frac=frac,
+            filter_physical=filter_physical,
+        )
         csv_files = _list_csvs(lake_dir, frac=frac)
         campaigns = _list_campaigns(lake_dir)
         fp = _fingerprint(csv_files, campaigns)
-        _save_manifest(fp, len(csv_files), campaigns, n_rows, 0.0)
+        _save_manifest(
+            manifest_path=manifest_path,
+            parquet_path=parquet_path,
+            fingerprint=fp,
+            n_files=len(csv_files),
+            campaigns=campaigns,
+            n_rows=n_rows,
+            elapsed=0.0,
+            filter_physical=filter_physical,
+        )
     else:
-        parquet_path = PARQUET_FILE
-        manifest = _load_manifest()
+        parquet_path = parquet_path_target
+        manifest = _load_manifest(manifest_path)
         n_rows = manifest.get("n_rows", 0) if manifest else 0
-        print(f"[consolidate] Parquet up-to-date ✔  ({n_rows:,} rows)")
+        mode = "phys-only" if filter_physical else "raw"
+        print(f"[consolidate] Parquet up-to-date ✔  ({n_rows:,} rows, mode={mode})")
         print(f"              {parquet_path}")
 
     return parquet_path
@@ -416,16 +478,21 @@ def get_parquet_path(
     lake_dir: Path = DATA_LAKE_DIR,
     force: bool = False,
     frac: float = 1.0,
+    filter_physical: bool = True,
 ) -> Path:
     """
     Convenience wrapper: ensure Parquet exists and return its Path.
 
-    Use this from notebooks:
-        >>> from consolidate_lake import get_parquet_path
-        >>> pq = get_parquet_path()
-        >>> df = pl.scan_parquet(pq)
+    Default behavior:
+      - filter_physical=True  -> returns phys-only parquet
+      - filter_physical=False -> returns raw parquet
     """
-    return ensure_parquet(lake_dir, force=force, frac=frac)
+    return ensure_parquet(
+        lake_dir,
+        force=force,
+        frac=frac,
+        filter_physical=filter_physical,
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -435,11 +502,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="One-shot CSV -> Parquet consolidator for di-Higgs lake.")
     parser.add_argument("--force", action="store_true", help="Force rebuild of Parquet file")
     parser.add_argument("--frac", type=float, default=1.0, help="Fraction of files to take per campaign (e.g. 0.1 for 10%)")
+    parser.add_argument(
+        "--no-phys-filter",
+        action="store_true",
+        help="Build/use RAW parquet without applying positivity/unitarity/perturbativity filtering",
+    )
     args = parser.parse_args()
 
-    parquet = ensure_parquet(force=args.force, frac=args.frac)
+    parquet = ensure_parquet(
+        force=args.force,
+        frac=args.frac,
+        filter_physical=not args.no_phys_filter,
+    )
+    mode = "raw" if args.no_phys_filter else "phys-only"
     print(f"\n{'='*60}")
-    print(f"Parquet listo para usar:")
+    print(f"Parquet listo para usar ({mode}):")
     print(f"  {parquet}")
     print(f"{'='*60}")
     print(f"\nEn notebook:")

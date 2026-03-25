@@ -1,10 +1,10 @@
 import os
 import sys
 import numpy as np
-import polars as pl
+import polars as pl # pyright: ignore[reportMissingImports]
 import matplotlib.pyplot as plt
 
-import archive_plots.polar_lake_explorer as ple
+# import archive_plots.polar_lake_explorer as ple
 import consolidate_lake as cl
 
 # =========================
