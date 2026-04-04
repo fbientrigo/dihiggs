@@ -79,7 +79,8 @@ directories:
 
 clean:
 	@echo "[CLEAN] Removing objects and binaries"
-	@rm -rf $(OBJ_DIR) $(BIN_DIR) $(LIB_DIR)
+	@rm -rf $(OBJ_DIR) $(LIB_DIR)
+	@rm -f $(BINARIES)
 
 cleanall: clean
 	@rm -rf data/*
