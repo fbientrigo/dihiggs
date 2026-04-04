@@ -33,7 +33,7 @@ LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
 # Fuentes y Objetos
 MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
-               $(SRC_DIR)/PhysScanWithFixings.cpp)
+               $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp)
 COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp
 
 # Generación de rutas de objetos
