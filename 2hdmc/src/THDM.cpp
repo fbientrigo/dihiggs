@@ -369,6 +369,21 @@ bool THDM::set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
     return params_set;
   }
 
+
+  // old comparison, provided error with 1 order of magnitude worse
+  // quickness was marginal, so I prefer the more stable version below
+  // double beta_loc = atan(tan_beta);
+  // double cb = 1./sqrt(1.+tan_beta*tan_beta);
+  // double cb2 = cb*cb;
+  // double sb = tan_beta/sqrt(1.+tan_beta*tan_beta);
+  // double tb = tan_beta;
+  // double cba = sqrt(1.-sba*sba);
+  // // double alpha_loc = -asin(sba)+beta_loc;
+  // double sa  = sb * cba - cb * sba;
+  // double sa2 = sa*sa;
+  // double ca  = cb * cba + sb * sba;
+  // double ca2 = ca*ca;
+
   double beta_loc = atan(tan_beta);
   double cb = cos(beta_loc);
   double cb2 = cb*cb;
