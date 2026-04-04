@@ -8,6 +8,10 @@ app/*
 
 *.csv
 
+2hdmc/lib/*.o
+2hdmc/lib/lib2HDMC.a
+2hdmc/CalcRoundTrip
+
 # ignorar datasets de HB/HS pesados
 datasets/*
 
