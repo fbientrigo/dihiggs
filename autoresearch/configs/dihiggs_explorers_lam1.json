@@ -1,0 +1,108 @@
+{
+  "campaign_id": "dihiggs-explorers-lam1-dev-2026-04-01",
+  "paths": {
+    "repo_root": "/home/fabi/dihiggs",
+    "outdir": "/home/fabi/dihiggs/runs/autoresearch-dihiggs-explorers-lam1",
+    "lake_name": "events.jsonl"
+  },
+  "runtime": {
+    "python_exe": "{sys_executable}",
+    "threads": 1,
+    "timeout_sec": 900,
+    "max_empty_rounds": 2
+  },
+  "dihiggs": {
+    "phys_exec": "{repo_root}/dihiggs/app/PhysLam1Scan",
+    "hb_dataset_env": "HB_DATASET",
+    "hs_dataset_env": "HS_DATASET"
+  },
+  "search": {
+    "tb_values": [50, 100, 500],
+    "lam1": {
+      "min": -1.0,
+      "max": 1.0,
+      "n_bins": 20
+    },
+    "mphi": {
+      "min": 130.0,
+      "max": 130.0,
+      "n_bins": 1
+    }
+  },
+  "limits": {
+    "max_new_run_dirs_per_round": 20,
+    "max_new_run_dirs_per_arm_call": 10
+  },
+  "metrics": {
+    "floors": {
+      "yield_norm": 0.01,
+      "coverage_norm": 0.0,
+      "diversity_norm": 0.0
+    },
+    "weights": {
+      "yield": 0.4,
+      "coverage": 0.3,
+      "diversity": 0.3
+    },
+    "multi_axis": {
+      "enabled": true,
+      "collapse_axes": ["tb", "lam1_bin"],
+      "coverage_axes": [
+        {
+          "name": "tb",
+          "kind": "categorical",
+          "domain": [50, 100, 500],
+          "weight": 0.5
+        },
+        {
+          "name": "lam1_bin",
+          "kind": "discrete",
+          "domain_size": 20,
+          "weight": 0.5
+        }
+      ],
+      "diversity_axes": [
+        {
+          "name": "tb",
+          "weight": 0.5
+        },
+        {
+          "name": "lam1_bin",
+          "weight": 0.5
+        }
+      ],
+      "diversity_pairs": []
+    }
+  },
+  "adaptation": {
+    "ucb_c": 1.414,
+    "warm_start_each_arm": false
+  },
+  "arms": [
+    {
+      "id": "adaptive-smoke",
+      "explorer": "adaptive",
+      "timeout_sec": 900,
+      "cmd": [
+        "{python}",
+        "{repo_root}/dihiggs/app/adaptive_explorer_lam1.py",
+        "--checkpoint-root",
+        "{checkpoint_root}/adaptive-smoke",
+        "--tb-values",
+        "{tb}",
+        "--lam1-range={lam1_min}:{lam1_max}",
+        "--n-bins",
+        "{lam1_n_bins}",
+        "--n-proposals",
+        "1",
+        "--iter",
+        "{iter}"
+      ],
+      "env": {
+        "HB_DATASET": "{hb_dataset}",
+        "HS_DATASET": "{hs_dataset}",
+        "OMP_NUM_THREADS": "1"
+      }
+    }
+  ]
+}
