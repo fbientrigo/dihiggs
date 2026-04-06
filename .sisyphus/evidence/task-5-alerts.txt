@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.7, pytest-9.0.2, pluggy-1.6.0 -- /home/fabi/anaconda3/bin/python
+cachedir: .pytest_cache
+rootdir: /home/fabi/dihiggs
+plugins: anyio-4.2.0, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 21 items
+
+autoresearch/tests/test_alerting.py::test_alert_fingerprint_stable_for_same_type_and_context PASSED [  4%]
+autoresearch/tests/test_alerting.py::test_alert_fingerprint_differs_for_different_context PASSED [  9%]
+autoresearch/tests/test_alerting.py::test_severity_map_complete PASSED   [ 14%]
+autoresearch/tests/test_alerting.py::test_preflight_blocked_alert_critical PASSED [ 19%]
+autoresearch/tests/test_alerting.py::test_dataset_missing_alert_warning PASSED [ 23%]
+autoresearch/tests/test_alerting.py::test_round_failed_alert_warning PASSED [ 28%]
+autoresearch/tests/test_alerting.py::test_round_crashed_alert_critical PASSED [ 33%]
+autoresearch/tests/test_alerting.py::test_round_timed_out_alert_warning PASSED [ 38%]
+autoresearch/tests/test_alerting.py::test_round_stalled_alert_warning PASSED [ 42%]
+autoresearch/tests/test_alerting.py::test_plateau_warning_alert_info PASSED [ 47%]
+autoresearch/tests/test_alerting.py::test_converged_alert_info PASSED    [ 52%]
+autoresearch/tests/test_alerting.py::test_telemetry_corruption_alert_critical PASSED [ 57%]
+autoresearch/tests/test_alerting.py::test_duplicate_alert_suppressed_within_cooldown PASSED [ 61%]
+autoresearch/tests/test_alerting.py::test_alert_resolved_when_condition_clears PASSED [ 66%]
+autoresearch/tests/test_alerting.py::test_multiple_alert_types_simultaneously PASSED [ 71%]
+autoresearch/tests/test_alerting.py::test_active_alerts_restored_from_state PASSED [ 76%]
+autoresearch/tests/test_alerting.py::test_emit_alerts_creates_jsonl_and_stderr PASSED [ 80%]
+autoresearch/tests/test_alerting.py::test_acceptance_preflight_blocked_critical PASSED [ 85%]
+autoresearch/tests/test_alerting.py::test_acceptance_plateau_dedupe PASSED [ 90%]
+autoresearch/tests/test_alerting.py::test_no_alerts_on_healthy_state PASSED [ 95%]
+autoresearch/tests/test_alerting.py::test_alert_context_preserved PASSED [100%]
+
+============================== 21 passed in 0.09s ==============================
