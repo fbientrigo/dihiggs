@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -414,3 +415,87 @@ class AlertEngine:
             # Append to alerts.jsonl
             with open(alerts_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(alert, separators=(",", ":")) + "\n")
+
+
+    def persist_alerts_to_sqlite(
+        self,
+        db_conn: sqlite3.Connection,
+        campaign_id: str,
+    ) -> None:
+        """Persist all active and resolved alerts to SQLite."""
+        cursor = db_conn.cursor()
+        
+        # Persist active alerts
+        for fingerprint, alert in self.active_alerts.items():
+            cursor.execute(
+                """INSERT OR REPLACE INTO alerts
+                (campaign_id, fingerprint, alert_type, severity, message, context,
+                 first_seen, last_seen, resolved_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+,
+                (
+                    campaign_id,
+                    fingerprint,
+                    alert.alert_type,
+                    alert.severity,
+                    alert.message,
+                    json.dumps(alert.context),
+                    alert.first_seen,
+                    alert.last_seen,
+                    alert.resolved_at,
+                    "active",
+                ),
+            )
+        
+        # Persist resolved alerts
+        for fingerprint, alert in self.resolved_alerts.items():
+            cursor.execute(
+                """INSERT OR REPLACE INTO alerts
+                (campaign_id, fingerprint, alert_type, severity, message, context,
+                 first_seen, last_seen, resolved_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+,
+                (
+                    campaign_id,
+                    fingerprint,
+                    alert.alert_type,
+                    alert.severity,
+                    alert.message,
+                    json.dumps(alert.context),
+                    alert.first_seen,
+                    alert.last_seen,
+                    alert.resolved_at,
+                    "resolved",
+                ),
+            )
+        
+        db_conn.commit()
+
+
+    def load_alerts_from_sqlite(
+        self,
+        db_conn: sqlite3.Connection,
+        campaign_id: str,
+    ) -> list[dict[str, object]]:
+        """Load active alerts from SQLite to restore campaign state."""
+        cursor = db_conn.cursor()
+        cursor.execute(
+            """SELECT alert_type, severity, message, context, first_seen, last_seen, fingerprint
+               FROM alerts WHERE campaign_id = ? AND status = 'active' ORDER BY last_seen DESC"""
+,
+            (campaign_id,),
+        )
+        
+        alerts = []
+        for row in cursor.fetchall():
+            alert_type, severity, message, context_json, first_seen, last_seen, fingerprint = row
+            alert_dict = {
+                "alert_type": alert_type,
+                "severity": severity,
+                "message": message,
+                "context": json.loads(context_json) if context_json else {},
+                "first_seen": first_seen,
+                "last_seen": last_seen,
+                "fingerprint": fingerprint,
+            }
+            alerts.append(alert_dict)
+        
+        return alerts
