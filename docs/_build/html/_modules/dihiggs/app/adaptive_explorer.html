@@ -1,0 +1,630 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dihiggs.app.adaptive_explorer &mdash; DiHiggs Explorer Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            DiHiggs Explorer
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli/orchestrate_scans.html"><code class="docutils literal notranslate"><span class="pre">orchestrate_scans.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli/adaptive_explorer.html"><code class="docutils literal notranslate"><span class="pre">adaptive_explorer.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../artifacts.html">Artifacts and Schemas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DiHiggs Explorer</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dihiggs.app.adaptive_explorer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dihiggs.app.adaptive_explorer</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModuleType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">TypeAlias</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="n">JSONPrimitive</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span>
+<span class="n">JSONValue</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">JSONPrimitive</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;JSONValue&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;JSONValue&quot;</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_module</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModuleType</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">loader</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to load module: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">mod</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mod</span>
+
+
+<span class="n">_APP_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span>
+<span class="n">_ARTIFACTS</span> <span class="o">=</span> <span class="n">_load_module</span><span class="p">(</span><span class="s2">&quot;adaptive_artifacts&quot;</span><span class="p">,</span> <span class="n">_APP_DIR</span> <span class="o">/</span> <span class="s2">&quot;adaptive_artifacts.py&quot;</span><span class="p">)</span>
+<span class="n">_CHECKPOINT</span> <span class="o">=</span> <span class="n">_load_module</span><span class="p">(</span><span class="s2">&quot;adaptive_checkpoint&quot;</span><span class="p">,</span> <span class="n">_APP_DIR</span> <span class="o">/</span> <span class="s2">&quot;adaptive_checkpoint.py&quot;</span><span class="p">)</span>
+<span class="n">_POLICY</span> <span class="o">=</span> <span class="n">_load_module</span><span class="p">(</span><span class="s2">&quot;adaptive_policy&quot;</span><span class="p">,</span> <span class="n">_APP_DIR</span> <span class="o">/</span> <span class="s2">&quot;adaptive_policy.py&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Artifacts</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parse_task_summary_jsonl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">summarize_task_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">records</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">successes_trials_from_task_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">parse_run_dir_from_orchestrator_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_omp_num_threads_from_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Checkpoint</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_adaptive_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_proposals_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">proposals</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_commands_sh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">commands</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_replay_commands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span> <span class="o">...</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Policy</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_lam1_bins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lam1_min</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">lam1_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">allocate_budget</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">bins</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+        <span class="n">successes_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+        <span class="n">trials_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+        <span class="n">total_budget</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">floor_points</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span> <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">allocate_budget_per_tanbeta</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">bins</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span>
+        <span class="n">successes_by_tb_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span>
+        <span class="n">trials_by_tb_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span>
+        <span class="n">total_budget_per_tb</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">floor_points</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span> <span class="o">...</span>
+
+
+<span class="n">adaptive_artifacts</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">_Artifacts</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">_ARTIFACTS</span><span class="p">))</span>
+<span class="n">adaptive_checkpoint</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">_Checkpoint</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">_CHECKPOINT</span><span class="p">))</span>
+<span class="n">adaptive_policy</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">_Policy</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">_POLICY</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_int</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">x</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_float</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">x</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="OrchestratorConfig">
+<a class="viewcode-back" href="../../../api/adaptive_explorer.html#dihiggs.app.adaptive_explorer.OrchestratorConfig">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">OrchestratorConfig</span><span class="p">:</span>
+    <span class="n">exec_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">lake_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">campaign</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">run_name_prefix</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">orchestrator_dry_run</span><span class="p">:</span> <span class="nb">bool</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_iter_dir</span><span class="p">(</span><span class="n">checkpoint_root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">iter_index_1based</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">checkpoint_root</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;iter_</span><span class="si">{</span><span class="n">iter_index_1based</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_orchestrator_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">&quot;orchestrate_scans.py&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_proposal_id</span><span class="p">(</span><span class="n">iter_index_1based</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">bin_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;iter</span><span class="si">{</span><span class="n">iter_index_1based</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">_bin</span><span class="si">{</span><span class="n">bin_index</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_name</span><span class="p">(</span><span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">iter_index_1based</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">bin_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_iter</span><span class="si">{</span><span class="n">iter_index_1based</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">_bin</span><span class="si">{</span><span class="n">bin_index</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_orchestrator_command</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">ocfg</span><span class="p">:</span> <span class="n">OrchestratorConfig</span><span class="p">,</span>
+    <span class="n">lam1_min</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">lam1_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">n_lam1</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">n_lam1_map</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">cmd</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">_orchestrator_path</span><span class="p">()),</span>
+        <span class="s2">&quot;--exec&quot;</span><span class="p">,</span>
+        <span class="n">ocfg</span><span class="o">.</span><span class="n">exec_path</span><span class="p">,</span>
+        <span class="s2">&quot;--outdir&quot;</span><span class="p">,</span>
+        <span class="n">ocfg</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span>
+        <span class="s2">&quot;--lake-name&quot;</span><span class="p">,</span>
+        <span class="n">ocfg</span><span class="o">.</span><span class="n">lake_name</span><span class="p">,</span>
+        <span class="s2">&quot;--campaign&quot;</span><span class="p">,</span>
+        <span class="n">ocfg</span><span class="o">.</span><span class="n">campaign</span><span class="p">,</span>
+        <span class="s2">&quot;--run-name&quot;</span><span class="p">,</span>
+        <span class="n">run_name</span><span class="p">,</span>
+        <span class="s2">&quot;--lam1-min&quot;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">lam1_min</span><span class="p">),</span>
+        <span class="s2">&quot;--lam1-max&quot;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">lam1_max</span><span class="p">),</span>
+        <span class="s2">&quot;--n-lam1&quot;</span><span class="p">,</span>
+        <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">n_lam1</span><span class="p">)),</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">n_lam1_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--n-lam1-map&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_lam1_map</span><span class="p">)])</span>
+
+    <span class="k">if</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--threads&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ocfg</span><span class="o">.</span><span class="n">threads</span><span class="p">))])</span>
+    <span class="k">if</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">orchestrator_dry_run</span><span class="p">:</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;--dry-run&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cmd</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_orchestrator</span><span class="p">(</span><span class="n">cmd</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_bin_metrics_from_run_dir</span><span class="p">(</span><span class="n">run_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="n">records</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">parse_task_summary_jsonl</span><span class="p">(</span><span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;task_summary.jsonl&quot;</span><span class="p">)</span>
+    <span class="n">attempts_total</span><span class="p">,</span> <span class="n">triple_ok_total</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">summarize_task_summary</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">attempts_total</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">triple_ok_total</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tb_sort_key</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">tb_tag</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sorted_tb_tags</span><span class="p">(</span><span class="n">tb_tags</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">tb_tags</span><span class="p">]</span>
+    <span class="n">tags</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">_tb_sort_key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tags</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_per_tb_bin_metrics_from_run_dir</span><span class="p">(</span><span class="n">run_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+    <span class="n">records</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">parse_task_summary_jsonl</span><span class="p">(</span><span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;task_summary.jsonl&quot;</span><span class="p">)</span>
+    <span class="n">successes_by_tb</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">trials_by_tb</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">records</span><span class="p">:</span>
+        <span class="n">tb_tag</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tb_tag&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+        <span class="n">succ</span><span class="p">,</span> <span class="n">trials</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">successes_trials_from_task_record</span><span class="p">(</span><span class="n">rec</span><span class="p">)</span>
+        <span class="n">successes_by_tb</span><span class="p">[</span><span class="n">tb_tag</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">successes_by_tb</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">succ</span><span class="p">))</span>
+        <span class="n">trials_by_tb</span><span class="p">[</span><span class="n">tb_tag</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trials_by_tb</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">trials</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">successes_by_tb</span><span class="p">,</span> <span class="n">trials_by_tb</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_iteration_checkpoint</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">checkpoint_root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">iter_index_1based</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">JSONValue</span><span class="p">],</span>
+    <span class="n">proposals</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]],</span>
+    <span class="n">commands</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_iter_dir</span><span class="p">(</span><span class="n">checkpoint_root</span><span class="p">,</span> <span class="n">iter_index_1based</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">adaptive_checkpoint</span><span class="o">.</span><span class="n">write_adaptive_state</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">adaptive_checkpoint</span><span class="o">.</span><span class="n">write_proposals_csv</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">proposals</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">adaptive_checkpoint</span><span class="o">.</span><span class="n">write_commands_sh</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">commands</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_do_replay</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">list_commands</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">commands_path</span> <span class="o">=</span> <span class="n">checkpoint_dir</span> <span class="o">/</span> <span class="s2">&quot;commands.sh&quot;</span>
+    <span class="k">if</span> <span class="n">list_commands</span><span class="p">:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">commands_path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">())</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="n">commands</span> <span class="o">=</span> <span class="n">adaptive_checkpoint</span><span class="o">.</span><span class="n">load_replay_commands</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">)</span>
+    <span class="n">worst_rc</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">commands</span><span class="p">:</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;-lc&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">worst_rc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">worst_rc</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">worst_rc</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="build_parser">
+<a class="viewcode-back" href="../../../api/adaptive_explorer.html#dihiggs.app.adaptive_explorer.build_parser">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_parser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Adaptive lam1 explorer (CLI wrapper over orchestrate_scans.py)&quot;</span><span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lam1-min&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lam1-max&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">12.0</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--n-bins&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--seed&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--n-coarse&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--total-budget&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--floor-points&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--n-iters&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--checkpoint-root&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--exec&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;exec_path&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;./PhysScanWithFixings&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--outdir&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;/mnt/c/Users/Asus/cern_db&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lake-name&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;dihiggs_lake&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--campaign&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;scan&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--threads&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--run-name-prefix&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;adaptive&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--orchestrator-dry-run&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--replay&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Replay commands from a checkpoint dir&quot;</span><span class="p">)</span>
+    <span class="n">_</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--list-commands&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;With --replay: print commands.sh byte-identical to stdout&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">p</span></div>
+
+
+
+<div class="viewcode-block" id="Args">
+<a class="viewcode-back" href="../../../api/adaptive_explorer.html#dihiggs.app.adaptive_explorer.Args">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Args</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">lam1_min</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">lam1_max</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">n_bins</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">n_coarse</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">total_budget</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">floor_points</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">n_iters</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">checkpoint_root</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">exec_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">lake_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">campaign</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">run_name_prefix</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">orchestrator_dry_run</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">replay</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">list_commands</span><span class="p">:</span> <span class="nb">bool</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../api/adaptive_explorer.html#dihiggs.app.adaptive_explorer.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Args</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">build_parser</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()))</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">replay</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_do_replay</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">replay</span><span class="p">),</span> <span class="n">list_commands</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">list_commands</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">list_commands</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;--list-commands requires --replay&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">checkpoint_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;--checkpoint-root is required (for writing iter_XXXX checkpoints)&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">n_iters</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;--n-iters must be &gt;= 1&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">n_bins</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;--n-bins must be &gt;= 1&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">n_coarse</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;--n-coarse must be &gt;= 1&quot;</span><span class="p">)</span>
+
+    <span class="n">checkpoint_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">checkpoint_root</span><span class="p">)</span>
+    <span class="n">checkpoint_root</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">ocfg</span> <span class="o">=</span> <span class="n">OrchestratorConfig</span><span class="p">(</span>
+        <span class="n">exec_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">exec_path</span><span class="p">),</span>
+        <span class="n">outdir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">),</span>
+        <span class="n">lake_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lake_name</span><span class="p">),</span>
+        <span class="n">campaign</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">campaign</span><span class="p">),</span>
+        <span class="n">threads</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">threads</span><span class="p">)</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">run_name_prefix</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">run_name_prefix</span><span class="p">),</span>
+        <span class="n">orchestrator_dry_run</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">orchestrator_dry_run</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">bins</span> <span class="o">=</span> <span class="n">adaptive_policy</span><span class="o">.</span><span class="n">make_lam1_bins</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_bins</span><span class="p">))</span>
+    <span class="n">rng_seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">omp_env_threads</span> <span class="o">=</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">threads</span> <span class="k">if</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;OMP_NUM_THREADS&quot;</span><span class="p">)</span>
+
+    <span class="n">successes_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]):</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">}</span>
+    <span class="n">trials_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]):</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">}</span>
+
+    <span class="n">successes_by_tb_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">trials_by_tb_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">bin_run_dirs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">bin_run_names</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">bins_json</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">JSONValue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">:</span>
+        <span class="n">bins_json</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">_as_int</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;lam1_lo&quot;</span><span class="p">:</span> <span class="n">_as_float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;lam1_lo&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;lam1_hi&quot;</span><span class="p">:</span> <span class="n">_as_float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;lam1_hi&quot;</span><span class="p">]),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">iter_index_1based</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_iters</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">iter_index_1based</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">budgets</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]):</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_coarse</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">}</span>
+            <span class="n">budgets_by_tb_by_bin</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">successes_by_tb_by_bin</span><span class="p">:</span>
+                <span class="n">tb_tags</span> <span class="o">=</span> <span class="n">_sorted_tb_tags</span><span class="p">(</span><span class="n">successes_by_tb_by_bin</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="n">budgets_by_tb_by_bin</span> <span class="o">=</span> <span class="n">adaptive_policy</span><span class="o">.</span><span class="n">allocate_budget_per_tanbeta</span><span class="p">(</span>
+                    <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+                    <span class="n">successes_by_tb_by_bin</span><span class="o">=</span><span class="n">successes_by_tb_by_bin</span><span class="p">,</span>
+                    <span class="n">trials_by_tb_by_bin</span><span class="o">=</span><span class="n">trials_by_tb_by_bin</span><span class="p">,</span>
+                    <span class="n">total_budget_per_tb</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">total_budget</span><span class="p">),</span>
+                    <span class="n">floor_points</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">floor_points</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="n">budgets</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">:</span>
+                    <span class="n">bid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+                    <span class="n">budgets</span><span class="p">[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">budgets_by_tb_by_bin</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tb</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bid</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="k">for</span> <span class="n">tb</span> <span class="ow">in</span> <span class="n">tb_tags</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">budgets_by_tb_by_bin</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">budgets</span> <span class="o">=</span> <span class="n">adaptive_policy</span><span class="o">.</span><span class="n">allocate_budget</span><span class="p">(</span>
+                    <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+                    <span class="n">successes_by_bin</span><span class="o">=</span><span class="n">successes_by_bin</span><span class="p">,</span>
+                    <span class="n">trials_by_bin</span><span class="o">=</span><span class="n">trials_by_bin</span><span class="p">,</span>
+                    <span class="n">total_budget</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">total_budget</span><span class="p">),</span>
+                    <span class="n">floor_points</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">floor_points</span><span class="p">),</span>
+                <span class="p">)</span>
+
+        <span class="n">proposals</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">commands</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">per_iter_state_proposals</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">JSONValue</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">:</span>
+            <span class="n">bid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+            <span class="n">bidx</span> <span class="o">=</span> <span class="n">_as_int</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">])</span>
+            <span class="n">lam1_lo</span> <span class="o">=</span> <span class="n">_as_float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;lam1_lo&quot;</span><span class="p">])</span>
+            <span class="n">lam1_hi</span> <span class="o">=</span> <span class="n">_as_float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="s2">&quot;lam1_hi&quot;</span><span class="p">])</span>
+            <span class="n">n_lam1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">budgets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bid</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">n_lam1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">proposal_id</span> <span class="o">=</span> <span class="n">_proposal_id</span><span class="p">(</span><span class="n">iter_index_1based</span><span class="p">,</span> <span class="n">bidx</span><span class="p">)</span>
+            <span class="n">run_name</span> <span class="o">=</span> <span class="n">_run_name</span><span class="p">(</span><span class="n">ocfg</span><span class="o">.</span><span class="n">run_name_prefix</span><span class="p">,</span> <span class="n">iter_index_1based</span><span class="p">,</span> <span class="n">bidx</span><span class="p">)</span>
+
+            <span class="n">n_lam1_map</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">iter_index_1based</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">budgets_by_tb_by_bin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">tb_tags</span> <span class="o">=</span> <span class="n">_sorted_tb_tags</span><span class="p">(</span><span class="n">budgets_by_tb_by_bin</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">tb_tags</span><span class="p">:</span>
+                    <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">tb_tag</span> <span class="ow">in</span> <span class="n">tb_tags</span><span class="p">:</span>
+                        <span class="n">n_for_tb</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">budgets_by_tb_by_bin</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">bid</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tb_tag</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">n_for_tb</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">n_lam1_map</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+                    <span class="n">n_lam1</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">floor_points</span><span class="p">))</span>
+
+            <span class="n">cmd</span> <span class="o">=</span> <span class="n">_build_orchestrator_command</span><span class="p">(</span>
+                <span class="n">ocfg</span><span class="o">=</span><span class="n">ocfg</span><span class="p">,</span>
+                <span class="n">lam1_min</span><span class="o">=</span><span class="n">lam1_lo</span><span class="p">,</span>
+                <span class="n">lam1_max</span><span class="o">=</span><span class="n">lam1_hi</span><span class="p">,</span>
+                <span class="n">n_lam1</span><span class="o">=</span><span class="n">n_lam1</span><span class="p">,</span>
+                <span class="n">run_name</span><span class="o">=</span><span class="n">run_name</span><span class="p">,</span>
+                <span class="n">n_lam1_map</span><span class="o">=</span><span class="n">n_lam1_map</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+            <span class="n">proposals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;proposal_id&quot;</span><span class="p">:</span> <span class="n">proposal_id</span><span class="p">,</span>
+                    <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;PENDING&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="n">shlex</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cmd</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+
+            <span class="n">result</span> <span class="o">=</span> <span class="n">_run_orchestrator</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            <span class="n">run_dir</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">parse_run_dir_from_orchestrator_output</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">proposals</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;DONE&quot;</span>
+
+            <span class="n">per_prop_state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">JSONValue</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;proposal_id&quot;</span><span class="p">:</span> <span class="n">proposal_id</span><span class="p">,</span>
+                <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;DONE&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="n">shlex</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cmd</span><span class="p">),</span>
+                <span class="s2">&quot;returncode&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="p">),</span>
+                <span class="s2">&quot;run_name&quot;</span><span class="p">:</span> <span class="n">run_name</span><span class="p">,</span>
+                <span class="s2">&quot;bin_id&quot;</span><span class="p">:</span> <span class="n">bid</span><span class="p">,</span>
+                <span class="s2">&quot;bin_index&quot;</span><span class="p">:</span> <span class="n">bidx</span><span class="p">,</span>
+                <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="n">lam1_lo</span><span class="p">,</span>
+                <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="n">lam1_hi</span><span class="p">,</span>
+                <span class="s2">&quot;n_lam1&quot;</span><span class="p">:</span> <span class="n">n_lam1</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">run_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">run_dir_s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">run_dir</span><span class="p">)</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;run_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">run_dir_s</span>
+                <span class="n">bin_run_dirs</span><span class="p">[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="n">run_dir_s</span>
+                <span class="n">bin_run_names</span><span class="p">[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="n">run_name</span>
+
+                <span class="n">attempts_total</span><span class="p">,</span> <span class="n">triple_ok_total</span> <span class="o">=</span> <span class="n">_read_bin_metrics_from_run_dir</span><span class="p">(</span><span class="n">run_dir</span><span class="p">)</span>
+                <span class="n">trials_by_bin</span><span class="p">[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">attempts_total</span><span class="p">)</span>
+                <span class="n">successes_by_bin</span><span class="p">[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">triple_ok_total</span><span class="p">)</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;attempts_total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">attempts_total</span><span class="p">)</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;triple_ok_total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">triple_ok_total</span><span class="p">)</span>
+
+                <span class="n">succ_by_tb</span><span class="p">,</span> <span class="n">trials_by_tb</span> <span class="o">=</span> <span class="n">_read_per_tb_bin_metrics_from_run_dir</span><span class="p">(</span><span class="n">run_dir</span><span class="p">)</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;successes_by_tb&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">succ_by_tb</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;trials_by_tb&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">trials_by_tb</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+                <span class="k">for</span> <span class="n">tb_tag</span><span class="p">,</span> <span class="n">succ</span> <span class="ow">in</span> <span class="n">succ_by_tb</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">successes_by_tb_by_bin</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">),</span> <span class="p">{})[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">succ</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">tb_tag</span><span class="p">,</span> <span class="n">tr</span> <span class="ow">in</span> <span class="n">trials_by_tb</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">trials_by_tb_by_bin</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tb_tag</span><span class="p">),</span> <span class="p">{})[</span><span class="n">bid</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tr</span><span class="p">)</span>
+
+                <span class="n">omp_from_manifest</span> <span class="o">=</span> <span class="n">adaptive_artifacts</span><span class="o">.</span><span class="n">read_omp_num_threads_from_manifest</span><span class="p">(</span><span class="n">run_dir</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">omp_from_manifest</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;omp_num_threads_manifest&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">omp_from_manifest</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">per_prop_state</span><span class="p">[</span><span class="s2">&quot;run_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="n">per_iter_state_proposals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">per_prop_state</span><span class="p">)</span>
+
+        <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">JSONValue</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="n">rng_seed</span><span class="p">,</span>
+            <span class="s2">&quot;n_iters&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_iters</span><span class="p">),</span>
+            <span class="s2">&quot;iter_index&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">iter_index_1based</span><span class="p">),</span>
+            <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">),</span>
+            <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">),</span>
+            <span class="s2">&quot;n_bins&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_bins</span><span class="p">),</span>
+            <span class="s2">&quot;n_coarse&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_coarse</span><span class="p">),</span>
+            <span class="s2">&quot;total_budget&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">total_budget</span><span class="p">),</span>
+            <span class="s2">&quot;floor_points&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">floor_points</span><span class="p">),</span>
+            <span class="s2">&quot;omp_num_threads&quot;</span><span class="p">:</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">omp_env_threads</span><span class="p">)</span> <span class="k">if</span> <span class="n">omp_env_threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;orchestrator&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;exec&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">exec_path</span><span class="p">,</span>
+                <span class="s2">&quot;outdir&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span>
+                <span class="s2">&quot;lake_name&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">lake_name</span><span class="p">,</span>
+                <span class="s2">&quot;campaign&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">campaign</span><span class="p">,</span>
+                <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">threads</span><span class="p">,</span>
+                <span class="s2">&quot;run_name_prefix&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">run_name_prefix</span><span class="p">,</span>
+                <span class="s2">&quot;dry_run&quot;</span><span class="p">:</span> <span class="n">ocfg</span><span class="o">.</span><span class="n">orchestrator_dry_run</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;bins&quot;</span><span class="p">:</span> <span class="n">bins_json</span><span class="p">,</span>
+            <span class="s2">&quot;budgets&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">budgets</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="s2">&quot;budgets_by_tb_by_bin&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">budgets_by_tb_by_bin</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="p">{</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">tb</span><span class="p">):</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">bid</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">bid</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">per_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                    <span class="k">for</span> <span class="n">tb</span><span class="p">,</span> <span class="n">per_bin</span> <span class="ow">in</span> <span class="n">budgets_by_tb_by_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;bin_run_dirs&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">bin_run_dirs</span><span class="p">),</span>
+            <span class="s2">&quot;bin_run_names&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">bin_run_names</span><span class="p">),</span>
+            <span class="s2">&quot;trials_by_bin&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">trials_by_bin</span><span class="p">),</span>
+            <span class="s2">&quot;successes_by_bin&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">successes_by_bin</span><span class="p">),</span>
+            <span class="s2">&quot;trials_by_tb_by_bin&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">tb</span><span class="p">):</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">bid</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">bid</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">per_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="k">for</span> <span class="n">tb</span><span class="p">,</span> <span class="n">per_bin</span> <span class="ow">in</span> <span class="n">trials_by_tb_by_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;successes_by_tb_by_bin&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">tb</span><span class="p">):</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">bid</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">bid</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">per_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="k">for</span> <span class="n">tb</span><span class="p">,</span> <span class="n">per_bin</span> <span class="ow">in</span> <span class="n">successes_by_tb_by_bin</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;proposals&quot;</span><span class="p">:</span> <span class="n">per_iter_state_proposals</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">_</span> <span class="o">=</span> <span class="n">_write_iteration_checkpoint</span><span class="p">(</span>
+            <span class="n">checkpoint_root</span><span class="o">=</span><span class="n">checkpoint_root</span><span class="p">,</span>
+            <span class="n">iter_index_1based</span><span class="o">=</span><span class="n">iter_index_1based</span><span class="p">,</span>
+            <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
+            <span class="n">proposals</span><span class="o">=</span><span class="n">proposals</span><span class="p">,</span>
+            <span class="n">commands</span><span class="o">=</span><span class="n">commands</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="mi">0</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

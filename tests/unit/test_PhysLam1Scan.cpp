@@ -28,6 +28,12 @@
 #include <algorithm>
 
 // ===========================================================================
+// BINARY PATH CONFIGURATION (from CMake)
+// ===========================================================================
+
+static const char* PHYSLAM1SCAN_BINARY = "@PHYSLAM1SCAN_BINARY_PATH@";
+
+// ===========================================================================
 // UTILITIES
 // ===========================================================================
 
@@ -121,7 +127,7 @@ static std::string run_command_capture(const std::string& cmd, int& rc) {
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan binary exists and has correct linkage", "[oracle][build]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     
     SECTION("Binary file exists") {
         REQUIRE(file_exists(binary_path));
@@ -144,7 +150,7 @@ TEST_CASE("PhysLam1Scan binary exists and has correct linkage", "[oracle][build]
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan CLI smoke tests", "[oracle][smoke]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_smoke_test.csv";
     
     // Clean up from previous runs
@@ -202,7 +208,7 @@ TEST_CASE("PhysLam1Scan CLI smoke tests", "[oracle][smoke]") {
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan physics consistency: lambda1 recovery", "[oracle][physics]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_physics_test.csv";
     
     remove_if_exists(test_output);
@@ -272,7 +278,7 @@ TEST_CASE("PhysLam1Scan physics consistency: lambda1 recovery", "[oracle][physic
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan anchor tests: sin(beta-alpha)=1", "[oracle][anchor]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_anchor_sba1.csv";
     
     remove_if_exists(test_output);
@@ -298,7 +304,7 @@ TEST_CASE("PhysLam1Scan anchor tests: sin(beta-alpha)=1", "[oracle][anchor]") {
 }
 
 TEST_CASE("PhysLam1Scan anchor tests: large tan_beta", "[oracle][anchor]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_anchor_tanbeta.csv";
     
     remove_if_exists(test_output);
@@ -324,7 +330,7 @@ TEST_CASE("PhysLam1Scan anchor tests: large tan_beta", "[oracle][anchor]") {
 TEST_CASE("PhysLam1Scan anchor tests: yukawa_type=1 hardcoded", "[oracle][anchor]") {
     // Verify yukawa_type=1 is hardcoded (from PhysLam1Scan.cpp line 94)
     // This is a build-time check - if binary runs, yukawa_type is correct
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     
     REQUIRE(file_exists(binary_path));
     
@@ -350,7 +356,7 @@ TEST_CASE("PhysLam1Scan anchor tests: yukawa_type=1 hardcoded", "[oracle][anchor
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan CSV header matches PhysScanWithFixings", "[oracle][physics]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_header_test.csv";
     
     remove_if_exists(test_output);
@@ -388,7 +394,7 @@ TEST_CASE("PhysLam1Scan CSV header matches PhysScanWithFixings", "[oracle][physi
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan randomized regression: fixed seed", "[oracle][regression]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_regression.csv";
     
     remove_if_exists(test_output);
@@ -444,7 +450,7 @@ TEST_CASE("PhysLam1Scan randomized regression: fixed seed", "[oracle][regression
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan stdout markers present", "[oracle][smoke]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_stdout_test.csv";
     
     remove_if_exists(test_output);
@@ -470,7 +476,7 @@ TEST_CASE("PhysLam1Scan stdout markers present", "[oracle][smoke]") {
 // ===========================================================================
 
 TEST_CASE("PhysLam1Scan atomic output: .tmp rename", "[oracle][build]") {
-    const char* binary_path = "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan";
+    const char* binary_path = PHYSLAM1SCAN_BINARY;
     const std::string test_output = "/tmp/physlam1scan_atomic_test.csv";
     const std::string tmp_output = test_output + ".tmp";
     

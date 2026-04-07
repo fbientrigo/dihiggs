@@ -41,6 +41,7 @@ jobs:
           name: compiled-binaries
           path: |
             dihiggs/lib/libdihiggs.a
+            dihiggs/app/PhysLam1Scan
             tests/unit/dihiggs_unit_tests
           retention-days: 1
 
