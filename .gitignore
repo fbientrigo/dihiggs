@@ -1,3 +1,5 @@
+__pycache__
+
 # entornos
 */env/
 */ubenv/
@@ -7,6 +9,8 @@ app/*
 .vscode
 
 *.csv
+*.pdf
+plots/
 
 2hdmc/lib/*.o
 2hdmc/lib/lib2HDMC.a
