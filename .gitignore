@@ -8,6 +8,10 @@ app/*
 
 *.csv
 
+2hdmc/lib/*.o
+2hdmc/lib/lib2HDMC.a
+2hdmc/CalcRoundTrip
+
 # ignorar datasets de HB/HS pesados
 datasets/*
 
@@ -80,3 +84,6 @@ mlpython/valid_points_extended.csv
 mlpython/06_valid_points/elite_candidates_report.csv
 mlpython/valid_points_extended.csv
 
+mlpython/2603/analyze_counts.py
+mlpython/2603/column_counts.txt
+mlpython/Analysis/compare_methods.py

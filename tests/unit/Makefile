@@ -26,7 +26,7 @@ LDFLAGS  := -L$(LIB_CORE) -ldihiggs \
             -Wl,-rpath,$(LIB_HIGGSTOOLS)
 
 # Sources
-TEST_SRCS := test_main.cpp test_ParamUtils.cpp
+TEST_SRCS := test_main.cpp test_ParamUtils.cpp test_PhysLam1Scan.cpp
 TARGET    := dihiggs_unit_tests
 
 .PHONY: all clean run
