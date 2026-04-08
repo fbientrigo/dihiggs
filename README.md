@@ -83,6 +83,14 @@ chmod +x install.sh
 
 The script creates a local Python virtual environment, installs the Python dependencies, rebuilds `2hdmc`, builds and installs `higgstools`, downloads the HiggsBounds/HiggsSignals datasets, and compiles the main project.
 
+It also creates a local `project_config.json` (if missing) with a machine-specific `data_lake_dir`. This file is gitignored so each PC can keep its own path.
+
+To set a custom data lake path at install time:
+
+```bash
+DATA_LAKE_DIR=/your/local/lake/path ./install.sh
+```
+
 If the process fails at any step, fix the issue and run `./install.sh` again. The installer keeps checkpoints in `.install-state/` and resumes from the last completed step.
 
 2. **Activate the prepared environment**

@@ -17,6 +17,8 @@ HS_DATASET="${HS_DATASET:-$DATASET_ROOT/HSDataset}"
 HIGGSTOOLS_URL="https://gitlab.com/higgsbounds/higgstools.git"
 REQ_FILE="$REPO_ROOT/requirements.txt"
 GET_DATASETS_SCRIPT="$REPO_ROOT/get_datasets.sh"
+PROJECT_CONFIG_FILE="$REPO_ROOT/project_config.json"
+DATA_LAKE_DIR="${DATA_LAKE_DIR:-$HOME/dihiggs_lake}"
 
 CURRENT_STAGE=""
 
@@ -72,6 +74,20 @@ export HIGGSTOOLS_PREFIX="$HIGGSTOOLS_PREFIX"
 source "$VENV_DIR/bin/activate"
 EOF
   chmod +x "$STATE_DIR/activate.sh"
+}
+
+stage_project_config() {
+  if [[ -f "$PROJECT_CONFIG_FILE" ]]; then
+    log "project config already exists: $PROJECT_CONFIG_FILE"
+    return 0
+  fi
+
+  log "creating project config at $PROJECT_CONFIG_FILE"
+  cat > "$PROJECT_CONFIG_FILE" <<EOF
+{
+  "data_lake_dir": "$DATA_LAKE_DIR"
+}
+EOF
 }
 
 stage_python_env() {
@@ -150,6 +166,7 @@ main() {
   require_cmd g++
   require_cmd cmake
 
+  run_stage project_config stage_project_config
   run_stage python_env stage_python_env
   run_stage python_deps stage_python_deps
   run_stage build_2hdmc stage_build_2hdmc

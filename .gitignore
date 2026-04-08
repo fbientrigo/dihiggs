@@ -9,6 +9,7 @@ app/*
 .agent
 .vscode
 .install-state/
+project_config.json
 
 *.csv
 *.pdf
