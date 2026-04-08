@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+from pathlib import Path
 import numpy as np
 import polars as pl # pyright: ignore[reportMissingImports]
 import matplotlib.pyplot as plt
@@ -10,7 +12,29 @@ import consolidate_lake as cl
 # =========================
 # CONFIGURATION
 # =========================
-DATA_LAKE_PATH = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+DEFAULT_DATA_LAKE_PATH = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+PROJECT_CONFIG_FILE = "project_config.json"
+
+
+def _load_data_lake_path(default: str = DEFAULT_DATA_LAKE_PATH) -> str:
+    this_file = Path(__file__).resolve()
+    cfg_path = next(
+        (parent / PROJECT_CONFIG_FILE for parent in [this_file.parent, *this_file.parents] if (parent / PROJECT_CONFIG_FILE).exists()),
+        None,
+    )
+    if cfg_path is None:
+        return default
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+        configured = payload.get("data_lake_dir") if isinstance(payload, dict) else None
+        if isinstance(configured, str) and configured.strip():
+            return configured
+    except Exception as exc:
+        print(f"[WARN] Config inválida en {cfg_path}: {exc}. Se usa ruta por defecto.")
+    return default
+
+
+DATA_LAKE_PATH = _load_data_lake_path()
 TEMP_PARQUET_FILE = "temp_subspace.parquet"
 IMG_DIR = "subspace_comparisons_logs"
 LOG_FILE_PATH = os.path.join(IMG_DIR, "execution_log.txt")
@@ -218,7 +242,6 @@ def _flag_true_expr(col_name: str):
 
 
 import argparse
-from pathlib import Path
 
 def main():
     os.makedirs(IMG_DIR, exist_ok=True)

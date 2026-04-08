@@ -2,8 +2,10 @@ import os
 import glob
 import time
 import gc
+import json
 import warnings
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -15,7 +17,29 @@ warnings.filterwarnings("ignore")
 # =========================================================
 # CONFIG
 # =========================================================
-DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+DEFAULT_DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+PROJECT_CONFIG_FILE = "project_config.json"
+
+
+def _load_data_lake_dir(default: str = DEFAULT_DATA_LAKE_DIR) -> str:
+    this_file = Path(__file__).resolve()
+    cfg_path = next(
+        (parent / PROJECT_CONFIG_FILE for parent in [this_file.parent, *this_file.parents] if (parent / PROJECT_CONFIG_FILE).exists()),
+        None,
+    )
+    if cfg_path is None:
+        return default
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+        configured = payload.get("data_lake_dir") if isinstance(payload, dict) else None
+        if isinstance(configured, str) and configured.strip():
+            return configured
+    except Exception as exc:
+        print(f"[WARN] Config inválida en {cfg_path}: {exc}. Se usa ruta por defecto.")
+    return default
+
+
+DATA_LAKE_DIR = _load_data_lake_dir()
 IMG_DIR = "/home/fabi/dihiggs/mlpython/paper_img/reunion_marzo_streaming"
 
 TARGET_COLS = [

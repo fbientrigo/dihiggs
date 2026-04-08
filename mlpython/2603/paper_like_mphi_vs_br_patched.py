@@ -4,30 +4,14 @@
 """
 paper_like_mphi_vs_br_patched.py
 ================================
-Memory-safer replacement for the original `paper_like_mphi_vs_br.py`.
+Dual-mode plotting utility:
+1) Family mode (default): m_phi vs BR for each (mA, lambda6), colored by tan_beta.
+2) Fixed-cut mode: single plot after applying fixed cuts on
+   (sin_ba, tan_beta, mA, lambda6, lambda7).
 
-What changed
-------------
-- Keeps the subset behavior and plotting style that already worked.
-- Avoids loading the full parquet into pandas in one shot.
-- Uses Polars lazy scanning to read only the columns that are needed.
-- Builds the list of (mA, lambda6) slices lazily.
-- Materializes only one slice at a time into pandas for plotting.
-- Optional physical filtering can be enabled explicitly if the input parquet is raw.
-
-Recommended usage
------------------
-Subset (already filtered by your workflow):
-    python paper_like_mphi_vs_br_patched.py --input temp_subspace.parquet
-
-Full phys-only parquet:
-    python paper_like_mphi_vs_br_patched.py \
-        --input /home/fabi/cern_db/dihiggs_consolidated/dihiggs_lake_phys_only.parquet
-
-Raw parquet (only if you explicitly want this script to apply the 3 *_ok filters):
-    python paper_like_mphi_vs_br_patched.py \
-        --input /home/fabi/cern_db/dihiggs_consolidated/dihiggs_lake.parquet \
-        --apply-phys-filter
+This keeps compatibility with both:
+- run_pipeline.sh (family mode)
+- previous fixed-cut invocations.
 """
 
 from __future__ import annotations
@@ -43,9 +27,6 @@ import pandas as pd
 import polars as pl
 
 
-# ------------------------------------------------------------------------------
-# Set up plotting style (paper-friendly)
-# ------------------------------------------------------------------------------
 plt.style.use("default")
 plt.rcParams.update(
     {
@@ -55,13 +36,12 @@ plt.rcParams.update(
         "axes.titlesize": 18,
         "xtick.labelsize": 14,
         "ytick.labelsize": 14,
-        "legend.fontsize": 12,
+        "legend.fontsize": 11,
         "legend.frameon": True,
         "legend.edgecolor": "black",
         "legend.fancybox": False,
         "figure.titlesize": 20,
         "figure.figsize": (8, 6),
-        "lines.linewidth": 2.0,
         "axes.linewidth": 1.5,
         "xtick.major.width": 1.5,
         "ytick.major.width": 1.5,
@@ -72,9 +52,6 @@ plt.rcParams.update(
     }
 )
 
-# ------------------------------------------------------------------------------
-# Config & Setup
-# ------------------------------------------------------------------------------
 DEFAULT_PARQUET = Path(__file__).parent / "temp_subspace.parquet"
 OUTPUT_DIR = Path(__file__).parent / "paper_plots_mphi_br"
 
@@ -82,8 +59,16 @@ logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 
+def _stream_collect(lf: pl.LazyFrame) -> pl.DataFrame:
+    try:
+        return lf.collect(engine="streaming")
+    except TypeError:
+        return lf.collect(streaming=True)
+    except Exception:
+        return lf.collect()
+
+
 def resolve_column(requested: str, schema_names: list[str], fallback_aliases: list[str] | None = None) -> str:
-    """Find the exact column name in the schema, with optional fallback heuristics."""
     if requested in schema_names:
         return requested
 
@@ -98,17 +83,7 @@ def resolve_column(requested: str, schema_names: list[str], fallback_aliases: li
                 logger.info("Resolved requested '%s' to '%s'", requested, resolved)
                 return resolved
 
-    raise ValueError(f"Could not resolve column '{requested}' in the schema. Available: {schema_names}")
-
-
-def _stream_collect(lf: pl.LazyFrame) -> pl.DataFrame:
-    """Collect with streaming engine when available; fall back safely otherwise."""
-    try:
-        return lf.collect(engine="streaming")
-    except TypeError:
-        return lf.collect(streaming=True)
-    except Exception:
-        return lf.collect()
+    raise ValueError(f"Could not resolve column '{requested}' in the schema.")
 
 
 def _flag_true_expr(col_name: str) -> pl.Expr:
@@ -122,70 +97,43 @@ def _flag_true_expr(col_name: str) -> pl.Expr:
     return (as_num >= 0.5) | as_txt.is_in(["1", "1.0", "true", "t"])
 
 
-def process_slice(df_slice: pd.DataFrame, mphi_col: str, br_col: str) -> pd.DataFrame:
-    """Aggregate duplicate m_phi points to mean/std/count for cleaner curves."""
-    return (
-        df_slice.groupby(mphi_col)
-        .agg(
-            mean_br=(br_col, "mean"),
-            std_br=(br_col, "std"),
-            count_br=(br_col, "count"),
-        )
-        .reset_index()
-        .sort_values(by=mphi_col)
-    )
-
-
-def generate_family_plot(
+def _plot_scatter_family(
     df: pd.DataFrame,
     ma_val: float,
     l6_val: float,
     tb_vals: list[float],
     mphi_col: str,
     br_col: str,
+    point_size: float,
+    point_alpha: float,
     output_stem: str,
 ) -> bool:
-    """Plot m_phi vs BR for a fixed (mA, lambda6) and multiple tan_beta values."""
     fig, ax = plt.subplots()
     colors = plt.cm.viridis(np.linspace(0.1, 0.9, len(tb_vals)))
-    curves_plotted = 0
+    groups_plotted = 0
 
     for idx, tb in enumerate(sorted(tb_vals)):
-        df_curve = df[df["tan_beta"] == tb]
-        if len(df_curve) < 2:
-            logger.warning("  -> Skipping tan_beta=%s: only %d points.", tb, len(df_curve))
+        dfi = df[df["tan_beta"] == tb]
+        if len(dfi) == 0:
             continue
-
-        df_agg = process_slice(df_curve, mphi_col, br_col)
-        if len(df_agg) < 2:
-            logger.warning("  -> Skipping tan_beta=%s: not enough aggregated points.", tb)
+        x = dfi[mphi_col].to_numpy()
+        y = dfi[br_col].to_numpy()
+        valid = np.isfinite(x) & np.isfinite(y)
+        if not valid.any():
             continue
+        ax.scatter(
+            x[valid],
+            y[valid],
+            color=colors[idx],
+            alpha=point_alpha,
+            s=point_size,
+            edgecolors="none",
+            label=f"$\\tan\\beta={tb:g}$",
+            zorder=2,
+        )
+        groups_plotted += 1
 
-        m_phi = df_agg[mphi_col].to_numpy()
-        br_mean = df_agg["mean_br"].to_numpy()
-        br_std = df_agg["std_br"].to_numpy()
-        tb_label = f"$\\tan\\beta = {tb:g}$"
-
-        raw_mphi = df_curve[mphi_col].to_numpy()
-        raw_br = df_curve[br_col].to_numpy()
-        valid = (~np.isnan(raw_mphi)) & (~np.isnan(raw_br))
-        ax.scatter(raw_mphi[valid], raw_br[valid], color=colors[idx], alpha=0.15, s=15, edgecolors="none", zorder=1)
-        ax.plot(m_phi, br_mean, color=colors[idx], label=tb_label, zorder=2)
-
-        valid_std = ~np.isnan(br_std)
-        if valid_std.any():
-            ax.fill_between(
-                m_phi[valid_std],
-                br_mean[valid_std] - br_std[valid_std],
-                br_mean[valid_std] + br_std[valid_std],
-                color=colors[idx],
-                alpha=0.2,
-                zorder=1,
-            )
-        curves_plotted += 1
-
-    if curves_plotted == 0:
-        logger.warning("No valid curves plotted for this slice combination.")
+    if groups_plotted == 0:
         plt.close(fig)
         return False
 
@@ -193,9 +141,9 @@ def generate_family_plot(
     ax.set_xlabel(r"$m_\phi$ [GeV]")
     br_display = r"BR($\phi \to \gamma\gamma$)" if "gaga" in br_col.lower() else f"BR ({br_col})"
     ax.set_ylabel(br_display)
-    ax.set_title(f"$m_A = {ma_val:g}$ GeV,  $\\lambda_6 = {l6_val:g}$")
+    ax.set_title(f"$m_A={ma_val:g}$ GeV, $\\lambda_6={l6_val:g}$")
     ax.grid(True, linestyle="--", alpha=0.4, which="both")
-    ax.legend()
+    ax.legend(loc="best")
     fig.tight_layout()
 
     png_path = OUTPUT_DIR / f"{output_stem}.png"
@@ -206,133 +154,211 @@ def generate_family_plot(
     return True
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate paper-quality mphi vs BR plots.")
-    parser.add_argument("--input", type=str, default=str(DEFAULT_PARQUET), help="Path to the parquet file (subset or full lake).")
-    parser.add_argument("--mphi-col", type=str, default="m_phi", help="Name of the m_phi column")
-    parser.add_argument("--br-col", type=str, default="br_gaga", help="Name of the Branching Ratio column")
-    parser.add_argument(
-        "--apply-phys-filter",
-        action="store_true",
-        help="Apply positivity/unitarity/perturbativity filters inside this script. Leave OFF for phys-only parquet or subset parquet.",
+def _plot_fixed_mode(
+    df: pd.DataFrame,
+    args: argparse.Namespace,
+    mphi_col: str,
+    br_col: str,
+) -> tuple[Path, Path]:
+    fig, ax = plt.subplots()
+    x = df[mphi_col].to_numpy()
+    y = df[br_col].to_numpy()
+    valid = np.isfinite(x) & np.isfinite(y)
+    if not valid.any():
+        raise RuntimeError("No valid points in fixed-cut mode after NaN filtering.")
+
+    ax.scatter(x[valid], y[valid], s=args.point_size, alpha=args.point_alpha, color="#d62728", edgecolors="none")
+    ax.set_yscale("log")
+    ax.set_xlabel(r"$m_\phi$ [GeV]")
+    ax.set_ylabel(r"BR($\phi \to \gamma\gamma$)" if "gaga" in br_col.lower() else f"BR ({br_col})")
+    ax.grid(True, linestyle="--", alpha=0.4, which="both")
+
+    title = (
+        rf"$\sin(\beta-\alpha)={args.sin_ba:g}$, "
+        rf"$\tan\beta={args.tan_beta:g}$, "
+        rf"$m_A={args.mA:g}$, "
+        rf"$\lambda_6={args.lambda6:g}$, "
+        rf"$\lambda_7={args.lambda7:g}$"
     )
-    parser.add_argument(
-        "--max-slices",
-        type=int,
-        default=None,
-        help="Optional safety limit for number of (mA, lambda6) slices to process.",
-    )
-    args = parser.parse_args()
+    ax.set_title(title)
+    fig.tight_layout()
 
-    input_path = Path(args.input)
-    if not input_path.exists():
-        logger.error("Input file not found: %s", input_path)
-        logger.info("If you meant to use the full lake, point --input to it.")
-        return
+    output_stem = (
+        f"mphi_vs_{br_col}_sinba{args.sin_ba:g}_tb{args.tan_beta:g}_"
+        f"mA{args.mA:g}_l6{args.lambda6:g}_l7{args.lambda7:g}"
+    ).replace(".", "p")
 
-    logger.info("Loading data lazily from %s", input_path)
-    schema = pl.scan_parquet(input_path).collect_schema()
-    schema_names = schema.names()
-    logger.info("Available columns: %d", len(schema_names))
+    png_path = OUTPUT_DIR / f"{output_stem}.png"
+    pdf_path = OUTPUT_DIR / f"{output_stem}.pdf"
+    fig.savefig(png_path, dpi=300, bbox_inches="tight")
+    fig.savefig(pdf_path, bbox_inches="tight")
+    plt.close(fig)
+    return png_path, pdf_path
 
-    mphi_col = resolve_column(args.mphi_col, schema_names, ["mphi"])
-    br_col = resolve_column(args.br_col, schema_names, ["branching_ratio", "br_gg"])
 
-    for req in ["mA", "lambda6", "tan_beta"]:
-        if req not in schema_names:
-            logger.error("Required parameter column '%s' not found in schema!", req)
-            return
+def _run_family_mode(lf: pl.LazyFrame, args: argparse.Namespace, mphi_col: str, br_col: str) -> dict[str, object]:
+    logger.info("Running family mode (pipeline-compatible).")
 
-    logger.info("Resolved target columns: X='%s', Y='%s'", mphi_col, br_col)
+    needed = [mphi_col, br_col, "mA", "lambda6", "tan_beta"]
+    lf = lf.select(needed)
 
-    needed_cols = [mphi_col, br_col, "mA", "lambda6", "tan_beta"]
-    present_flags = [c for c in ["positivity_ok", "unitarity_ok", "perturbativity_ok"] if c in schema_names]
-    if args.apply_phys_filter:
-        needed_cols.extend([c for c in present_flags if c not in needed_cols])
-
-    lf = pl.scan_parquet(input_path).select(needed_cols)
-
-    if args.apply_phys_filter:
-        if present_flags:
-            logger.info("Applying internal physical filter: %s", present_flags)
-            expr = None
-            for c in present_flags:
-                e = _flag_true_expr(c)
-                expr = e if expr is None else (expr & e)
-            lf = lf.filter(expr)
-        else:
-            logger.warning("--apply-phys-filter requested, but no *_ok columns were found.")
-    else:
-        logger.info("Skipping internal physical filter. Assumes input is already the desired dataset.")
+    if args.apply_phys_filter and args.present_flags:
+        expr = None
+        for c in args.present_flags:
+            e = _flag_true_expr(c)
+            expr = e if expr is None else (expr & e)
+        lf = lf.filter(expr)
 
     lf = lf.filter(pl.col(mphi_col).is_not_null() & pl.col(br_col).is_not_null())
 
-    unique_params_lf = lf.select(["mA", "lambda6"]).unique().sort(["mA", "lambda6"])
-    unique_params = _stream_collect(unique_params_lf).to_pandas()
-
+    unique_params = _stream_collect(lf.select(["mA", "lambda6"]).unique().sort(["mA", "lambda6"]))
+    unique_df = unique_params.to_pandas()
     if args.max_slices is not None:
-        unique_params = unique_params.head(args.max_slices)
-
-    logger.info("Found %d unique (mA, lambda6) combinations.", len(unique_params))
+        unique_df = unique_df.head(args.max_slices)
 
     summary: dict[str, object] = {
-        "input_file": str(input_path),
-        "apply_phys_filter": bool(args.apply_phys_filter),
-        "total_combinations_investigated": int(len(unique_params)),
+        "mode": "family",
+        "total_combinations_investigated": int(len(unique_df)),
         "plots_generated": [],
         "discarded_combinations": [],
     }
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    for _, row in unique_params.iterrows():
+    for _, row in unique_df.iterrows():
         ma_val = float(row["mA"])
         l6_val = float(row["lambda6"])
-        logger.info("\nProcessing slice: mA=%s, lambda6=%s", ma_val, l6_val)
 
         df_slice = _stream_collect(
             lf.filter((pl.col("mA") == ma_val) & (pl.col("lambda6") == l6_val)).select([mphi_col, br_col, "tan_beta"])
         ).to_pandas()
 
         if len(df_slice) == 0:
-            logger.warning("  -> Slice is empty after collection. Discarding.")
             summary["discarded_combinations"].append({"mA": ma_val, "lambda6": l6_val, "reason": "empty"})
             continue
 
-        unique_tb = df_slice["tan_beta"].dropna().unique().tolist()
-        logger.info("  -> Found %d unique tan_beta values: %s", len(unique_tb), unique_tb)
-        logger.info("  -> Total points in this slice: %d", len(df_slice))
+        tb_vals = df_slice["tan_beta"].dropna().unique().tolist()
+        if len(tb_vals) > 20:
+            sorted_tb = sorted(tb_vals)
+            idxs = np.linspace(0, len(sorted_tb) - 1, 12, dtype=int)
+            tb_vals = [sorted_tb[i] for i in idxs]
 
-        if len(unique_tb) > 15:
-            logger.warning("  -> Too many tan_beta curves (>15). Taking 10 linearly spaced values to avoid clutter.")
-            sorted_tb = sorted(unique_tb)
-            indices = np.linspace(0, len(sorted_tb) - 1, 10, dtype=int)
-            unique_tb = [sorted_tb[i] for i in indices]
+        output_stem = f"mphi_vs_{br_col}_mA{ma_val:g}_l6_{l6_val:g}".replace(".", "p")
+        ok = _plot_scatter_family(
+            df_slice,
+            ma_val,
+            l6_val,
+            tb_vals,
+            mphi_col,
+            br_col,
+            args.point_size,
+            args.point_alpha,
+            output_stem,
+        )
 
-        output_stem = f"mphi_vs_{args.br_col}_mA{ma_val:g}_l6_{l6_val:g}".replace(".", "p")
-        success = generate_family_plot(df_slice, ma_val, l6_val, unique_tb, mphi_col, br_col, output_stem)
-
-        if success:
+        if ok:
             summary["plots_generated"].append(
                 {
                     "mA": ma_val,
                     "lambda6": l6_val,
-                    "tan_beta_curves": unique_tb,
+                    "tan_beta_groups": tb_vals,
                     "points_in_slice": int(len(df_slice)),
                     "file_stem": output_stem,
                 }
             )
         else:
             summary["discarded_combinations"].append(
-                {"mA": ma_val, "lambda6": l6_val, "reason": "no valid curves generated (<2 pts per tb)"}
+                {"mA": ma_val, "lambda6": l6_val, "reason": "no valid point groups"}
             )
+
+    return summary
+
+
+def _run_fixed_mode(lf: pl.LazyFrame, args: argparse.Namespace, mphi_col: str, br_col: str) -> dict[str, object]:
+    logger.info("Running fixed-cut mode (legacy-compatible).")
+
+    required = ["sin_ba", "tan_beta", "mA", "lambda6", "lambda7", mphi_col, br_col]
+    df = _stream_collect(lf.select(required).filter(
+        (pl.col("sin_ba") == float(args.sin_ba))
+        & (pl.col("tan_beta") == float(args.tan_beta))
+        & (pl.col("mA") == float(args.mA))
+        & (pl.col("lambda6") == float(args.lambda6))
+        & (pl.col("lambda7") == float(args.lambda7))
+    )).to_pandas()
+
+    if df.empty:
+        raise RuntimeError("No rows found for fixed cuts. Check --tan-beta/--mA/--lambda6/--lambda7/--sin-ba values.")
+
+    png_path, pdf_path = _plot_fixed_mode(df, args, mphi_col, br_col)
+    return {
+        "mode": "fixed",
+        "n_rows_after_cuts": int(len(df)),
+        "files": {"png": str(png_path), "pdf": str(pdf_path)},
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate m_phi vs BR plots (family mode + fixed-cut compatibility).")
+    parser.add_argument("--input", type=str, default=str(DEFAULT_PARQUET), help="Path to parquet")
+    parser.add_argument("--mphi-col", type=str, default="m_phi", help="Name of m_phi column")
+    parser.add_argument("--br-col", type=str, default="br_gaga", help="Name of BR column")
+    parser.add_argument("--apply-phys-filter", action="store_true", help="Apply *_ok filters when present")
+    parser.add_argument("--max-slices", type=int, default=None, help="Optional cap for (mA, lambda6) slices in family mode")
+    parser.add_argument("--point-size", type=float, default=2.0, help="Scatter marker size")
+    parser.add_argument("--point-alpha", type=float, default=0.5, help="Scatter marker alpha")
+
+    # Legacy/fixed-cut compatibility args.
+    parser.add_argument("--sin-ba", type=float, default=1.0, help="Fixed sin_ba cut (fixed mode)")
+    parser.add_argument("--tan-beta", type=float, default=None, help="Fixed tan_beta cut (fixed mode)")
+    parser.add_argument("--mA", type=float, default=None, help="Fixed mA cut (fixed mode)")
+    parser.add_argument("--lambda6", type=float, default=None, help="Fixed lambda6 cut (fixed mode)")
+    parser.add_argument("--lambda7", type=float, default=None, help="Fixed lambda7 cut (fixed mode)")
+
+    args = parser.parse_args()
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    schema = pl.scan_parquet(input_path).collect_schema()
+    schema_names = schema.names()
+
+    mphi_col = resolve_column(args.mphi_col, schema_names, ["mphi"])
+    br_col = resolve_column(args.br_col, schema_names, ["branching_ratio", "br_gg"])
+
+    present_flags = [c for c in ["positivity_ok", "unitarity_ok", "perturbativity_ok"] if c in schema_names]
+    args.present_flags = present_flags
+
+    needed_base = [mphi_col, br_col, "mA", "lambda6", "tan_beta"]
+    for c in ["sin_ba", "lambda7"]:
+        if c in schema_names and c not in needed_base:
+            needed_base.append(c)
+    for c in present_flags:
+        if c not in needed_base:
+            needed_base.append(c)
+
+    lf = pl.scan_parquet(input_path).select(needed_base)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Fixed mode is enabled only when all fixed parameters are explicitly provided.
+    use_fixed_mode = all(v is not None for v in [args.tan_beta, args.mA, args.lambda6, args.lambda7])
+
+    if use_fixed_mode:
+        result = _run_fixed_mode(lf, args, mphi_col, br_col)
+    else:
+        result = _run_family_mode(lf, args, mphi_col, br_col)
+
+    summary = {
+        "input_file": str(input_path),
+        "resolved_columns": {"mphi_col": mphi_col, "br_col": br_col},
+        "apply_phys_filter": bool(args.apply_phys_filter),
+        "result": result,
+    }
 
     summary_path = OUTPUT_DIR / "summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
-    logger.info("\nAnalysis complete! Summary saved to %s", summary_path)
-    logger.info("Figures saved in %s/", OUTPUT_DIR)
+    logger.info("Done. Summary written to %s", summary_path)
 
 
 if __name__ == "__main__":

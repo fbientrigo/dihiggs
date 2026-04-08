@@ -126,20 +126,6 @@ def _flag_true_expr(col_name: str) -> pl.Expr:
     return (as_num >= 0.5) | as_txt.is_in(["1", "1.0", "true", "t"])
 
 
-def process_slice(df_slice: pd.DataFrame, x_col: str, y_col: str) -> pd.DataFrame:
-    return (
-        df_slice.dropna(subset=[x_col, y_col])
-        .groupby(x_col)
-        .agg(
-            mean_br=(y_col, "mean"),
-            std_br=(y_col, "std"),
-            count_br=(y_col, "count"),
-        )
-        .reset_index()
-        .sort_values(by=x_col)
-    )
-
-
 def generate_family_plot(
     df: pd.DataFrame,
     fixed_params: dict,
@@ -148,25 +134,18 @@ def generate_family_plot(
     x_col: str,
     y_col: str,
     output_stem: str,
+    point_size: float,
+    point_alpha: float,
 ) -> bool:
     fig, ax = plt.subplots()
     colors = plt.cm.plasma(np.linspace(0.1, 0.9, len(varying_vals)))
-    curves_plotted = 0
+    groups_plotted = 0
 
     for idx, v_val in enumerate(sorted(varying_vals)):
         df_curve = df[df[varying_col] == v_val]
-        if len(df_curve) < 2:
-            logger.warning("  -> Skipping %s=%s: only %d points.", varying_col, v_val, len(df_curve))
+        if len(df_curve) == 0:
+            logger.warning("  -> Skipping %s=%s: empty group.", varying_col, v_val)
             continue
-
-        df_agg = process_slice(df_curve, x_col, y_col)
-        if len(df_agg) < 2:
-            logger.warning("  -> Skipping %s=%s: not enough valid aggregated points.", varying_col, v_val)
-            continue
-
-        x_vals = df_agg[x_col].to_numpy()
-        y_mean = df_agg["mean_br"].to_numpy()
-        y_std = df_agg["std_br"].to_numpy()
 
         if varying_col == "tan_beta":
             val_label = f"$\\tan\\beta = {v_val:g}$"
@@ -178,23 +157,24 @@ def generate_family_plot(
         raw_x = df_curve[x_col].to_numpy()
         raw_y = df_curve[y_col].to_numpy()
         valid_scatter = (~np.isnan(raw_x)) & (~np.isnan(raw_y))
-        ax.scatter(raw_x[valid_scatter], raw_y[valid_scatter], color=colors[idx], alpha=0.15, s=15, edgecolors="none", zorder=1)
-        ax.plot(x_vals, y_mean, color=colors[idx], label=val_label, zorder=2)
+        if not valid_scatter.any():
+            logger.warning("  -> Skipping %s=%s: no valid points after NaN filtering.", varying_col, v_val)
+            continue
 
-        valid_std = ~np.isnan(y_std)
-        if valid_std.any():
-            ax.fill_between(
-                x_vals[valid_std],
-                y_mean[valid_std] - y_std[valid_std],
-                y_mean[valid_std] + y_std[valid_std],
-                color=colors[idx],
-                alpha=0.2,
-                zorder=1,
-            )
-        curves_plotted += 1
+        ax.scatter(
+            raw_x[valid_scatter],
+            raw_y[valid_scatter],
+            color=colors[idx],
+            alpha=point_alpha,
+            s=point_size,
+            edgecolors="none",
+            label=val_label,
+            zorder=2,
+        )
+        groups_plotted += 1
 
-    if curves_plotted == 0:
-        logger.warning("No valid curves plotted for this slice combination.")
+    if groups_plotted == 0:
+        logger.warning("No valid point groups plotted for this slice combination.")
         plt.close(fig)
         return False
 
@@ -225,7 +205,14 @@ def generate_family_plot(
     return True
 
 
-def run_analysis_lazy(lf: pl.LazyFrame, br_col: str, color_mode: str, summary: dict) -> None:
+def run_analysis_lazy(
+    lf: pl.LazyFrame,
+    br_col: str,
+    color_mode: str,
+    summary: dict,
+    point_size: float,
+    point_alpha: float,
+) -> None:
     logger.info("\n=========================================")
     logger.info("Running Variant: Color by %s", color_mode)
     logger.info("=========================================")
@@ -289,7 +276,17 @@ def run_analysis_lazy(lf: pl.LazyFrame, br_col: str, color_mode: str, summary: d
         stem_parts = [f"{k}{v:g}".replace(".", "p") for k, v in fixed_dict.items()]
         output_stem = f"ctau_vs_{br_col}_color_{color_mode}_" + "_".join(stem_parts)
 
-        success = generate_family_plot(df_slice, fixed_dict, color_mode, actual_varying, "c_tau_mm", br_col, output_stem)
+        success = generate_family_plot(
+            df_slice,
+            fixed_dict,
+            color_mode,
+            actual_varying,
+            "c_tau_mm",
+            br_col,
+            output_stem,
+            point_size,
+            point_alpha,
+        )
         if success:
             var_summary["plots_generated"].append(
                 {
@@ -300,7 +297,7 @@ def run_analysis_lazy(lf: pl.LazyFrame, br_col: str, color_mode: str, summary: d
                 }
             )
         else:
-            var_summary["discarded_combinations"].append({**fixed_dict, "reason": "no valid curves generated (<2 pts per curve)"})
+            var_summary["discarded_combinations"].append({**fixed_dict, "reason": "no valid point groups"})
 
     summary["variants"].append(var_summary)
 
@@ -320,6 +317,18 @@ def main() -> None:
         type=int,
         default=None,
         help="Optional safety limit for number of fixed-parameter combinations processed in each variant.",
+    )
+    parser.add_argument(
+        "--point-size",
+        type=float,
+        default=2.0,
+        help="Scatter marker size in points^2.",
+    )
+    parser.add_argument(
+        "--point-alpha",
+        type=float,
+        default=0.5,
+        help="Scatter alpha in [0, 1].",
     )
     args = parser.parse_args()
 
@@ -395,7 +404,14 @@ def main() -> None:
     if args.max_combinations is not None:
         logger.info("Safety cap active: max combinations per variant = %d", args.max_combinations)
 
-        def capped_run_analysis_lazy(lf: pl.LazyFrame, br_col: str, color_mode: str, summary: dict) -> None:
+        def capped_run_analysis_lazy(
+            lf: pl.LazyFrame,
+            br_col: str,
+            color_mode: str,
+            summary: dict,
+            point_size: float,
+            point_alpha: float,
+        ) -> None:
             logger.info("\n=========================================")
             logger.info("Running Variant: Color by %s", color_mode)
             logger.info("=========================================")
@@ -444,7 +460,17 @@ def main() -> None:
                 actual_varying = [c for c in unique_colors if c in df_slice[color_mode].values]
                 stem_parts = [f"{k}{v:g}".replace(".", "p") for k, v in fixed_dict.items()]
                 output_stem = f"ctau_vs_{br_col}_color_{color_mode}_" + "_".join(stem_parts)
-                success = generate_family_plot(df_slice, fixed_dict, color_mode, actual_varying, "c_tau_mm", br_col, output_stem)
+                success = generate_family_plot(
+                    df_slice,
+                    fixed_dict,
+                    color_mode,
+                    actual_varying,
+                    "c_tau_mm",
+                    br_col,
+                    output_stem,
+                    point_size,
+                    point_alpha,
+                )
                 if success:
                     var_summary["plots_generated"].append({
                         "fixed_params": fixed_dict,
@@ -453,7 +479,7 @@ def main() -> None:
                         "file_stem": output_stem,
                     })
                 else:
-                    var_summary["discarded_combinations"].append({**fixed_dict, "reason": "no valid curves generated (<2 pts per curve)"})
+                        var_summary["discarded_combinations"].append({**fixed_dict, "reason": "no valid point groups"})
             summary["variants"].append(var_summary)
 
         runner = capped_run_analysis_lazy
@@ -461,9 +487,9 @@ def main() -> None:
         runner = run_analysis_lazy
 
     if args.color_by in ["lambda6", "both"]:
-        runner(lf, br_col, "lambda6", summary)
+        runner(lf, br_col, "lambda6", summary, args.point_size, args.point_alpha)
     if args.color_by in ["tan_beta", "both"]:
-        runner(lf, br_col, "tan_beta", summary)
+        runner(lf, br_col, "tan_beta", summary, args.point_size, args.point_alpha)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = OUTPUT_DIR / "ctau_summary.json"
