@@ -3,10 +3,12 @@ __pycache__
 # entornos
 */env/
 */ubenv/
+.venv/
 datasets
 app/*
 .agent
 .vscode
+.install-state/
 
 *.csv
 *.pdf
