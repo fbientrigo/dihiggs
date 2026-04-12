@@ -1,0 +1,52 @@
+diff --git a/2hdmc/src/THDM.cpp b/2hdmc/src/THDM.cpp
+index 39bd620..d0b3cb6 100644
+--- a/2hdmc/src/THDM.cpp
++++ b/2hdmc/src/THDM.cpp
+@@ -352,10 +352,46 @@ bool THDM::set_param_phys(double m_h,double m_H, double m_A, double m_Hp,
+ }
+ 
+ 
++bool THDM::set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
++			       double sba, double lambda1,
++			       double lambda6, double lambda7,
++			       double tan_beta) {
++
++  if (m_h>m_H) {
++    cerr << "WARNING: Cannot set physical masses such that m_H < m_h\n";
++    params_set = false;
++    return params_set;
++  }
++
++  // Problematic parameter choices
++  if ((tan_beta<=0)||(abs(sba)>1)||(m_h<0)||(m_H<0)||(m_A<0)||(m_Hp<0)) {
++    params_set=false;
++    return params_set;
++  }
++
++  double beta_loc = atan(tan_beta);
++  double cb = cos(beta_loc);
++  double cb2 = cb*cb;
++  double tb = tan(beta_loc);
++
++  double alpha_loc = -asin(sba)+beta_loc;
++  double sa  = sin(alpha_loc);
++  double sa2 = sa*sa;
++  double ca  = cos(alpha_loc);
++  double ca2 = ca*ca;
++
++  // Reconstruct m12_2 from lambda1 by inverting the set_param_phys formula
++  double m12_2 = (m_H*m_H*ca2+m_h*m_h*sa2
++                 - v2*cb2*(lambda1+1.5*lambda6*tb-0.5*lambda7*tb*tb*tb))/tb;
++
++  // Delegate to set_param_phys with reconstructed m12_2
++  return set_param_phys(m_h,m_H,m_A,m_Hp,sba,lambda6,lambda7,m12_2,tan_beta);
++}
++
++
+ bool THDM::set_param_higgs(double Lambda1, double Lambda2, double Lambda3,
+ 			   double Lambda4, double Lambda5, double Lambda6,
+ 			   double Lambda7, double m_Hp) {
+-
+   if (m_Hp<0) {
+     params_set = false;
+     return params_set;

@@ -1,0 +1,4 @@
+- `git diff src/THDM.cpp` shows `set_param_phys(...)` unchanged; only a new adjacent method `set_param_phys_lam1(...)` was added and delegates to `set_param_phys`.
+- No refactor of existing `set_param_phys` logic was detected (same guards, same parameter-to-lambda calculations, same return flow).
+- No new physics constraint system was introduced: the new method only reuses existing input guards (`m_h <= m_H`, positive masses, `tan_beta > 0`, `|sba| <= 1`) and computes `m12_2` before calling existing `set_param_phys`.
+- Diff scope is minimal for source: `src/THDM.cpp` + `src/THDM.h` (new API declaration/docs + implementation). Additional changed files are build artifacts under `lib/`.

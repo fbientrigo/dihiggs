@@ -1,0 +1,5 @@
+src/THDM.h:209:  bool set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
+src/THDM.cpp:355:bool THDM::set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
+src/CalcRoundTrip.cpp:31:  if (!m2.set_param_phys_lam1(m_h, m_H, m_A, m_Hp, sba, l1, lambda6, lambda7, tan_beta)) {
+src/CalcRoundTrip.cpp:32:    std::cout << "Case " << name << ": FAIL (set_param_phys_lam1 returned false)\n";
+src/CalcRoundTrip.cpp:92:    const bool ok = !m_bad.set_param_phys_lam1(125.0, 300.0, 350.0, 360.0,

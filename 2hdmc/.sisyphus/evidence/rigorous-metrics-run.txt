@@ -1,0 +1,20 @@
+WARNING: Cannot set physical masses such that m_H < m_h
+PASS: 400 random round-trip points validated
+PASS: invalid-input guards validated (3 cases)
+Global max abs diff: 2.6193447411060333e-09 in m12_2 at point 66
+Global max rel diff: 2.2463382265407876e-12 in hmass(1) at point 147
+
+Per-observable maxima:
+- m12_2: max_abs=2.6193447411060333e-09 (point 66), max_rel=7.3971567400955148e-15 (point 200)
+- tan_beta: max_abs=0 (point -1), max_rel=0 (point -1)
+- lambda1: max_abs=4.6566128730773926e-10 (point 274), max_rel=2.3350149538672452e-14 (point 231)
+- lambda2: max_abs=1.1368683772161603e-13 (point 77), max_rel=7.915361206189481e-16 (point 42)
+- lambda3: max_abs=3.4106051316484809e-13 (point 16), max_rel=5.6186457402196685e-15 (point 398)
+- lambda4: max_abs=2.2737367544323206e-13 (point 16), max_rel=6.1498595353138059e-15 (point 202)
+- lambda5: max_abs=2.2737367544323206e-13 (point 16), max_rel=4.6634475196139837e-15 (point 225)
+- lambda6: max_abs=0 (point -1), max_rel=0 (point -1)
+- lambda7: max_abs=0 (point -1), max_rel=0 (point -1)
+- hmass(1): max_abs=2.8079227831767639e-10 (point 147), max_rel=2.2463382265407876e-12 (point 147)
+- hmass(2): max_abs=2.8194335754960775e-11 (point 66), max_rel=2.42076070055429e-14 (point 66)
+- hmass(3): max_abs=1.6709122974134516e-10 (point 147), max_rel=6.8135169195459164e-13 (point 147)
+- hmass(4): max_abs=1.6217427400988527e-10 (point 147), max_rel=6.4182559634008434e-13 (point 147)
