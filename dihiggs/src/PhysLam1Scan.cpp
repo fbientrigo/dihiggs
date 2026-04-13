@@ -1,10 +1,13 @@
 /**
  * @file PhysLam1Scan.cpp
- * @brief Parameter scan over m_phi and lambda1 using reconstructed m12^2 + set_param_phys
+ * @brief Parameter scan over m_phi and lambda1 using THDM::set_param_phys_lam1
  *
- * Single-threaded implementation that reconstructs m12^2 from lambda1 and
- * calls THDM::set_param_phys. This keeps compatibility with 2HDMC builds where
- * set_param_phys_lam1 is not present in the linked library.
+ * Uses THDM::set_param_phys_lam1 to directly set the physical parameters with
+ * lambda1 as input.  This avoids the floating-point precision loss that occurs
+ * when manually reconstructing m12^2 from lambda1 and then calling
+ * set_param_phys, where the two different numerical paths for computing cos(beta)
+ * (1/sqrt(1+tb^2) vs cos(atan(tb))) accumulate roundoff that exceeds the
+ * round-trip tolerance of 1e-10.
  *
  * CLI contract: 12 positional args
  *   mphi_min mphi_max N_mphi lam1_min lam1_max N_lam1 mA sin_ba tan_beta lambda6 lambda7 output.csv
@@ -33,31 +36,9 @@ using namespace std;
 using namespace std::chrono;
 
 constexpr double M_H = 125.0;  // Light Higgs mass (fixed)
-constexpr double VEV = 246.0;
 
 using Clock    = std::chrono::high_resolution_clock;
 using Duration = std::chrono::duration<double>;
-
-static double reconstruct_m12_from_lam1(
-    double mh,
-    double mH,
-    double sin_ba,
-    double tan_beta,
-    double lambda1,
-    double lambda6,
-    double lambda7
-) {
-    const double inv = 1.0 / std::sqrt(1.0 + tan_beta * tan_beta);
-    const double cb = inv;
-    const double sb = tan_beta * inv;
-    const double cba = std::sqrt(std::max(0.0, 1.0 - sin_ba * sin_ba));
-    const double ca = cb * cba + sb * sin_ba;
-    const double sa = sb * cba - cb * sin_ba;
-
-    const double term1 = (mH * mH * ca * ca + mh * mh * sa * sa) / (VEV * VEV * cb * cb);
-    const double coeff = (VEV * VEV) * cb * cb / tan_beta;
-    return (term1 - 1.5 * lambda6 * tan_beta + 0.5 * lambda7 * tan_beta * tan_beta * tan_beta - lambda1) * coeff;
-}
 
 void perform_param_scan_lam1(
     double mphi_min, double mphi_max, int N_mphi,
@@ -125,17 +106,21 @@ void perform_param_scan_lam1(
 
             double lambda1 = lam1_min + i_l1 * step_lam1;
 
-            const double m12_2 = reconstruct_m12_from_lam1(
-                M_H, m_phi, sin_ba, tan_beta, lambda1, lambda6, lambda7
-            );
-            if (!std::isfinite(m12_2)) {
-                continue;
-            }
-
-            // Compatibility path: use set_param_phys with reconstructed m12^2.
-            bool pset = model.set_param_phys(
+            // Use set_param_phys_lam1 to directly supply lambda1 instead of
+            // reconstructing m12^2 manually.  The manual path suffered from
+            // floating-point inconsistency: reconstruction used
+            //   cb = 1/sqrt(1 + tan_beta^2)
+            // while set_param_phys internally used
+            //   cb = cos(atan(tan_beta))
+            // These are mathematically equal but numerically differ by a few
+            // ULPs, so the round-trip lambda1 -> m12_2 -> lambda[1] exceeded
+            // the 1e-10 relative-tolerance target.
+            // set_param_phys_lam1 performs the reconstruction using its own
+            // internally consistent angle computations before delegating to
+            // set_param_phys, guaranteeing the round-trip precision.
+            bool pset = model.set_param_phys_lam1(
                 M_H, m_phi, mA_fixed, mA_fixed,
-                sin_ba, lambda6, lambda7, m12_2, tan_beta
+                sin_ba, lambda1, lambda6, lambda7, tan_beta
             );
 
             if (!pset) continue;
