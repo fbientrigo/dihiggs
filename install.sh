@@ -177,6 +177,24 @@ stage_project_config() {
 EOF
 }
 
+ensure_system_pkg() {
+  local cmd_name="$1"
+  local pkg_name="$2"
+
+  if command -v "$cmd_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v apt-get >/dev/null 2>&1; then
+    log "installing missing system package: $pkg_name"
+    sudo apt-get update
+    sudo apt-get install -y "$pkg_name"
+    return 0
+  fi
+
+  die "missing required system dependency: $pkg_name"
+}
+
 stage_python_env() {
   local chosen_python=""
   local python_label=""
@@ -240,9 +258,10 @@ stage_python_deps() {
 }
 
 stage_build_2hdmc() {
+
   require_cmd make
   require_cmd g++
-
+  ensure_system_pkg gsl-config libgsl-dev
   log "building 2HDMC static library"
   make -C "$REPO_ROOT/2hdmc" lib
 
