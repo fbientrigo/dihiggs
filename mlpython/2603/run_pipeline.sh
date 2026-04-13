@@ -162,25 +162,6 @@ run_mphi() {
     fi
 }
 
-run_compare() {
-    print_header "Phase 4: Subspace Comparison (Optional)"
-    print_info "Comparing full dataset with filtered subset"
-    print_info "Outputs to: subspace_comparisons_logs/"
-    
-    python subspace_comparator.py \
-        --force \
-        --br 1e-1 \
-        --dw 1e-11 \
-        --vars "m_phi, lambda6, tan_beta, total_width" \
-        --logy
-    
-    print_success "Comparison plots generated!"
-    
-    if [ -f "subspace_comparisons_logs/execution_log.txt" ]; then
-        print_info "Log: subspace_comparisons_logs/execution_log.txt"
-    fi
-}
-
 run_parallel() {
     print_header "Phase 5: Parallel Coordinates (Global + ROI)"
     print_info "Generating plots in: parallel_plots/"
@@ -287,13 +268,6 @@ case "$STAGE" in
         run_mphi
         show_summary
         ;;
-    compare)
-        check_environment
-        verify_dependencies
-        verify_parquet
-        run_compare
-        show_summary
-        ;;
     parallel)
         check_environment
         verify_dependencies
@@ -313,7 +287,6 @@ case "$STAGE" in
             print_info "Skipping EDA phase (notebook). Run manually: jupyter notebook EDA_subSpace.ipynb"
             run_ctau
             run_mphi
-            run_compare
             run_parallel
             show_summary
         else

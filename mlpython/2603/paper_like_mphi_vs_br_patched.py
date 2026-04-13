@@ -296,8 +296,10 @@ def _run_fixed_mode(lf: pl.LazyFrame, args: argparse.Namespace, mphi_col: str, b
 
 
 def main() -> None:
+    global OUTPUT_DIR
     parser = argparse.ArgumentParser(description="Generate m_phi vs BR plots (family mode + fixed-cut compatibility).")
     parser.add_argument("--input", type=str, default=str(DEFAULT_PARQUET), help="Path to parquet")
+    parser.add_argument("--output-dir", type=str, default=str(OUTPUT_DIR), help="Directory where plots and summary are written")
     parser.add_argument("--mphi-col", type=str, default="m_phi", help="Name of m_phi column")
     parser.add_argument("--br-col", type=str, default="br_gaga", help="Name of BR column")
     parser.add_argument("--apply-phys-filter", action="store_true", help="Apply *_ok filters when present")
@@ -313,6 +315,7 @@ def main() -> None:
     parser.add_argument("--lambda7", type=float, default=None, help="Fixed lambda7 cut (fixed mode)")
 
     args = parser.parse_args()
+    OUTPUT_DIR = Path(args.output_dir)
 
     input_path = Path(args.input)
     if not input_path.exists():
@@ -349,6 +352,7 @@ def main() -> None:
 
     summary = {
         "input_file": str(input_path),
+        "output_dir": str(OUTPUT_DIR),
         "resolved_columns": {"mphi_col": mphi_col, "br_col": br_col},
         "apply_phys_filter": bool(args.apply_phys_filter),
         "result": result,
