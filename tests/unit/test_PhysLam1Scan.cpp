@@ -28,10 +28,17 @@
 #include <algorithm>
 
 // ===========================================================================
-// BINARY PATH CONFIGURATION (from CMake)
+// BINARY PATH CONFIGURATION
 // ===========================================================================
+// When built with CMake (via configure_file from .cpp.in), PHYSLAM1SCAN_BINARY_PATH
+// is substituted by CMake.  When built with the Makefile, the -D flag provides it.
+// The default fallback is a path relative to the project root (CWD when tests run).
 
-static const char* PHYSLAM1SCAN_BINARY = "@PHYSLAM1SCAN_BINARY_PATH@";
+#ifndef PHYSLAM1SCAN_BINARY_PATH
+#define PHYSLAM1SCAN_BINARY_PATH "dihiggs/app/PhysLam1Scan"
+#endif
+
+static const char* PHYSLAM1SCAN_BINARY = PHYSLAM1SCAN_BINARY_PATH;
 
 // ===========================================================================
 // UTILITIES
