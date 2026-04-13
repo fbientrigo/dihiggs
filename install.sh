@@ -206,7 +206,7 @@ stage_python_env() {
       "$chosen_python" -m venv "$VENV_DIR"
     else
       log "creating virtual environment at $VENV_DIR with Python $PYTHON_SPEC via uv"
-      uv venv --python "$PYTHON_SPEC" "$VENV_DIR"
+      uv venv --python "$PYTHON_SPEC" --seed "$VENV_DIR"
     fi
   fi
 
@@ -217,6 +217,17 @@ stage_python_env() {
   fi
 
   log "venv python: $("$VENV_DIR/bin/python" --version)"
+
+  if ! "$VENV_DIR/bin/python" -m pip --version >/dev/null 2>&1; then
+    warn "pip missing in virtualenv; attempting to seed it"
+    if command -v uv >/dev/null 2>&1; then
+      rm -rf "$VENV_DIR"
+      uv venv --python "$PYTHON_SPEC" --seed "$VENV_DIR"
+    else
+      die "pip is missing in the virtualenv and uv is unavailable to recreate it with seed packages"
+    fi
+  fi
+
   "$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel
 }
 
