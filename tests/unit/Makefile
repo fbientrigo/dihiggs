@@ -5,6 +5,10 @@
 CXX      := g++
 REPO_ROOT := ../..
 
+# Absolute project root (resolved at make time so the binary path baked into
+# the test binary matches the container path at test-run time)
+REPO_ROOT_ABS := $(abspath $(REPO_ROOT))
+
 # Include paths (Core Src + Dependencies headers)
 INCLUDES := -I$(REPO_ROOT)/dihiggs/src \
             -I$(REPO_ROOT)/2hdmc/src \
@@ -12,6 +16,10 @@ INCLUDES := -I$(REPO_ROOT)/dihiggs/src \
 
 # Compilation Flags (Must match Core flags essentially)
 CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g $(INCLUDES)
+
+# Bake the absolute path to PhysLam1Scan into the test binary so that oracle
+# tests can locate the executable regardless of the working directory.
+CXXFLAGS += -DPHYSLAM1SCAN_BINARY_PATH=\"$(REPO_ROOT_ABS)/dihiggs/app/PhysLam1Scan\"
 
 # Library Paths
 LIB_CORE      := $(REPO_ROOT)/dihiggs/lib
