@@ -1,9 +1,13 @@
 // src/CalcRoundTrip.cpp
+/*
+* exeuction of a round-trip consistency check for the set_param_phys_lam1 interface
+*/
 
 #include "THDM.h"
 
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 
 static bool nearly_equal(double a, double b, double rtol, double atol) {
@@ -33,6 +37,19 @@ static int run_case(const char* name,
     return 1;
   }
 
+  double lambda1_input = 0.;
+  double lambda1_recomputed = 0.;
+  double lambda1_abs_error = 0.;
+  bool lambda1_warning = false;
+  if (!m2.has_param_phys_lam1_validation()) {
+    std::cout << "Case " << name << ": FAIL (missing lambda1 validation state)\n";
+    return 1;
+  }
+  m2.get_param_phys_lam1_validation(lambda1_input,
+                                    lambda1_recomputed,
+                                    lambda1_abs_error,
+                                    lambda1_warning);
+
   double L1,L2,L3,L4,L5,L6,L7,m12_new,tb_new;
   m2.get_param_gen(L1,L2,L3,L4,L5,L6,L7,m12_new,tb_new);
 
@@ -52,11 +69,23 @@ static int run_case(const char* name,
   }
 
   if (ok) {
-    std::cout << "Case " << name << ": PASS\n";
+    std::cout << std::setprecision(17)
+              << "Case " << name << ": PASS"
+              << " | lambda1_input=" << lambda1_input
+              << " lambda1_recomputed=" << lambda1_recomputed
+              << " abs_error=" << lambda1_abs_error
+              << " warning_flag=" << (lambda1_warning ? 1 : 0)
+              << "\n";
     return 0;
   }
 
   std::cout << "Case " << name << ": FAIL\n";
+  std::cout << std::setprecision(17)
+            << "  lambda1_input=" << lambda1_input
+            << " lambda1_recomputed=" << lambda1_recomputed
+            << " abs_error=" << lambda1_abs_error
+            << " warning_flag=" << (lambda1_warning ? 1 : 0)
+            << "\n";
   std::cout << "  m12_2: ref=" << m12_ref << " new=" << m12_new << "\n";
   std::cout << "  tanb : ref=" << tb_ref  << " new=" << tb_new  << "\n";
   return 1;
@@ -68,22 +97,26 @@ int main() {
 
   int rc = 0;
 
+  // double m_h, double m_H, double m_A, double m_Hp,
+                  // double sba, double lambda6, double lambda7,
+                  // double m12_2, double tan_beta,
+                  // double rtol, double atol
   // Generic point
   rc |= run_case("generic",
-                 125.0, 300.0, 350.0, 360.0,
+                 125.0, 160.0, 300.0, 300.0,
                  0.80,
-                 0.10, -0.20,
-                 20000.0,
+                 0.10, 0.0,
                  2.0,
+                 20000.0,
                  rtol, atol);
 
   // Near-alignment point
   rc |= run_case("near-alignment",
-                 125.0, 300.0, 350.0, 360.0,
-                 0.9999,
-                 0.10, -0.20,
-                 20000.0,
+                 125.0, 160.0, 300.0, 300.0,
+                 1.0,
+                 0.10, 0.0,
                  2.0,
+                 20000.0,
                  rtol, atol);
 
   // Invalid-input guard (expected failure)

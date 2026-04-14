@@ -21,7 +21,7 @@ LIB=lib2HDMC.a
 LDFLAGS+=-L$(LIBDIR) -l2HDMC -lgsl -lgslcblas -lm
 #LDFLAGS+=-L$(LIBDIR) -l2HDMC
 LIBS=
-PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo
+PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo CalcRoundTrip CalcLam1Scan CalcLam1ScanFromLake
 INCLUDE=
 
 # To use HiggsBounds/HiggsSignals for Higgs constraints, set both of the

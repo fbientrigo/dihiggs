@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/home/fabi/wt_dihiggs_exploratory/2hdmc/CalcLam1ScanFromLake",
+    "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=physdisc_nb_tb4p4e6_l60p00115/fixed_sinba=1p0000_l6=0p0011_l7=0p0000_mA=300p0/physdisc_nb_tb4p4e6_l60p00115_iter0002_bin125/tb_4400000/scan_tb_4400000.csv",
+    "/home/fabi/wt_dihiggs_exploratory/2hdmc/working/lam1_lake_benchmark_smoke/runs/002_campaign_physdisc_nb_tb4p4e6_l60p00115_scan_tb_4400000/validator_output.csv",
+    "500",
+    "1578884818",
+    "triple_ok"
+  ],
+  "returncode": 6,
+  "elapsed_sec": 0.3565126440007589,
+  "seed": 1578884818,
+  "mode": "triple_ok"
+}

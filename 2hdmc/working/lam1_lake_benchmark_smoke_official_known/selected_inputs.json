@@ -1,0 +1,32 @@
+{
+  "config": {
+    "lake_root": "/mnt/c/Users/Asus/cern_db/dihiggs_lake",
+    "binary": "/home/fabi/wt_dihiggs_exploratory/2hdmc/CalcLam1ScanFromLake",
+    "mode": "triple_ok",
+    "n_campaigns": 3,
+    "n_files_per_campaign": 1,
+    "samples_per_file": 500,
+    "seed": 123456,
+    "campaign_regex": "scan_l6_tb_xhigh|sinba_0p9999_tb_hi",
+    "require_header_match": true,
+    "max_files_scan": 120000
+  },
+  "selected": [
+    {
+      "path": "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=scan_l6_tb_xhigh/fixed_sinba=1p0000_l6=0p0010_l7=0p0000_mA=300p0/branchcurve_l6_0p00100000_tb_10000p00000000_seed_try_01_global_seed/tb_10000/scan_tb_10000.csv",
+      "campaign": "campaign=scan_l6_tb_xhigh",
+      "size_bytes": 7600353,
+      "mtime": 1775544478.5834556,
+      "header_match": true,
+      "scan_tb_like": true
+    },
+    {
+      "path": "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=sinba_0p9999_tb_hi/fixed_sinba=0p9999_l6=0p1000_l7=0p0000_mA=300p0/run_20260126T214835Z_host=zephyrus_git=a718276/tb_20000/scan_tb_20000.csv",
+      "campaign": "campaign=sinba_0p9999_tb_hi",
+      "size_bytes": 284586604,
+      "mtime": 1769484412.8566878,
+      "header_match": true,
+      "scan_tb_like": true
+    }
+  ]
+}

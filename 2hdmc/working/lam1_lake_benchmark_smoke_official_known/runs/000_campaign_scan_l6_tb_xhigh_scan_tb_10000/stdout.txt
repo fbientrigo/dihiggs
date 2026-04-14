@@ -1,0 +1,16 @@
+Input rows parsed: 20000
+Parseable rows: 20000
+Eligible rows after filtering: 13340
+Requested samples: 500
+Actual samples written: 500
+Baseline failures: 0
+Probe failures: 0
+Max absolute error: 0
+Max relative error: 0
+Max scaled error: 0
+Warning rate abs: 0
+Warning rate rel: 0
+Warning rate scaled: 0
+Selected mode: triple_ok
+Seed: 1056718845
+Output CSV: /home/fabi/wt_dihiggs_exploratory/2hdmc/working/lam1_lake_benchmark_smoke_official_known/runs/000_campaign_scan_l6_tb_xhigh_scan_tb_10000/validator_output.csv
