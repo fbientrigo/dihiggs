@@ -39,7 +39,30 @@ import polars as pl # pyright: ignore[reportMissingImports]
 # ──────────────────────────────────────────────────────────────────────
 # CONFIG
 # ──────────────────────────────────────────────────────────────────────
-DATA_LAKE_DIR = Path("/mnt/c/Users/Asus/cern_db/dihiggs_lake")
+DEFAULT_DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+PROJECT_CONFIG_FILE = "project_config.json"
+
+
+def _load_data_lake_dir(default: str = DEFAULT_DATA_LAKE_DIR) -> Path:
+    """Resolve data-lake directory from repo root JSON config (with fallback)."""
+    this_file = Path(__file__).resolve()
+    cfg_path = next(
+        (parent / PROJECT_CONFIG_FILE for parent in [this_file.parent, *this_file.parents] if (parent / PROJECT_CONFIG_FILE).exists()),
+        None,
+    )
+    if cfg_path is None:
+        return Path(default)
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+        configured = payload.get("data_lake_dir") if isinstance(payload, dict) else None
+        if isinstance(configured, str) and configured.strip():
+            return Path(configured)
+    except Exception as exc:
+        print(f"[consolidate] warning: invalid {cfg_path} ({exc}). Using default data lake path.")
+    return Path(default)
+
+
+DATA_LAKE_DIR = _load_data_lake_dir()
 
 IGNORE_ERRORS = False
 

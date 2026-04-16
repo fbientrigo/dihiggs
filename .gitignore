@@ -1,12 +1,19 @@
+__pycache__
+
 # entornos
 */env/
 */ubenv/
+.venv/
 datasets
 app/*
 .agent
 .vscode
+.install-state/
+project_config.json
 
 *.csv
+*.pdf
+plots/
 
 2hdmc/lib/*.o
 2hdmc/lib/lib2HDMC.a

@@ -1,16 +1,22 @@
 /**
  * @file PhysLam1Scan.cpp
- * @brief Parameter scan over m_phi and lambda1 using set_param_phys_lam1 API
+ * @brief Parameter scan over m_phi and lambda1 using THDM::set_param_phys_lam1
  *
- * Single-threaded implementation using THDM::set_param_phys_lam1 which accepts
- * lambda1 as input instead of m12^2. This avoids the analytical inversion
- * and directly uses 2HDMC's native lambda1 parameterization.
+ * Uses THDM::set_param_phys_lam1 to directly set the physical parameters with
+ * lambda1 as input.  This avoids the floating-point precision loss that occurs
+ * when manually reconstructing m12^2 from lambda1 and then calling
+ * set_param_phys, where the two different numerical paths for computing cos(beta)
+ * (1/sqrt(1+tb^2) vs cos(atan(tb))) accumulate roundoff that exceeds the
+ * round-trip tolerance of 1e-10.
  *
  * CLI contract: 12 positional args
  *   mphi_min mphi_max N_mphi lam1_min lam1_max N_lam1 mA sin_ba tan_beta lambda6 lambda7 output.csv
  *
  * Output: CSV with 29 columns, atomic write via .tmp rename
  * Stdout markers: "Total Attempts: <int>" and "TRIPLE_OK_POINTS <int>"
+ * 
+ *  ./dihiggs/app/PhysLam1Scan 
+ *  OMP_NUM_THREADS=12 ./dihiggs/app/PhysLam1Scan 130 290 15 0 6 100 300 1 10000 0.0001 0 test.csv
  */
 
 #include "THDM.h"
@@ -100,8 +106,18 @@ void perform_param_scan_lam1(
 
             double lambda1 = lam1_min + i_l1 * step_lam1;
 
-            // Call set_param_phys_lam1 - this is the key difference
-            // API: set_param_phys_lam1(mh, mH, mA, mHp, sba, lambda1, lambda6, lambda7, tan_beta)
+            // Use set_param_phys_lam1 to directly supply lambda1 instead of
+            // reconstructing m12^2 manually.  The manual path suffered from
+            // floating-point inconsistency: reconstruction used
+            //   cb = 1/sqrt(1 + tan_beta^2)
+            // while set_param_phys internally used
+            //   cb = cos(atan(tan_beta))
+            // These are mathematically equal but numerically differ by a few
+            // ULPs, so the round-trip lambda1 -> m12_2 -> lambda[1] exceeded
+            // the 1e-10 relative-tolerance target.
+            // set_param_phys_lam1 performs the reconstruction using its own
+            // internally consistent angle computations before delegating to
+            // set_param_phys, guaranteeing the round-trip precision.
             bool pset = model.set_param_phys_lam1(
                 M_H, m_phi, mA_fixed, mA_fixed,
                 sin_ba, lambda1, lambda6, lambda7, tan_beta

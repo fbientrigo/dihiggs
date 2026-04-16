@@ -1,0 +1,1297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dihiggs.app.orchestrate_scans &mdash; DiHiggs Explorer Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            DiHiggs Explorer
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli/orchestrate_scans.html"><code class="docutils literal notranslate"><span class="pre">orchestrate_scans.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli/adaptive_explorer.html"><code class="docutils literal notranslate"><span class="pre">adaptive_explorer.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../artifacts.html">Artifacts and Schemas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">DiHiggs Explorer</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">dihiggs.app.orchestrate_scans</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for dihiggs.app.orchestrate_scans</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Orchestrate 2HDM parameter scans and persist results in a CERNBox-synced &quot;mini data lake&quot;.</span>
+
+<span class="sd">This script is designed to be:</span>
+<span class="sd">- **Resumable**: skips existing outputs unless `--force` is used.</span>
+<span class="sd">- **Multi-machine friendly**: each run writes into a unique run directory (`run_id`),</span>
+<span class="sd">  so different machines won&#39;t overwrite each other.</span>
+<span class="sd">- **Analysis-ready**: writes a `run_manifest.json` capturing *all* fixed hyperparameters</span>
+<span class="sd">  and scan-grid settings (including ranges and point counts).</span>
+
+<span class="sd">Folder layout (default):</span>
+<span class="sd">    /mnt/c/Users/Asus/cern_db/dihiggs_lake/</span>
+<span class="sd">        campaign=&lt;campaign&gt;/</span>
+<span class="sd">            fixed_sinba=&lt;...&gt;_l6=&lt;...&gt;_l7=&lt;...&gt;_mA=&lt;...&gt;/</span>
+<span class="sd">                run_&lt;run_id&gt;_host=&lt;host&gt;_git=&lt;sha&gt;/</span>
+<span class="sd">                    run_manifest.json</span>
+<span class="sd">                    orchestrator.log</span>
+<span class="sd">                    task_summary.jsonl</span>
+<span class="sd">                    tb_&lt;...&gt;/</span>
+<span class="sd">                        scan_tb_&lt;...&gt;.csv</span>
+
+<span class="sd">Notes</span>
+<span class="sd">-----</span>
+<span class="sd">- CVMFS (/cvmfs) is read-only and should not be used for outputs.</span>
+<span class="sd">- For safety/portability, avoid writing outputs inside your repo; instead point `--outdir`</span>
+<span class="sd">  to a CERNBox-synced folder (default already does this).</span>
+<span class="sd">- This script does NOT use sudo. Install prefixes should be writable by the user.</span>
+
+<span class="sd">Examples</span>
+<span class="sd">--------</span>
+<span class="sd">Basic (defaults to CERNBox outdir):</span>
+<span class="sd">    python3 orchestrate_scans.py --exec ./PhysScanWithFixings --campaign scan_999</span>
+
+<span class="sd">Choose fixed hyperparameters and tan(beta) list:</span>
+<span class="sd">    python3 orchestrate_scans.py \</span>
+<span class="sd">        --campaign scan_999 \</span>
+<span class="sd">        --sin-ba 0.995 --lambda6 0.10 --lambda7 0.00 --mA 300 \</span>
+<span class="sd">        --tanbeta 10000,15000,20000</span>
+
+<span class="sd">Customize scan grid (mphi and lambda1 ranges, N points):</span>
+<span class="sd">    python3 orchestrate_scans.py \</span>
+<span class="sd">        --mphi-min 130 --mphi-max 290 --n-mphi 15 \</span>
+<span class="sd">        --lam1-min 0 --lam1-max 12 --n-lam1 666</span>
+
+<span class="sd">Force overwrite of existing CSVs:</span>
+<span class="sd">    python3 orchestrate_scans.py --force</span>
+
+<span class="sd">Dry-run (print commands, create folders + manifest, but don&#39;t execute):</span>
+<span class="sd">    python3 orchestrate_scans.py --dry-run</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<span class="c1"># Defaults (safe + convenient for WSL + CERNBox Desktop on Windows)</span>
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<span class="n">DEFAULT_CERNBOX_OUTDIR</span> <span class="o">=</span> <span class="s2">&quot;/mnt/c/Users/Asus/cern_db&quot;</span>
+<span class="n">DEFAULT_LAKE_DIRNAME</span> <span class="o">=</span> <span class="s2">&quot;dihiggs_lake&quot;</span>
+
+<span class="c1"># Original defaults (kept as defaults, but now configurable via CLI)</span>
+<span class="n">DEFAULT_MPHI_MIN</span> <span class="o">=</span> <span class="mf">130.0</span>
+<span class="n">DEFAULT_MPHI_MAX</span> <span class="o">=</span> <span class="mf">290.0</span>
+<span class="n">DEFAULT_N_MPHI</span> <span class="o">=</span> <span class="mi">15</span>
+
+<span class="n">DEFAULT_LAM1_MIN</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">DEFAULT_LAM1_MAX</span> <span class="o">=</span> <span class="mf">12.0</span>
+<span class="n">DEFAULT_N_LAM1</span> <span class="o">=</span> <span class="mi">666</span>
+
+<span class="n">DEFAULT_MA</span> <span class="o">=</span> <span class="mf">300.0</span>
+<span class="n">DEFAULT_SIN_BA</span> <span class="o">=</span> <span class="mf">0.995</span>
+<span class="n">DEFAULT_L6</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="n">DEFAULT_L7</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="n">DEFAULT_TANBETA_LIST</span> <span class="o">=</span> <span class="p">[</span><span class="mf">10000.0</span><span class="p">,</span> <span class="mf">15000.0</span><span class="p">,</span> <span class="mf">20000.0</span><span class="p">]</span>
+
+
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<span class="c1"># Utilities</span>
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="utc_now_iso">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.utc_now_iso">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">utc_now_iso</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return current UTC timestamp in ISO-8601 format.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="utc_now_compact">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.utc_now_compact">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">utc_now_compact</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return compact UTC timestamp suitable for folder naming.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">T%H%M%SZ&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="log_message">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.log_message">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">log_message</span><span class="p">(</span><span class="n">msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">log_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a timestamped message to stdout and append to a log file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msg:</span>
+<span class="sd">        Message to log.</span>
+<span class="sd">    log_file:</span>
+<span class="sd">        Path to the orchestrator log file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;[%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S]&quot;</span><span class="p">)</span>
+    <span class="n">full</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ts</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">full</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">log_file</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">log_file</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">full</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="safe_write_json">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.safe_write_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">safe_write_json</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Atomically write a JSON file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path:</span>
+<span class="sd">        Destination JSON path.</span>
+<span class="sd">    payload:</span>
+<span class="sd">        JSON-serializable dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">+</span> <span class="s2">&quot;.tmp&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tmp</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tmp</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="append_jsonl">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.append_jsonl">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">append_jsonl</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Append a single JSON record to a JSON Lines file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path:</span>
+<span class="sd">        JSONL file path.</span>
+<span class="sd">    record:</span>
+<span class="sd">        JSON-serializable dictionary record.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="parse_csv_floats">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.parse_csv_floats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_csv_floats</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse a comma-separated list of floats.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &quot;100,200,500&quot; -&gt; [100.0, 200.0, 500.0]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<div class="viewcode-block" id="sanitize_for_path">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.sanitize_for_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sanitize_for_path</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sanitize a string for safe path components.</span>
+
+<span class="sd">    Replaces:</span>
+<span class="sd">    - &#39;.&#39; -&gt; &#39;p&#39;</span>
+<span class="sd">    - &#39;-&#39; -&gt; &#39;m&#39;</span>
+<span class="sd">    - any other non-alnum/_/= -&gt; &#39;_&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;m&quot;</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^A-Za-z0-9_=]+&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="format_float_tag">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.format_float_tag">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_float_tag</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">ndp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Format a float for stable tagging in folder names.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x:</span>
+<span class="sd">        Value to format.</span>
+<span class="sd">    ndp:</span>
+<span class="sd">        Decimal places.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        A compact, deterministic string representation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Use fixed decimals for stability in folder naming</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">ndp</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="format_tanbeta_folder">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.format_tanbeta_folder">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_tanbeta_folder</span><span class="p">(</span><span class="n">tb</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a folder name and file tag for tan(beta).</span>
+
+<span class="sd">    Handles integers with zero padding (tb_00010), and non-integers safely.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tb:</span>
+<span class="sd">        tan(beta) value.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    folder_name:</span>
+<span class="sd">        Directory name for this tan(beta).</span>
+<span class="sd">    tag:</span>
+<span class="sd">        Filename tag for this tan(beta).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tb</span> <span class="o">-</span> <span class="nb">round</span><span class="p">(</span><span class="n">tb</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">1e-12</span> <span class="ow">and</span> <span class="n">tb</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">tb_int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">tb</span><span class="p">))</span>
+        <span class="c1"># Pad at least 5 digits; if larger, it will expand naturally.</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tb_</span><span class="si">{</span><span class="n">tb_int</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">tb_int</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">folder</span><span class="p">,</span> <span class="n">tag</span>
+
+    <span class="c1"># Non-integer or negative: safe representation</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tb</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">safe</span> <span class="o">=</span> <span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+    <span class="n">folder</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tb_</span><span class="si">{</span><span class="n">safe</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">tag</span> <span class="o">=</span> <span class="n">safe</span>
+    <span class="k">return</span> <span class="n">folder</span><span class="p">,</span> <span class="n">tag</span></div>
+
+
+
+<div class="viewcode-block" id="detect_git_info">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.detect_git_info">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">detect_git_info</span><span class="p">(</span><span class="n">start_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Best-effort git metadata (commit + dirty status).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    start_dir:</span>
+<span class="sd">        A directory inside (or near) the git repo.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Keys: &quot;commit&quot;, &quot;commit_short&quot;, &quot;is_dirty&quot;, &quot;repo_root&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_git</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">args</span><span class="p">,</span>
+                <span class="n">cwd</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">start_dir</span><span class="p">),</span>
+                <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="n">r</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">repo_root</span> <span class="o">=</span> <span class="n">run_git</span><span class="p">([</span><span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;--show-toplevel&quot;</span><span class="p">])</span>
+    <span class="n">commit</span> <span class="o">=</span> <span class="n">run_git</span><span class="p">([</span><span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">])</span>
+    <span class="n">dirty</span> <span class="o">=</span> <span class="n">run_git</span><span class="p">([</span><span class="s2">&quot;status&quot;</span><span class="p">,</span> <span class="s2">&quot;--porcelain&quot;</span><span class="p">])</span>
+
+    <span class="n">commit_short</span> <span class="o">=</span> <span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span> <span class="k">if</span> <span class="n">commit</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">is_dirty</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">dirty</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="s2">&quot;yes&quot;</span> <span class="k">if</span> <span class="n">dirty</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="k">else</span> <span class="s2">&quot;no&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;repo_root&quot;</span><span class="p">:</span> <span class="n">repo_root</span><span class="p">,</span>
+        <span class="s2">&quot;commit&quot;</span><span class="p">:</span> <span class="n">commit</span><span class="p">,</span>
+        <span class="s2">&quot;commit_short&quot;</span><span class="p">:</span> <span class="n">commit_short</span><span class="p">,</span>
+        <span class="s2">&quot;is_dirty&quot;</span><span class="p">:</span> <span class="n">is_dirty</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="grid_signature">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.grid_signature">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">grid_signature</span><span class="p">(</span><span class="n">grid</span><span class="p">:</span> <span class="s2">&quot;ScanGrid&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a stable signature for the effective scan grid.</span>
+
+<span class="sd">    This is used to ensure checkpoints are only reused when the grid truly matches.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;mphi=</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">-N</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;|lam1=</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">-N</span><span class="si">{</span><span class="n">grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="parse_n_lam1_map">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.parse_n_lam1_map">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_n_lam1_map</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse a per-tanbeta n_lam1 mapping from a string.</span>
+
+<span class="sd">    Format: &quot;10000:200,15000:400&quot;</span>
+<span class="sd">    Keys are tanbeta values (float), values are n_lam1 (int).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="n">mapping</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;:&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid --n-lam1-map entry (missing &#39;:&#39;): </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">k_str</span><span class="p">,</span> <span class="n">v_str</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">k_str</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">v_str</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid --n-lam1-map value (must be &gt;0): </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">mapping</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">mapping</span></div>
+
+
+
+<div class="viewcode-block" id="pick_n_lam1_for_tb">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.pick_n_lam1_for_tb">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pick_n_lam1_for_tb</span><span class="p">(</span><span class="n">tb</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">default_n_lam1</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Select effective n_lam1 for a given tanbeta.</span>
+
+<span class="sd">    If mapping is provided, match by float closeness; otherwise use default.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mapping</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">default_n_lam1</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">tb</span> <span class="o">-</span> <span class="n">k</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">default_n_lam1</span></div>
+
+
+
+<div class="viewcode-block" id="load_json_best_effort">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.load_json_best_effort">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_json_best_effort</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load JSON file; return None if missing or invalid.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="candidate_grid_sig_from_meta">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.candidate_grid_sig_from_meta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">candidate_grid_sig_from_meta</span><span class="p">(</span><span class="n">tb_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Try to get grid signature from scan_meta.json next to the CSV.&quot;&quot;&quot;</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">load_json_best_effort</span><span class="p">(</span><span class="n">tb_dir</span> <span class="o">/</span> <span class="s2">&quot;scan_meta.json&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;grid_signature&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sig</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="c1"># Only reuse if it was actually completed successfully.</span>
+        <span class="k">if</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;done&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sig</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="candidate_grid_sig_from_manifest">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.candidate_grid_sig_from_manifest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">candidate_grid_sig_from_manifest</span><span class="p">(</span><span class="n">run_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fallback: infer grid signature from run_manifest.json in the run directory.&quot;&quot;&quot;</span>
+    <span class="n">mani</span> <span class="o">=</span> <span class="n">load_json_best_effort</span><span class="p">(</span><span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;run_manifest.json&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mani</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">sg</span> <span class="o">=</span> <span class="n">mani</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scan_grid&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">ScanGrid</span><span class="p">(</span>
+            <span class="n">mphi_min</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;mphi_min&quot;</span><span class="p">]),</span>
+            <span class="n">mphi_max</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;mphi_max&quot;</span><span class="p">]),</span>
+            <span class="n">n_mphi</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;n_mphi&quot;</span><span class="p">]),</span>
+            <span class="n">lam1_min</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;lam1_min&quot;</span><span class="p">]),</span>
+            <span class="n">lam1_max</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;lam1_max&quot;</span><span class="p">]),</span>
+            <span class="n">n_lam1</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">sg</span><span class="p">[</span><span class="s2">&quot;n_lam1&quot;</span><span class="p">]),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">grid_signature</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="find_previous_csv_matching_grid">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.find_previous_csv_matching_grid">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_previous_csv_matching_grid</span><span class="p">(</span>
+    <span class="n">fixed_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">current_run_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">tb_tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">desired_grid_sig</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Look for an existing CSV for this tanbeta in ANY previous run under the same fixed_dir,</span>
+<span class="sd">    but only accept it if its grid signature matches desired_grid_sig.</span>
+
+<span class="sd">    Expected pattern:</span>
+<span class="sd">      fixed_dir/</span>
+<span class="sd">        run_.../</span>
+<span class="sd">          tb_.../</span>
+<span class="sd">            scan_tb_&lt;tb_tag&gt;.csv</span>
+<span class="sd">            scan_meta.json (preferred)</span>
+<span class="sd">        ...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;run_*/tb_*/scan_tb_</span><span class="si">{</span><span class="n">tb_tag</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">fixed_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">pattern</span><span class="p">))</span>
+
+    <span class="n">best</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># (mtime, path)</span>
+
+    <span class="k">for</span> <span class="n">csv_path</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Exclude current run directory</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">csv_path</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">current_run_dir</span><span class="p">)):</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Basic sanity: non-empty file</span>
+            <span class="n">st</span> <span class="o">=</span> <span class="n">csv_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">st</span><span class="o">.</span><span class="n">st_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">tb_dir</span> <span class="o">=</span> <span class="n">csv_path</span><span class="o">.</span><span class="n">parent</span>
+            <span class="n">run_dir</span> <span class="o">=</span> <span class="n">tb_dir</span><span class="o">.</span><span class="n">parent</span>
+
+            <span class="n">sig</span> <span class="o">=</span> <span class="n">candidate_grid_sig_from_meta</span><span class="p">(</span><span class="n">tb_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sig</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sig</span> <span class="o">=</span> <span class="n">candidate_grid_sig_from_manifest</span><span class="p">(</span><span class="n">run_dir</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">sig</span> <span class="o">!=</span> <span class="n">desired_grid_sig</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">mtime</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">st_mtime</span>
+            <span class="k">if</span> <span class="n">best</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">mtime</span> <span class="o">&gt;</span> <span class="n">best</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">best</span> <span class="o">=</span> <span class="p">(</span><span class="n">mtime</span><span class="p">,</span> <span class="n">csv_path</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="k">return</span> <span class="n">best</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">best</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="ScanGrid">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.ScanGrid">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ScanGrid</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for scan-grid parameters.&quot;&quot;&quot;</span>
+    <span class="n">mphi_min</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">mphi_max</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">n_mphi</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">lam1_min</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">lam1_max</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">n_lam1</span><span class="p">:</span> <span class="nb">int</span></div>
+
+
+
+<div class="viewcode-block" id="FixedParams">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.FixedParams">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FixedParams</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for fixed (experiment-level) hyperparameters.&quot;&quot;&quot;</span>
+    <span class="n">mA</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">sin_ba</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">lambda6</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">lambda7</span><span class="p">:</span> <span class="nb">float</span></div>
+
+
+
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<span class="c1"># CLI</span>
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="build_parser">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.build_parser">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_parser</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build argument parser.&quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Orchestrator for 2HDM scans (C++ driver) with CERNBox data-lake output.&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Executable + runtime</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--exec&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;./PhysScanWithFixings&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the compiled C++ executable.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--threads&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;OMP_NUM_THREADS (optional). If omitted, use default (all cores).&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Overwrite existing CSV outputs (otherwise skip).&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--dry-run&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Create folders + manifest, print commands, but do not execute the C++ binary.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Output organization</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--outdir&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_CERNBOX_OUTDIR</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Root output directory (default points to CERNBox-synced folder in WSL). &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Default: </span><span class="si">{</span><span class="n">DEFAULT_CERNBOX_OUTDIR</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--lake-name&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_LAKE_DIRNAME</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Subfolder under outdir used as data-lake root. Default: </span><span class="si">{</span><span class="n">DEFAULT_LAKE_DIRNAME</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--campaign&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;scan&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Human label for this scan campaign (e.g. scan_999).&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--run-name&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Optional run name. If omitted, uses UTC timestamp + hostname (+ git short sha if available).&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Resume policy</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--resume-scope&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;fixed&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="s2">&quot;fixed&quot;</span><span class="p">],</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Checkpoint scope: &#39;run&#39; only checks within current run_dir; &quot;</span>
+            <span class="s2">&quot;&#39;fixed&#39; also reuses checkpoints from previous runs under the same fixed_dir &quot;</span>
+            <span class="s2">&quot;(matching effective grid signature). Default: fixed.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--materialize&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If reusing a previous-run checkpoint, copy the CSV into the current run folder.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Fixed hyperparameters (experiment-level)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--mA&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_MA</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Fixed mA (also mHp).&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--sin-ba&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_SIN_BA</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Fixed sin(b-a).&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lambda6&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_L6</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Fixed lambda_6.&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lambda7&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_L7</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Fixed lambda_7.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Scan grid</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--mphi-min&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_MPHI_MIN</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;m_phi min.&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--mphi-max&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_MPHI_MAX</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;m_phi max.&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--n-mphi&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_N_MPHI</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of m_phi points.&quot;</span><span class="p">)</span>
+
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lam1-min&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_LAM1_MIN</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;lambda_1 min.&quot;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lam1-max&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_LAM1_MAX</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;lambda_1 max.&quot;</span><span class="p">)</span>
+    <span class="c1"># Keep backward compatibility with your old flag spelling:</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--n-lam1&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--N-lam1&quot;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;n_lam1&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="n">DEFAULT_N_LAM1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of lambda_1 points. Default: 666. Use 10 for tests.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--n-lam1-map&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Optional per-tanbeta override for n_lam1. Format: &#39;10000:200,15000:400&#39;. &quot;</span>
+            <span class="s2">&quot;If a tanbeta is not listed, falls back to --n-lam1.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># TanBeta list</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--tanbeta&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">DEFAULT_TANBETA_LIST</span><span class="p">),</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Comma-separated list of tan(beta) values, e.g. &#39;100,500,1000&#39;.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">p</span></div>
+
+
+
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<span class="c1"># Main orchestrator</span>
+<span class="c1"># -----------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="build_run_dir">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.build_run_dir">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_run_dir</span><span class="p">(</span>
+    <span class="n">outdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">lake_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">campaign</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">fixed</span><span class="p">:</span> <span class="n">FixedParams</span><span class="p">,</span>
+    <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build the run directory path.</span>
+
+<span class="sd">    The directory is split into:</span>
+<span class="sd">      - campaign directory</span>
+<span class="sd">      - fixed-parameter directory</span>
+<span class="sd">      - run directory</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path</span>
+<span class="sd">        Full path to run directory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lake_root</span> <span class="o">=</span> <span class="n">outdir</span> <span class="o">/</span> <span class="n">lake_name</span>
+    <span class="n">campaign_dir</span> <span class="o">=</span> <span class="n">lake_root</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;campaign=</span><span class="si">{</span><span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">campaign</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">fixed_dir_name</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;fixed_sinba=</span><span class="si">{</span><span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">format_float_tag</span><span class="p">(</span><span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;_l6=</span><span class="si">{</span><span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">format_float_tag</span><span class="p">(</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;_l7=</span><span class="si">{</span><span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">format_float_tag</span><span class="p">(</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;_mA=</span><span class="si">{</span><span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">format_float_tag</span><span class="p">(</span><span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">fixed_dir</span> <span class="o">=</span> <span class="n">campaign_dir</span> <span class="o">/</span> <span class="n">fixed_dir_name</span>
+
+    <span class="n">run_dir</span> <span class="o">=</span> <span class="n">fixed_dir</span> <span class="o">/</span> <span class="n">sanitize_for_path</span><span class="p">(</span><span class="n">run_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">run_dir</span></div>
+
+
+
+<div class="viewcode-block" id="parse_cpp_stats">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.parse_cpp_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_cpp_stats</span><span class="p">(</span><span class="n">stdout</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse key stats from the C++ stdout.</span>
+
+<span class="sd">    Looks for:</span>
+<span class="sd">      - &quot;Total Attempts: &lt;int&gt;&quot;</span>
+<span class="sd">      - &quot;TRIPLE_OK_POINTS &lt;something&gt;&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    attempts:</span>
+<span class="sd">        Parsed integer attempts if found, else None.</span>
+<span class="sd">    triple_ok:</span>
+<span class="sd">        Parsed string for TRIPLE_OK_POINTS if found, else None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">attempts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">triple_ok</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">stdout</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+        <span class="k">if</span> <span class="s2">&quot;TRIPLE_OK_POINTS&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">parts</span><span class="p">:</span>
+                <span class="n">triple_ok</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;Total Attempts:&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">attempts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="n">attempts</span><span class="p">,</span> <span class="n">triple_ok</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../api/orchestrate_scans.html#dihiggs.app.orchestrate_scans.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">build_parser</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># Resolve executable path</span>
+    <span class="n">executable</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">exec</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">executable</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Executable not found: </span><span class="si">{</span><span class="n">executable</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">2</span>
+
+    <span class="c1"># Prepare scan settings</span>
+    <span class="n">base_grid</span> <span class="o">=</span> <span class="n">ScanGrid</span><span class="p">(</span>
+        <span class="n">mphi_min</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+        <span class="n">mphi_max</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+        <span class="n">n_mphi</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+        <span class="n">lam1_min</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+        <span class="n">lam1_max</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+        <span class="n">n_lam1</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">fixed</span> <span class="o">=</span> <span class="n">FixedParams</span><span class="p">(</span>
+        <span class="n">mA</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span>
+        <span class="n">sin_ba</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span>
+        <span class="n">lambda6</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span>
+        <span class="n">lambda7</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tanbeta_list</span> <span class="o">=</span> <span class="n">parse_csv_floats</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">tanbeta</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tanbeta_list</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[ERROR] Empty --tanbeta list.&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">2</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">n_lam1_map</span> <span class="o">=</span> <span class="n">parse_n_lam1_map</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">n_lam1_map</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to parse --n-lam1-map: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">2</span>
+
+    <span class="c1"># Environment (OpenMP)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">env</span><span class="p">[</span><span class="s2">&quot;OMP_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">threads</span><span class="p">)</span>
+
+    <span class="c1"># Metadata (host + git)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">()</span>
+    <span class="n">git</span> <span class="o">=</span> <span class="n">detect_git_info</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
+
+    <span class="c1"># run name</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">run_name</span><span class="p">:</span>
+        <span class="n">run_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">run_name</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Example: run_20260126T182031Z_host=zephyrus_git=abc1234</span>
+        <span class="n">sha</span> <span class="o">=</span> <span class="n">git</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;commit_short&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;nogit&quot;</span>
+        <span class="n">run_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;run_</span><span class="si">{</span><span class="n">utc_now_compact</span><span class="p">()</span><span class="si">}</span><span class="s2">_host=</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">_git=</span><span class="si">{</span><span class="n">sha</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="c1"># Output directories</span>
+    <span class="n">outdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">run_dir</span> <span class="o">=</span> <span class="n">build_run_dir</span><span class="p">(</span>
+        <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+        <span class="n">lake_name</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lake_name</span><span class="p">,</span>
+        <span class="n">campaign</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">campaign</span><span class="p">,</span>
+        <span class="n">fixed</span><span class="o">=</span><span class="n">fixed</span><span class="p">,</span>
+        <span class="n">run_name</span><span class="o">=</span><span class="n">run_name</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">run_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">log_path</span> <span class="o">=</span> <span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;orchestrator.log&quot;</span>
+    <span class="n">jsonl_path</span> <span class="o">=</span> <span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;task_summary.jsonl&quot;</span>
+    <span class="n">manifest_path</span> <span class="o">=</span> <span class="n">run_dir</span> <span class="o">/</span> <span class="s2">&quot;run_manifest.json&quot;</span>
+
+    <span class="c1"># Start logging</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="s2">&quot;[INIT] Starting scan orchestration.&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[PATH] run_dir = </span><span class="si">{</span><span class="n">run_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[EXEC] executable = </span><span class="si">{</span><span class="n">executable</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">threads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] OMP_NUM_THREADS = </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">threads</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] dry_run = </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">dry_run</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] force   = </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] resume_scope = </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">resume_scope</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] materialize  = </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">materialize</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="n">log_message</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;[CONF] fixed: mA=</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="si">}</span><span class="s2">, sin(b-a)=</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="si">}</span><span class="s2">, l6=</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="si">}</span><span class="s2">, l7=</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">log_path</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;[CONF] grid: m_phi=[</span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="si">}</span><span class="s2">] (N=</span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="si">}</span><span class="s2">), &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;lam1=[</span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="si">}</span><span class="s2">] (N=</span><span class="si">{</span><span class="n">base_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+        <span class="n">log_path</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_lam1_map</span><span class="p">:</span>
+        <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] n_lam1_map = </span><span class="si">{</span><span class="n">n_lam1_map</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CONF] tanbeta_list = </span><span class="si">{</span><span class="n">tanbeta_list</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="c1"># Write initial manifest</span>
+    <span class="n">manifest</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;created_utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+        <span class="s2">&quot;campaign&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">campaign</span><span class="p">,</span>
+        <span class="s2">&quot;run_name&quot;</span><span class="p">:</span> <span class="n">run_name</span><span class="p">,</span>
+        <span class="s2">&quot;paths&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;outdir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">outdir</span><span class="p">),</span>
+            <span class="s2">&quot;lake_name&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">lake_name</span><span class="p">,</span>
+            <span class="s2">&quot;run_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">run_dir</span><span class="p">),</span>
+            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_path</span><span class="p">),</span>
+            <span class="s2">&quot;task_summary_jsonl&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">jsonl_path</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;hostname&quot;</span><span class="p">:</span> <span class="n">host</span><span class="p">,</span>
+            <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="n">platform</span><span class="o">.</span><span class="n">platform</span><span class="p">(),</span>
+            <span class="s2">&quot;python&quot;</span><span class="p">:</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;USER&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;USERNAME&quot;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;git&quot;</span><span class="p">:</span> <span class="n">git</span><span class="p">,</span>
+        <span class="s2">&quot;runtime&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;executable&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">executable</span><span class="p">),</span>
+            <span class="s2">&quot;dry_run&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span>
+            <span class="s2">&quot;force&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">,</span>
+            <span class="s2">&quot;omp_num_threads&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">threads</span><span class="p">,</span>
+            <span class="s2">&quot;resume_scope&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">resume_scope</span><span class="p">,</span>
+            <span class="s2">&quot;materialize&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">materialize</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;fixed_params&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;mA&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span>
+            <span class="s2">&quot;sin_ba&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span>
+            <span class="s2">&quot;lambda6&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span>
+            <span class="s2">&quot;lambda7&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;scan_grid&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;mphi_min&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+            <span class="s2">&quot;mphi_max&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+            <span class="s2">&quot;n_mphi&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+            <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+            <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+            <span class="s2">&quot;n_lam1&quot;</span><span class="p">:</span> <span class="n">base_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span>
+            <span class="s2">&quot;n_lam1_map&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">n_lam1_map</span><span class="p">,</span>
+            <span class="s2">&quot;tanbeta_list&quot;</span><span class="p">:</span> <span class="n">tanbeta_list</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="p">{},</span>  <span class="c1"># filled at end</span>
+    <span class="p">}</span>
+    <span class="n">safe_write_json</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[MANI] Wrote manifest: </span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="c1"># Run loop</span>
+    <span class="n">total_tasks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tanbeta_list</span><span class="p">)</span>
+    <span class="n">grand_t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">total_attempts</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">tasks_ok</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">tasks_skipped</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">tasks_failed</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">fixed_dir</span> <span class="o">=</span> <span class="n">run_dir</span><span class="o">.</span><span class="n">parent</span>  <span class="c1"># campaign/fixed_.../</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">tb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tanbeta_list</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">folder_name</span><span class="p">,</span> <span class="n">tb_tag</span> <span class="o">=</span> <span class="n">format_tanbeta_folder</span><span class="p">(</span><span class="n">tb</span><span class="p">)</span>
+        <span class="n">current_dir</span> <span class="o">=</span> <span class="n">run_dir</span> <span class="o">/</span> <span class="n">folder_name</span>
+        <span class="n">current_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">output_csv</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;scan_tb_</span><span class="si">{</span><span class="n">tb_tag</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+        <span class="n">meta_path</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s2">&quot;scan_meta.json&quot;</span>
+
+        <span class="n">n_lam1_eff</span> <span class="o">=</span> <span class="n">pick_n_lam1_for_tb</span><span class="p">(</span><span class="n">tb</span><span class="o">=</span><span class="n">tb</span><span class="p">,</span> <span class="n">default_n_lam1</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="n">n_lam1_map</span><span class="p">)</span>
+        <span class="n">eff_grid</span> <span class="o">=</span> <span class="n">ScanGrid</span><span class="p">(</span>
+            <span class="n">mphi_min</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+            <span class="n">mphi_max</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+            <span class="n">n_mphi</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+            <span class="n">lam1_min</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+            <span class="n">lam1_max</span><span class="o">=</span><span class="n">base_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+            <span class="n">n_lam1</span><span class="o">=</span><span class="n">n_lam1_eff</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">eff_sig</span> <span class="o">=</span> <span class="n">grid_signature</span><span class="p">(</span><span class="n">eff_grid</span><span class="p">)</span>
+
+        <span class="c1"># resumability</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">output_csv</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">tasks_skipped</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">log_message</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;[SKIP] (</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total_tasks</span><span class="si">}</span><span class="s2">) tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> exists: </span><span class="si">{</span><span class="n">output_csv</span><span class="si">}</span><span class="s2"> | grid_sig=</span><span class="si">{</span><span class="n">eff_sig</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">log_path</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">append_jsonl</span><span class="p">(</span>
+                    <span class="n">jsonl_path</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                        <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                        <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+                        <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                        <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                        <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                        <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                        <span class="s2">&quot;n_lam1_effective&quot;</span><span class="p">:</span> <span class="n">n_lam1_eff</span><span class="p">,</span>
+                        <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;exists_and_force_false&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">resume_scope</span> <span class="o">==</span> <span class="s2">&quot;fixed&quot;</span><span class="p">:</span>
+                <span class="n">prev_csv</span> <span class="o">=</span> <span class="n">find_previous_csv_matching_grid</span><span class="p">(</span>
+                    <span class="n">fixed_dir</span><span class="o">=</span><span class="n">fixed_dir</span><span class="p">,</span>
+                    <span class="n">current_run_dir</span><span class="o">=</span><span class="n">run_dir</span><span class="p">,</span>
+                    <span class="n">tb_tag</span><span class="o">=</span><span class="n">tb_tag</span><span class="p">,</span>
+                    <span class="n">desired_grid_sig</span><span class="o">=</span><span class="n">eff_sig</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">prev_csv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">prev_csv</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="n">tasks_skipped</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">log_message</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;[SKIP] (</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total_tasks</span><span class="si">}</span><span class="s2">) tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> found in previous run: </span><span class="si">{</span><span class="n">prev_csv</span><span class="si">}</span><span class="s2"> | grid_sig=</span><span class="si">{</span><span class="n">eff_sig</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">log_path</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">materialize</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">prev_csv</span><span class="p">,</span> <span class="n">output_csv</span><span class="p">)</span>
+                            <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[LINK] copied previous CSV into current run: </span><span class="si">{</span><span class="n">output_csv</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                            <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] materialize failed (</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">); continuing without copy.&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+                    <span class="n">append_jsonl</span><span class="p">(</span>
+                        <span class="n">jsonl_path</span><span class="p">,</span>
+                        <span class="p">{</span>
+                            <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;skip&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                            <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                            <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+                            <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                            <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                            <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                            <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                            <span class="s2">&quot;n_lam1_effective&quot;</span><span class="p">:</span> <span class="n">n_lam1_eff</span><span class="p">,</span>
+                            <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;found_in_previous_run_under_same_fixed_dir_matching_grid&quot;</span><span class="p">,</span>
+                            <span class="s2">&quot;previous_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">prev_csv</span><span class="p">),</span>
+                        <span class="p">},</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
+
+        <span class="n">log_message</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;[RUN ] (</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total_tasks</span><span class="si">}</span><span class="s2">) tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">output_csv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> | n_lam1=</span><span class="si">{</span><span class="n">n_lam1_eff</span><span class="si">}</span><span class="s2"> | grid_sig=</span><span class="si">{</span><span class="n">eff_sig</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">log_path</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">executable</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">eff_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tb</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+        <span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">dry_run</span><span class="p">:</span>
+            <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[DRY ] cmd = </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+            <span class="n">append_jsonl</span><span class="p">(</span>
+                <span class="n">jsonl_path</span><span class="p">,</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;dry_run&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                    <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                    <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+                    <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                    <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                    <span class="s2">&quot;cmd&quot;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">,</span>
+                    <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                    <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                    <span class="s2">&quot;n_lam1_effective&quot;</span><span class="p">:</span> <span class="n">n_lam1_eff</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+
+            <span class="n">attempts</span><span class="p">,</span> <span class="n">triple_ok</span> <span class="o">=</span> <span class="n">parse_cpp_stats</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+
+            <span class="n">record</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+                <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                <span class="s2">&quot;elapsed_sec&quot;</span><span class="p">:</span> <span class="n">elapsed</span><span class="p">,</span>
+                <span class="s2">&quot;returncode&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span>
+                <span class="s2">&quot;attempts&quot;</span><span class="p">:</span> <span class="n">attempts</span><span class="p">,</span>
+                <span class="s2">&quot;triple_ok_points&quot;</span><span class="p">:</span> <span class="n">triple_ok</span><span class="p">,</span>
+                <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                <span class="s2">&quot;n_lam1_effective&quot;</span><span class="p">:</span> <span class="n">n_lam1_eff</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">tasks_ok</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">attempts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">total_attempts</span> <span class="o">+=</span> <span class="n">attempts</span>
+                <span class="n">log_message</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;[DONE] tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">elapsed</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s | attempts=</span><span class="si">{</span><span class="n">attempts</span><span class="si">}</span><span class="s2"> | tripleOK=</span><span class="si">{</span><span class="n">triple_ok</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">log_path</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">record</span><span class="p">[</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;done&quot;</span>
+
+                <span class="c1"># Write per-task metadata to support cross-run checkpoints with varying effective grids</span>
+                <span class="n">safe_write_json</span><span class="p">(</span>
+                    <span class="n">meta_path</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;done&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                        <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                        <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                        <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                        <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                        <span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;mphi_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+                            <span class="s2">&quot;mphi_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+                            <span class="s2">&quot;n_mphi&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+                            <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+                            <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+                            <span class="s2">&quot;n_lam1&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span>
+                        <span class="p">},</span>
+                        <span class="s2">&quot;fixed_params&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;mA&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span>
+                            <span class="s2">&quot;sin_ba&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span>
+                            <span class="s2">&quot;lambda6&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span>
+                            <span class="s2">&quot;lambda7&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span>
+                        <span class="p">},</span>
+                        <span class="s2">&quot;attempts&quot;</span><span class="p">:</span> <span class="n">attempts</span><span class="p">,</span>
+                        <span class="s2">&quot;triple_ok_points&quot;</span><span class="p">:</span> <span class="n">triple_ok</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tasks_failed</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[FAIL] tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> code=</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+                <span class="c1"># Keep stderr in a file for debugging (avoid polluting orchestrator.log)</span>
+                <span class="n">stderr_path</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s2">&quot;stderr.log&quot;</span>
+                <span class="n">stdout_path</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s2">&quot;stdout.log&quot;</span>
+                <span class="n">stderr_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="n">stdout_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="n">log_message</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;[FAIL] wrote stdout/stderr logs to: </span><span class="si">{</span><span class="n">stdout_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">stderr_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">log_path</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">record</span><span class="p">[</span><span class="s2">&quot;event&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;fail&quot;</span>
+                <span class="n">record</span><span class="p">[</span><span class="s2">&quot;stderr_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">stderr_path</span><span class="p">)</span>
+                <span class="n">record</span><span class="p">[</span><span class="s2">&quot;stdout_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">stdout_path</span><span class="p">)</span>
+
+                <span class="c1"># Best-effort meta for failures (does not count as checkpointable)</span>
+                <span class="n">safe_write_json</span><span class="p">(</span>
+                    <span class="n">meta_path</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;fail&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                        <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                        <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                        <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                        <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                        <span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;mphi_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+                            <span class="s2">&quot;mphi_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+                            <span class="s2">&quot;n_mphi&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+                            <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+                            <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+                            <span class="s2">&quot;n_lam1&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span>
+                        <span class="p">},</span>
+                        <span class="s2">&quot;fixed_params&quot;</span><span class="p">:</span> <span class="p">{</span>
+                            <span class="s2">&quot;mA&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span>
+                            <span class="s2">&quot;sin_ba&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span>
+                            <span class="s2">&quot;lambda6&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span>
+                            <span class="s2">&quot;lambda7&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span>
+                        <span class="p">},</span>
+                        <span class="s2">&quot;returncode&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span>
+                        <span class="s2">&quot;stderr_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">stderr_path</span><span class="p">),</span>
+                        <span class="s2">&quot;stdout_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">stdout_path</span><span class="p">),</span>
+                    <span class="p">},</span>
+                <span class="p">)</span>
+
+            <span class="n">append_jsonl</span><span class="p">(</span><span class="n">jsonl_path</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">tasks_failed</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span>
+            <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[CRASH] tanbeta=</span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2"> exception=</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+            <span class="n">append_jsonl</span><span class="p">(</span>
+                <span class="n">jsonl_path</span><span class="p">,</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;crash&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                    <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+                    <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+                    <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                    <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                    <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                    <span class="s2">&quot;elapsed_sec&quot;</span><span class="p">:</span> <span class="n">elapsed</span><span class="p">,</span>
+                    <span class="s2">&quot;exception&quot;</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                    <span class="s2">&quot;cmd&quot;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">,</span>
+                    <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                    <span class="s2">&quot;n_lam1_effective&quot;</span><span class="p">:</span> <span class="n">n_lam1_eff</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Best-effort meta for crashes (does not count as checkpointable)</span>
+            <span class="n">safe_write_json</span><span class="p">(</span>
+                <span class="n">meta_path</span><span class="p">,</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;event&quot;</span><span class="p">:</span> <span class="s2">&quot;crash&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+                    <span class="s2">&quot;tanbeta&quot;</span><span class="p">:</span> <span class="n">tb</span><span class="p">,</span>
+                    <span class="s2">&quot;tb_tag&quot;</span><span class="p">:</span> <span class="n">tb_tag</span><span class="p">,</span>
+                    <span class="s2">&quot;output_csv&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_csv</span><span class="p">),</span>
+                    <span class="s2">&quot;grid_signature&quot;</span><span class="p">:</span> <span class="n">eff_sig</span><span class="p">,</span>
+                    <span class="s2">&quot;grid&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;mphi_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_min</span><span class="p">,</span>
+                        <span class="s2">&quot;mphi_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">mphi_max</span><span class="p">,</span>
+                        <span class="s2">&quot;n_mphi&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_mphi</span><span class="p">,</span>
+                        <span class="s2">&quot;lam1_min&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_min</span><span class="p">,</span>
+                        <span class="s2">&quot;lam1_max&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">lam1_max</span><span class="p">,</span>
+                        <span class="s2">&quot;n_lam1&quot;</span><span class="p">:</span> <span class="n">eff_grid</span><span class="o">.</span><span class="n">n_lam1</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;fixed_params&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;mA&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">mA</span><span class="p">,</span>
+                        <span class="s2">&quot;sin_ba&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">sin_ba</span><span class="p">,</span>
+                        <span class="s2">&quot;lambda6&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda6</span><span class="p">,</span>
+                        <span class="s2">&quot;lambda7&quot;</span><span class="p">:</span> <span class="n">fixed</span><span class="o">.</span><span class="n">lambda7</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;exception&quot;</span><span class="p">:</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="p">},</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Final summary</span>
+    <span class="n">grand_elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">grand_t0</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="s2">&quot;[FIN ] Orchestration complete.&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       Total wall time: </span><span class="si">{</span><span class="n">grand_elapsed</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s (</span><span class="si">{</span><span class="n">grand_elapsed</span><span class="o">/</span><span class="mi">60</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> min)&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       Tasks: ok=</span><span class="si">{</span><span class="n">tasks_ok</span><span class="si">}</span><span class="s2">, skipped=</span><span class="si">{</span><span class="n">tasks_skipped</span><span class="si">}</span><span class="s2">, failed=</span><span class="si">{</span><span class="n">tasks_failed</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       Total attempts (parsed): </span><span class="si">{</span><span class="n">total_attempts</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">total_attempts</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">grand_elapsed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">sec_per_point</span> <span class="o">=</span> <span class="n">grand_elapsed</span> <span class="o">/</span> <span class="n">total_attempts</span>
+        <span class="n">points_per_hour</span> <span class="o">=</span> <span class="n">total_attempts</span> <span class="o">/</span> <span class="p">(</span><span class="n">grand_elapsed</span> <span class="o">/</span> <span class="mf">3600.0</span><span class="p">)</span>
+        <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       Avg speed: </span><span class="si">{</span><span class="n">sec_per_point</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> s/attempt&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+        <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       Throughput: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">points_per_hour</span><span class="p">)</span><span class="si">}</span><span class="s2"> attempts/hour&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log_message</span><span class="p">(</span><span class="s2">&quot;       No new attempts parsed (all skipped/dry-run/failed?).&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="c1"># Update manifest with summary</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;summary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;finished_utc&quot;</span><span class="p">:</span> <span class="n">utc_now_iso</span><span class="p">(),</span>
+        <span class="s2">&quot;wall_time_sec&quot;</span><span class="p">:</span> <span class="n">grand_elapsed</span><span class="p">,</span>
+        <span class="s2">&quot;tasks_total&quot;</span><span class="p">:</span> <span class="n">total_tasks</span><span class="p">,</span>
+        <span class="s2">&quot;tasks_ok&quot;</span><span class="p">:</span> <span class="n">tasks_ok</span><span class="p">,</span>
+        <span class="s2">&quot;tasks_skipped&quot;</span><span class="p">:</span> <span class="n">tasks_skipped</span><span class="p">,</span>
+        <span class="s2">&quot;tasks_failed&quot;</span><span class="p">:</span> <span class="n">tasks_failed</span><span class="p">,</span>
+        <span class="s2">&quot;total_attempts_parsed&quot;</span><span class="p">:</span> <span class="n">total_attempts</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">safe_write_json</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[MANI] Updated manifest summary: </span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+    <span class="n">log_message</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">,</span> <span class="n">log_path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="mi">0</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

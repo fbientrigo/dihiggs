@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artifacts and Schemas &mdash; DiHiggs Explorer Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="adaptive_explorer.py" href="cli/adaptive_explorer.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            DiHiggs Explorer
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli/orchestrate_scans.html"><code class="docutils literal notranslate"><span class="pre">orchestrate_scans.py</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli/adaptive_explorer.html"><code class="docutils literal notranslate"><span class="pre">adaptive_explorer.py</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Artifacts and Schemas</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#orchestrator-run-artifacts">Orchestrator Run Artifacts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adaptive-iteration-ledger">Adaptive Iteration Ledger</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#adaptive-state-json-schema-high-level"><code class="docutils literal notranslate"><span class="pre">adaptive_state.json</span></code> schema (high-level)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#proposals-csv-schema"><code class="docutils literal notranslate"><span class="pre">proposals.csv</span></code> schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#commands-sh-schema"><code class="docutils literal notranslate"><span class="pre">commands.sh</span></code> schema</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#replay-behavior">Replay Behavior</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#strict-viability-semantics">Strict Viability Semantics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#iteration-semantics">Iteration Semantics</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DiHiggs Explorer</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Artifacts and Schemas</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/artifacts.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="artifacts-and-schemas">
+<h1>Artifacts and Schemas<a class="headerlink" href="#artifacts-and-schemas" title="Link to this heading"></a></h1>
+<p>This page documents artifacts produced by scan orchestration and adaptive exploration.</p>
+<section id="orchestrator-run-artifacts">
+<h2>Orchestrator Run Artifacts<a class="headerlink" href="#orchestrator-run-artifacts" title="Link to this heading"></a></h2>
+<p>Under each run directory:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&lt;outdir&gt;/&lt;lake-name&gt;/campaign=&lt;campaign&gt;/fixed_.../run_.../
+</pre></div>
+</div>
+<p>Core files:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">run_manifest.json</span></code>: run metadata and effective scan grid.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">orchestrator.log</span></code>: timestamped execution log.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">task_summary.jsonl</span></code>: per-task events (<code class="docutils literal notranslate"><span class="pre">done</span></code>, <code class="docutils literal notranslate"><span class="pre">skip</span></code>, <code class="docutils literal notranslate"><span class="pre">fail</span></code>, <code class="docutils literal notranslate"><span class="pre">crash</span></code>, <code class="docutils literal notranslate"><span class="pre">dry_run</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tb_*/scan_tb_&lt;tb_tag&gt;.csv</span></code>: scan output for each <code class="docutils literal notranslate"><span class="pre">tanbeta</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tb_*/scan_meta.json</span></code>: per-task metadata with <code class="docutils literal notranslate"><span class="pre">event</span></code>, <code class="docutils literal notranslate"><span class="pre">grid_signature</span></code>, and counters.</p></li>
+</ul>
+</section>
+<section id="adaptive-iteration-ledger">
+<h2>Adaptive Iteration Ledger<a class="headerlink" href="#adaptive-iteration-ledger" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">adaptive_explorer.py</span></code> writes one checkpoint directory per iteration:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&lt;checkpoint-root&gt;/iter_XXXX/
+</pre></div>
+</div>
+<p>Required files:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">adaptive_state.json</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">proposals.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">commands.sh</span></code></p></li>
+</ul>
+<section id="adaptive-state-json-schema-high-level">
+<h3><code class="docutils literal notranslate"><span class="pre">adaptive_state.json</span></code> schema (high-level)<a class="headerlink" href="#adaptive-state-json-schema-high-level" title="Link to this heading"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>{
+  &quot;iter_index&quot;: int,
+  &quot;n_iters&quot;: int,
+  &quot;lam1_min&quot;: float,
+  &quot;lam1_max&quot;: float,
+  &quot;n_bins&quot;: int,
+  &quot;n_coarse&quot;: int,
+  &quot;total_budget&quot;: int,
+  &quot;floor_points&quot;: int,
+  &quot;orchestrator&quot;: {...},
+  &quot;bins&quot;: [{&quot;id&quot;,&quot;index&quot;,&quot;lam1_lo&quot;,&quot;lam1_hi&quot;}],
+  &quot;budgets&quot;: {&quot;lam1_bin_###&quot;: int},
+  &quot;budgets_by_tb_by_bin&quot;: {&quot;&lt;tb_tag&gt;&quot;: {&quot;lam1_bin_###&quot;: int}} | null,
+  &quot;trials_by_bin&quot;: {&quot;lam1_bin_###&quot;: int},
+  &quot;successes_by_bin&quot;: {&quot;lam1_bin_###&quot;: int},
+  &quot;trials_by_tb_by_bin&quot;: {&quot;&lt;tb_tag&gt;&quot;: {&quot;lam1_bin_###&quot;: int}},
+  &quot;successes_by_tb_by_bin&quot;: {&quot;&lt;tb_tag&gt;&quot;: {&quot;lam1_bin_###&quot;: int}},
+  &quot;proposals&quot;: [
+    {
+      &quot;proposal_id&quot;: str,
+      &quot;status&quot;: &quot;DONE&quot;,
+      &quot;command&quot;: str,
+      &quot;run_name&quot;: str,
+      &quot;run_dir&quot;: str | null,
+      &quot;n_lam1&quot;: int,
+      &quot;attempts_total&quot;: int?,
+      &quot;triple_ok_total&quot;: int?,
+      &quot;successes_by_tb&quot;: {&quot;&lt;tb_tag&gt;&quot;: int}?,
+      &quot;trials_by_tb&quot;: {&quot;&lt;tb_tag&gt;&quot;: int}?
+    }
+  ]
+}
+</pre></div>
+</div>
+</section>
+<section id="proposals-csv-schema">
+<h3><code class="docutils literal notranslate"><span class="pre">proposals.csv</span></code> schema<a class="headerlink" href="#proposals-csv-schema" title="Link to this heading"></a></h3>
+<p>Header and status constraints are fixed:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>proposal_id,status,command
+iter0001_bin000,DONE,&quot;python ...&quot;
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code> is validated as <code class="docutils literal notranslate"><span class="pre">PENDING</span></code> or <code class="docutils literal notranslate"><span class="pre">DONE</span></code>.</p></li>
+</ul>
+</section>
+<section id="commands-sh-schema">
+<h3><code class="docutils literal notranslate"><span class="pre">commands.sh</span></code> schema<a class="headerlink" href="#commands-sh-schema" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+python<span class="w"> </span>.../orchestrate_scans.py<span class="w"> </span>...
+python<span class="w"> </span>.../orchestrate_scans.py<span class="w"> </span>...
+</pre></div>
+</div>
+</section>
+</section>
+<section id="replay-behavior">
+<h2>Replay Behavior<a class="headerlink" href="#replay-behavior" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">dihiggs/app/adaptive_explorer.py</span> <span class="pre">--replay</span> <span class="pre">&lt;checkpoint_dir&gt;</span></code>: executes command lines from <code class="docutils literal notranslate"><span class="pre">commands.sh</span></code> in order.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">dihiggs/app/adaptive_explorer.py</span> <span class="pre">--replay</span> <span class="pre">&lt;checkpoint_dir&gt;</span> <span class="pre">--list-commands</span></code>: prints <code class="docutils literal notranslate"><span class="pre">commands.sh</span></code> byte-identical.</p></li>
+</ul>
+</section>
+<section id="strict-viability-semantics">
+<h2>Strict Viability Semantics<a class="headerlink" href="#strict-viability-semantics" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Success metric is strict viability (<code class="docutils literal notranslate"><span class="pre">triple_ok_points</span></code>) per bin and per <code class="docutils literal notranslate"><span class="pre">tb_tag</span></code>.</p></li>
+<li><p>For skipped tasks, recovery logic checks sibling <code class="docutils literal notranslate"><span class="pre">scan_meta.json</span></code> first (<code class="docutils literal notranslate"><span class="pre">triple_ok_points</span></code>).</p></li>
+<li><p>If metadata is unavailable, fallback is strict CSV recount with all three flags equal to 1.</p></li>
+</ul>
+</section>
+<section id="iteration-semantics">
+<h2>Iteration Semantics<a class="headerlink" href="#iteration-semantics" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Iteration 1 (<code class="docutils literal notranslate"><span class="pre">iter_index</span> <span class="pre">==</span> <span class="pre">1</span></code>) is coarse: each <code class="docutils literal notranslate"><span class="pre">lam1</span></code> bin uses <code class="docutils literal notranslate"><span class="pre">n_coarse</span></code>.</p></li>
+<li><p>Iteration 2 and later use adaptive budgets; when per-<code class="docutils literal notranslate"><span class="pre">tb_tag</span></code> data exists, explorer emits <code class="docutils literal notranslate"><span class="pre">--n-lam1-map</span></code> for orchestrator.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli/adaptive_explorer.html" class="btn btn-neutral float-left" title="adaptive_explorer.py" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

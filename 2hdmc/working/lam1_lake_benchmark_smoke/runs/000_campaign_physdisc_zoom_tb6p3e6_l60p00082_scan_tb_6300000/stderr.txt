@@ -1,0 +1,1 @@
+No eligible rows found for mode triple_ok in /mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=physdisc_zoom_tb6p3e6_l60p00082/fixed_sinba=1p0000_l6=0p0008_l7=0p0000_mA=300p0/physdisc_zoom_tb6p3e6_l60p00082_iter0001_bin095/tb_6300000/scan_tb_6300000.csv
