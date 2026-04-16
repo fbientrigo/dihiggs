@@ -9,6 +9,7 @@
 #include "DecayTable.h"
 #include "HBHS.h"
 #include "Util.h"
+#include "Constraints.h"
 #include <string>
 #include <algorithm>
 #include <iostream>
