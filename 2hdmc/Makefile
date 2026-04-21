@@ -2,7 +2,8 @@
 
 # Choose your C++ compiler here (in general g++ on Linux systems):
 CC = g++
-LDFLAGS=-lgsl -lgslcblas
+LDFLAGS=-fopenmp -lgsl -lgslcblas
+
 
 #Optimisation level, eg: -O3
 OPT=-O3
@@ -11,7 +12,7 @@ DEBUG=
 
 VPATH=src
 
-CFLAGS= -std=c++11 -Wall $(DEBUG) $(OPT)
+CFLAGS= -std=c++11 -Wall $(DEBUG) $(OPT) -fopenmp
 
 OBJDIR=lib
 LIBDIR=$(OBJDIR)
