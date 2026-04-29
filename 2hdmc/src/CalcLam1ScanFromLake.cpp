@@ -1,714 +1,825 @@
 #include "THDM.h"
+#include "Constraints.h"
+#include "DecayTable.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
-#include <cstdint>
+#include <cctype>
 #include <cstdlib>
-#include <cstring>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <cerrno>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include <numeric>
+#include <omp.h>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+//error 231
+#include <gsl/gsl_errno.h>
+
 namespace {
 
-struct LakeRow {
-  std::size_t row_index;
-  std::string source_csv;
+constexpr double kMh = 125.0;
+constexpr int kDefaultYukawasType = 1;
+constexpr double kWidthFloor = 1e-15;
+
+struct Sample {
+  std::size_t sample_index;
+  std::size_t attempt_index;
+  double mh;
+  double mH;
+  double mA;
+  double mHp;
+  double sba;
+  double lambda6;
+  double lambda7;
+  double m12_2;
+  double tan_beta;
+  double lambda1_input;
+  double lambda1_recomputed;
+  double abs_error;
+  bool warning_flag;
+};
+
+struct QuarantinePointInput {
+  std::string point_id;
   double m_phi;
   double mA;
+  double sin_ba;
+  double tan_beta;
+  double lambda6;
+  double lambda7;
+  double lam1;
+};
+
+struct RecomputeRow {
+  double m_phi;
+  double mA;
+  double alpha;
+  double beta;
   double lambda6;
   double lambda7;
   double m12;
   double sin_ba;
   double tan_beta;
-  bool positivity_ok;
-  bool unitarity_ok;
-  bool perturbativity_ok;
+  int positivity_ok;
+  int unitarity_ok;
+  int perturbativity_ok;
+  double width_bb;
+  double width_tautau;
+  double width_WW;
+  double width_ZZ;
+  double width_gaga;
+  double width_Zga;
+  double width_gg;
+  double width_hh;
+  double total_width;
+  double br_gaga;
+  double lam1;
+  double computed_lam1;
+  double lam2;
+  double computed_lam2;
+  double lam3;
+  double lam4;
+  double lam5;
 };
 
-struct OutputRow {
-  std::size_t sample_index;
-  std::size_t row_index;
-  std::string source_csv;
-  double m_phi;
-  double mA;
-  double mHp;
-  double sin_ba;
-  double lambda6;
-  double lambda7;
-  double m12_input;
-  double tan_beta;
-  double lambda1_input;
-  double lambda1_recomputed;
-  double abs_error;
-  double rel_error;
-  double scaled_error;
-  bool exact_equal;
-  std::uint64_t ulp_diff;
-  bool warning_internal;
-  bool warning_abs;
-  bool warning_rel;
-  bool warning_scaled;
-  bool baseline_ok;
-  bool probe_ok;
-  std::string mode;
-};
+double qnan() {
+  return std::numeric_limits<double>::quiet_NaN();
+}
 
-using HeaderMap = std::unordered_map<std::string, std::size_t>;
+std::string trim_copy(const std::string& s) {
+  std::size_t begin = 0;
+  while (begin < s.size() && std::isspace(static_cast<unsigned char>(s[begin])) != 0) {
+    ++begin;
+  }
+  std::size_t end = s.size();
+  while (end > begin && std::isspace(static_cast<unsigned char>(s[end - 1])) != 0) {
+    --end;
+  }
+  return s.substr(begin, end - begin);
+}
 
-struct FileLoadStats {
-  std::size_t total_rows_parsed = 0;
-  std::size_t parseable_rows = 0;
-  std::size_t eligible_rows = 0;
-};
+bool has_key(const std::unordered_map<std::string, std::string>& row,
+             const std::string& key) {
+  return row.find(key) != row.end();
+}
 
-std::vector<std::string> split_csv_line(const std::string &line) {
-  std::vector<std::string> fields;
-  std::stringstream stream(line);
-  std::string field;
-  while (std::getline(stream, field, ',')) {
-    fields.push_back(field);
+std::string require_string(const std::unordered_map<std::string, std::string>& row,
+                           const std::string& key) {
+  std::unordered_map<std::string, std::string>::const_iterator it = row.find(key);
+  if (it == row.end()) {
+    throw std::runtime_error("Missing required column: " + key);
+  }
+  return trim_copy(it->second);
+}
+
+double require_double(const std::unordered_map<std::string, std::string>& row,
+                      const std::string& key) {
+  const std::string raw = require_string(row, key);
+  const double parsed = std::stod(raw);
+  if (!std::isfinite(parsed)) {
+    throw std::runtime_error("Non-finite value for column: " + key + " value=" + raw);
+  }
+  return parsed;
+}
+
+std::vector<std::string> split_csv_simple(const std::string& line) {
+  std::vector<std::string> out;
+  std::stringstream ss(line);
+  std::string item;
+  while (std::getline(ss, item, ',')) {
+    out.push_back(trim_copy(item));
   }
   if (!line.empty() && line.back() == ',') {
-    fields.push_back("");
+    out.push_back("");
   }
-  return fields;
-}
-
-HeaderMap parse_header_map(const std::string &header_line) {
-  HeaderMap header_map;
-  const std::vector<std::string> fields = split_csv_line(header_line);
-  for (std::size_t index = 0; index < fields.size(); ++index) {
-    header_map[fields[index]] = index;
-  }
-  return header_map;
-}
-
-bool parse_double_field(const std::vector<std::string> &fields,
-                        const HeaderMap &header_map,
-                        const std::string &name,
-                        double &value) {
-  const auto it = header_map.find(name);
-  if (it == header_map.end() || it->second >= fields.size()) {
-    return false;
-  }
-
-  char *end_ptr = nullptr;
-  value = std::strtod(fields[it->second].c_str(), &end_ptr);
-  return end_ptr != fields[it->second].c_str() && *end_ptr == '\0' && std::isfinite(value);
-}
-
-bool parse_flag_field(const std::vector<std::string> &fields,
-                      const HeaderMap &header_map,
-                      const std::string &name,
-                      bool &value) {
-  double numeric_value = 0.0;
-  if (!parse_double_field(fields, header_map, name, numeric_value)) {
-    return false;
-  }
-  value = std::abs(numeric_value - 1.0) < 1e-12;
-  return true;
-}
-
-bool row_passes_mode(const LakeRow &row, const std::string &mode) {
-  if (mode == "all") {
-    return true;
-  }
-
-  const bool triple_ok = row.positivity_ok && row.unitarity_ok && row.perturbativity_ok;
-  if (mode == "triple_ok") {
-    return triple_ok;
-  }
-  if (mode == "triple_ok_sba1") {
-    return triple_ok && std::abs(row.sin_ba - 1.0) < 1e-12;
-  }
-  if (mode == "triple_ok_align" || mode == "alignment") {
-    return triple_ok && row.sin_ba >= 0.995;
-  }
-  return false;
-}
-
-std::string normalize_mode(const std::string &mode) {
-  if (mode == "alignment") {
-    return "triple_ok_align";
-  }
-  return mode;
-}
-
-bool valid_mode(const std::string &mode) {
-  return mode == "triple_ok" || mode == "triple_ok_sba1" || mode == "triple_ok_align" ||
-         mode == "alignment" || mode == "all";
-}
-
-std::uint64_t monotonic_double_bits(double value) {
-  std::uint64_t bits = 0;
-  std::memcpy(&bits, &value, sizeof(double));
-
-  constexpr std::uint64_t sign_mask = 0x8000000000000000ULL;
-  return (bits & sign_mask) ? ~bits : (bits | sign_mask);
-}
-
-std::uint64_t ulp_distance(double a, double b) {
-  if (!std::isfinite(a) || !std::isfinite(b)) {
-    return std::numeric_limits<std::uint64_t>::max();
-  }
-  const std::uint64_t ma = monotonic_double_bits(a);
-  const std::uint64_t mb = monotonic_double_bits(b);
-  return (ma >= mb) ? (ma - mb) : (mb - ma);
-}
-
-std::string csv_escape(const std::string &s) {
-  bool needs_quotes = false;
-  for (char c : s) {
-    if (c == ',' || c == '"' || c == '\n' || c == '\r') {
-      needs_quotes = true;
-      break;
-    }
-  }
-  if (!needs_quotes) {
-    return s;
-  }
-
-  std::string out = "\"";
-  for (char c : s) {
-    if (c == '"') {
-      out += "\"\"";
-    } else {
-      out += c;
-    }
-  }
-  out += "\"";
   return out;
 }
 
-void write_header(std::ofstream &out) {
-  out << "sample_index,row_index,source_csv,m_phi,mA,mHp,sin_ba,lambda6,lambda7,m12_input,tan_beta,"
-         "lambda1_input,lambda1_recomputed,abs_error,rel_error,scaled_error,exact_equal,ulp_diff,"
-         "warning_internal,warning_abs,warning_rel,warning_scaled,baseline_ok,probe_ok,mode\n";
+std::unordered_map<std::string, std::string>
+make_row_map(const std::vector<std::string>& header,
+             const std::vector<std::string>& values) {
+  std::unordered_map<std::string, std::string> row;
+  const std::size_t n = std::min(header.size(), values.size());
+  for (std::size_t i = 0; i < n; ++i) {
+    row[header[i]] = values[i];
+  }
+  return row;
 }
 
-void write_output_row(std::ofstream &out, const OutputRow &row) {
-  out << row.sample_index << ','
-      << row.row_index << ','
-      << csv_escape(row.source_csv) << ','
-      << std::scientific << std::setprecision(17)
+void write_random_header(std::ofstream &out) {
+  out << "sample_index,attempt_index,mh,mH,mA,mHp,sba,lambda6,lambda7,m12_2,tan_beta,"
+         "lambda1_input,lambda1_recomputed,abs_error,warning_flag\n";
+}
+
+void write_random_sample(std::ofstream &out, const Sample &sample) {
+  out << sample.sample_index << ','
+      << sample.attempt_index << ','
+      << std::setprecision(17)
+      << sample.mh << ','
+      << sample.mH << ','
+      << sample.mA << ','
+      << sample.mHp << ','
+      << sample.sba << ','
+      << sample.lambda6 << ','
+      << sample.lambda7 << ','
+      << sample.m12_2 << ','
+      << sample.tan_beta << ','
+      << sample.lambda1_input << ','
+      << sample.lambda1_recomputed << ','
+      << sample.abs_error << ','
+      << (sample.warning_flag ? 1 : 0) << '\n';
+}
+
+void write_recompute_header(std::ofstream& out) {
+  out << "m_phi,mA,alpha,beta,lambda6,lambda7,m12,"
+         "sin_ba,tan_beta,positivity_ok,unitarity_ok,perturbativity_ok,"
+         "width_bb,width_tautau,width_WW,width_ZZ,"
+         "width_gaga,width_Zga,width_gg,width_hh,"
+         "total_width,br_gaga,lam1,computed_lam1,"
+         "lam2,computed_lam2,lam3,lam4,lam5\n";
+}
+
+std::string serialize_recompute_row(const RecomputeRow& row) {
+  std::ostringstream out;
+  out.setf(std::ios::scientific);
+  out << std::setprecision(17)
       << row.m_phi << ','
       << row.mA << ','
-      << row.mHp << ','
-      << row.sin_ba << ','
+      << row.alpha << ','
+      << row.beta << ','
       << row.lambda6 << ','
       << row.lambda7 << ','
-      << row.m12_input << ','
+      << row.m12 << ','
+      << row.sin_ba << ','
       << row.tan_beta << ','
-      << row.lambda1_input << ','
-      << row.lambda1_recomputed << ','
-      << row.abs_error << ','
-      << row.rel_error << ','
-      << row.scaled_error << ','
-      << (row.exact_equal ? 1 : 0) << ','
-      << row.ulp_diff << ','
-      << (row.warning_internal ? 1 : 0) << ','
-      << (row.warning_abs ? 1 : 0) << ','
-      << (row.warning_rel ? 1 : 0) << ','
-      << (row.warning_scaled ? 1 : 0) << ','
-      << (row.baseline_ok ? 1 : 0) << ','
-      << (row.probe_ok ? 1 : 0) << ','
-      << row.mode << '\n';
+      << row.positivity_ok << ','
+      << row.unitarity_ok << ','
+      << row.perturbativity_ok << ','
+      << row.width_bb << ','
+      << row.width_tautau << ','
+      << row.width_WW << ','
+      << row.width_ZZ << ','
+      << row.width_gaga << ','
+      << row.width_Zga << ','
+      << row.width_gg << ','
+      << row.width_hh << ','
+      << row.total_width << ','
+      << row.br_gaga << ','
+      << row.lam1 << ','
+      << row.computed_lam1 << ','
+      << row.lam2 << ','
+      << row.computed_lam2 << ','
+      << row.lam3 << ','
+      << row.lam4 << ','
+      << row.lam5 << '\n';
+  return out.str();
 }
 
-void print_usage() {
-  std::cerr
-      << "Usage: ./CalcLam1ScanFromLake input_path output_csv [n_samples] [seed] [mode] [n_input_files]\n"
-      << "  input_path: CSV file or directory root of the lake\n"
-      << "  n_input_files: only used when input_path is a directory (default: 5)\n"
-      << "Modes: triple_ok, triple_ok_sba1, triple_ok_align, alignment, all\n";
-}
-
-static bool path_exists(const std::string &path) {
-  struct stat st;
-  return ::stat(path.c_str(), &st) == 0;
-}
-
-static bool is_regular_file_path(const std::string &path) {
-  struct stat st;
-  if (::stat(path.c_str(), &st) != 0) {
-    return false;
+double safe_asin_input(double value) {
+  if (value < -1.0) {
+    return -1.0;
   }
-  return S_ISREG(st.st_mode);
+  if (value > 1.0) {
+    return 1.0;
+  }
+  return value;
 }
 
-static bool is_directory_path(const std::string &path) {
-  struct stat st;
-  if (::stat(path.c_str(), &st) != 0) {
-    return false;
-  }
-  return S_ISDIR(st.st_mode);
+RecomputeRow make_failure_row(const QuarantinePointInput& in) {
+  const double beta = std::atan(in.tan_beta);
+  const double alpha = beta - std::asin(safe_asin_input(in.sin_ba));
+  const double nanv = qnan();
+  return RecomputeRow{
+      in.m_phi,
+      in.mA,
+      alpha,
+      beta,
+      in.lambda6,
+      in.lambda7,
+      nanv,
+      in.sin_ba,
+      in.tan_beta,
+      0,
+      0,
+      0,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      in.lam1,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv,
+      nanv};
 }
 
-static std::string join_path(const std::string &a, const std::string &b) {
-  if (a.empty()) {
-    return b;
-  }
-  if (a[a.size() - 1] == '/') {
-    return a + b;
-  }
-  return a + "/" + b;
-}
-
-static std::string absolute_path_string(const std::string &path) {
-  char *resolved = ::realpath(path.c_str(), NULL);
-  if (resolved == NULL) {
-    return path;
-  }
-  std::string out(resolved);
-  std::free(resolved);
+QuarantinePointInput parse_quarantine_row(
+    const std::unordered_map<std::string, std::string>& row,
+    std::size_t row_index) {
+  QuarantinePointInput out{};
+  out.point_id = has_key(row, "point_id") ? require_string(row, "point_id")
+                                           : ("row_" + std::to_string(row_index));
+  out.m_phi = require_double(row, "m_phi");
+  out.mA = require_double(row, "mA");
+  out.sin_ba = require_double(row, "sin_ba");
+  out.tan_beta = require_double(row, "tan_beta");
+  out.lambda6 = require_double(row, "lambda6");
+  out.lambda7 = require_double(row, "lambda7");
+  out.lam1 = require_double(row, "lam1");
   return out;
 }
 
-static bool is_candidate_scan_csv_path(const std::string &path) {
-  if (!is_regular_file_path(path)) {
+bool compute_quarantine_point(
+    const QuarantinePointInput& in,
+    int yukawas_type,
+    RecomputeRow& out_row,
+    bool& set_param_ok,
+    bool& triple_ok,
+    std::string& error_detail) {
+  out_row = make_failure_row(in);
+  set_param_ok = false;
+  triple_ok = false;
+  error_detail.clear();
+
+  try {
+    THDM model;
+    SM sm;
+    model.set_SM(sm);
+    model.set_yukawas_type(yukawas_type);
+
+    const bool ok = model.set_param_phys_lam1(
+        kMh, in.m_phi, in.mA, in.mA, in.sin_ba, in.lam1, in.lambda6, in.lambda7, in.tan_beta);
+    if (!ok) {
+      error_detail = "set_param_phys_lam1 returned false";
+      return false;
+    }
+    set_param_ok = true;
+//------------------------------
+    // double lam1_g = qnan();
+    // double lam2_g = qnan();
+    // double lam3_g = qnan();
+    // double lam4_g = qnan();
+    // double lam5_g = qnan();
+    // double lam6_g = qnan();
+    // double lam7_g = qnan();
+    // double m12_2_g = qnan();
+    // double tanb_g = qnan();
+    // model.get_param_gen(
+    //     lam1_g, lam2_g, lam3_g, lam4_g, lam5_g,
+    //     lam6_g, lam7_g, m12_2_g, tanb_g);
+
+    // Constraints check(model);
+    // const bool pos = check.check_positivity();
+    // const bool uni = check.check_unitarity();
+    // const bool pert = check.check_perturbativity();
+    // triple_ok = (pos && uni && pert);
+
+    // DecayTable tab(model);
+    // const double w_bb = tab.get_gamma_hdd(2, 3, 3);
+    // const double w_tautau = tab.get_gamma_hll(2, 3, 3);
+    // const double w_WW = tab.get_gamma_hvv(2, 3);
+    // const double w_ZZ = tab.get_gamma_hvv(2, 2);
+    // const double w_gaga = tab.get_gamma_hgaga(2);
+    // const double w_Zga = tab.get_gamma_hZga(2);
+    // const double w_gg = tab.get_gamma_hgg(2);
+    // const double w_hh = tab.get_gamma_hhh(2, 1, 1);
+    // const double w_tot = tab.get_gammatot_h(2);
+    // const double br_gaga = (w_tot > kWidthFloor) ? (w_gaga / w_tot) : qnan();
+// -----------------------------
+
+    double lam1_g = qnan();
+    double lam2_g = qnan();
+    double lam3_g = qnan();
+    double lam4_g = qnan();
+    double lam5_g = qnan();
+    double lam6_g = qnan();
+    double lam7_g = qnan();
+    double m12_2_g = qnan();
+    double tanb_g = qnan();
+    model.get_param_gen(
+        lam1_g, lam2_g, lam3_g, lam4_g, lam5_g,
+        lam6_g, lam7_g, m12_2_g, tanb_g);
+
+    const bool gen_ok =
+        std::isfinite(lam1_g) &&
+        std::isfinite(lam2_g) &&
+        std::isfinite(lam3_g) &&
+        std::isfinite(lam4_g) &&
+        std::isfinite(lam5_g) &&
+        std::isfinite(m12_2_g);
+
+    if (!gen_ok) {
+      error_detail = "non-finite values returned by get_param_gen";
+      return false;
+    }
+
+    Constraints check(model);
+    const bool pos = check.check_positivity();
+    const bool uni = check.check_unitarity();
+    const bool pert = check.check_perturbativity();
+    triple_ok = (pos && uni && pert);
+
+    DecayTable tab(model);
+    const double w_bb = tab.get_gamma_hdd(2, 3, 3);
+    const double w_tautau = tab.get_gamma_hll(2, 3, 3);
+    const double w_WW = tab.get_gamma_hvv(2, 3);
+    const double w_ZZ = tab.get_gamma_hvv(2, 2);
+    const double w_gaga = tab.get_gamma_hgaga(2);
+    const double w_Zga = tab.get_gamma_hZga(2);
+    const double w_gg = tab.get_gamma_hgg(2);
+    const double w_hh = tab.get_gamma_hhh(2, 1, 1);
+    const double w_tot = tab.get_gammatot_h(2);
+    double br_gaga = 0.0;
+    if (std::isfinite(w_tot) && w_tot > 0.0 && std::isfinite(w_gaga) && w_gaga >= 0.0) {
+        br_gaga = w_gaga / w_tot;
+    }
+
+    const bool widths_ok =
+        std::isfinite(w_bb) &&
+        std::isfinite(w_tautau) &&
+        std::isfinite(w_WW) &&
+        std::isfinite(w_ZZ) &&
+        std::isfinite(w_gaga) &&
+        std::isfinite(w_Zga) &&
+        std::isfinite(w_gg) &&
+        std::isfinite(w_hh) &&
+        std::isfinite(w_tot);
+
+    if (!widths_ok) {
+      error_detail = "non-finite decay widths produced during recomputation";
+      return false;
+    }
+
+
+
+
+// ----------- end corrected------------------
+    const double beta = std::atan(in.tan_beta);
+    const double alpha = beta - std::asin(safe_asin_input(in.sin_ba));
+
+    out_row = RecomputeRow{
+        in.m_phi,
+        in.mA,
+        alpha,
+        beta,
+        in.lambda6,
+        in.lambda7,
+        m12_2_g,
+        in.sin_ba,
+        in.tan_beta,
+        pos ? 1 : 0,
+        uni ? 1 : 0,
+        pert ? 1 : 0,
+        w_bb,
+        w_tautau,
+        w_WW,
+        w_ZZ,
+        w_gaga,
+        w_Zga,
+        w_gg,
+        w_hh,
+        w_tot,
+        br_gaga,
+        in.lam1,
+        lam1_g,
+        lam2_g,
+        lam2_g,
+        lam3_g,
+        lam4_g,
+        lam5_g};
+    return true;
+  } catch (const std::exception& ex) {
+    error_detail = ex.what();
+    return false;
+  } catch (...) {
+    error_detail = "unknown error during point recomputation";
     return false;
   }
-
-  const std::size_t slash = path.find_last_of('/');
-  const std::string filename =
-      (slash == std::string::npos) ? path : path.substr(slash + 1);
-
-  if (filename.size() < 4 || filename.substr(filename.size() - 4) != ".csv") {
-    return false;
-  }
-
-  return filename.find("scan_tb_") == 0;
 }
 
-static void discover_candidate_csvs_recursive(const std::string &root,
-                                              std::vector<std::string> &csvs) {
-  DIR *dir = ::opendir(root.c_str());
-  if (dir == NULL) {
-    return;
+int run_random_mode(const std::string& output_csv,
+                    std::size_t n_samples,
+                    unsigned long long seed) {
+  const std::size_t max_attempts = std::max<std::size_t>(n_samples * 200, 1000);
+
+  std::ofstream out(output_csv.c_str());
+  if (!out) {
+    std::cerr << "Failed to open output file: " << output_csv << "\n";
+    return 2;
   }
 
-  struct dirent *entry = NULL;
-  while ((entry = ::readdir(dir)) != NULL) {
-    const std::string name(entry->d_name);
-    if (name == "." || name == "..") {
+  write_random_header(out);
+
+  std::mt19937_64 rng(seed);
+  std::uniform_real_distribution<double> mh_dist(120.0, 130.0);
+  std::uniform_real_distribution<double> mH_dist(200.0, 600.0);
+  std::uniform_real_distribution<double> mA_dist(200.0, 700.0);
+  std::uniform_real_distribution<double> mHp_dist(200.0, 700.0);
+  std::uniform_real_distribution<double> sba_dist(-0.9999, 0.9999);
+  std::uniform_real_distribution<double> lambda6_dist(0.0, 1.0);
+  std::uniform_real_distribution<double> lambda7_dist(0.0, 1.0);
+  std::uniform_real_distribution<double> m12_dist(1.0, 500.0);
+  std::uniform_real_distribution<double> tan_beta_dist(100.0, 50000.0);
+
+  std::size_t accepted = 0;
+  std::size_t warnings = 0;
+  std::size_t attempts = 0;
+  double max_abs_error = 0.0;
+  Sample worst_sample{};
+
+  while (accepted < n_samples && attempts < max_attempts) {
+    ++attempts;
+
+    const double mh = mh_dist(rng);
+    const double mH = std::max(mH_dist(rng), mh + 1e-6);
+    const double mA = mA_dist(rng);
+    const double mHp = mHp_dist(rng);
+    const double sba = sba_dist(rng);
+    const double lambda6 = lambda6_dist(rng);
+    const double lambda7 = lambda7_dist(rng);
+    const double m12_2 = m12_dist(rng);
+    const double tan_beta = tan_beta_dist(rng);
+
+    THDM baseline;
+    if (!baseline.set_param_phys(mh, mH, mA, mHp, sba, lambda6, lambda7, m12_2, tan_beta)) {
       continue;
     }
 
-    const std::string full_path = join_path(root, name);
+    double lambda1 = 0.0;
+    double lambda2 = 0.0;
+    double lambda3 = 0.0;
+    double lambda4 = 0.0;
+    double lambda5 = 0.0;
+    double lambda6_rt = 0.0;
+    double lambda7_rt = 0.0;
+    double m12_rt = 0.0;
+    double tan_beta_rt = 0.0;
+    baseline.get_param_gen(lambda1, lambda2, lambda3, lambda4, lambda5,
+                           lambda6_rt, lambda7_rt, m12_rt, tan_beta_rt);
 
-    if (is_directory_path(full_path)) {
-      discover_candidate_csvs_recursive(full_path, csvs);
+    THDM probe;
+    if (!probe.set_param_phys_lam1(mh, mH, mA, mHp, sba, lambda1, lambda6, lambda7, tan_beta)) {
       continue;
     }
 
-    if (is_candidate_scan_csv_path(full_path)) {
-      csvs.push_back(absolute_path_string(full_path));
+    if (!probe.has_param_phys_lam1_validation()) {
+      std::cerr << "Missing validation state for accepted sample " << accepted << "\n";
+      return 3;
     }
+
+    double lambda1_input = 0.0;
+    double lambda1_recomputed = 0.0;
+    double abs_error = 0.0;
+    bool warning_flag = false;
+    probe.get_param_phys_lam1_validation(lambda1_input,
+                                         lambda1_recomputed,
+                                         abs_error,
+                                         warning_flag);
+
+    Sample sample{accepted, attempts - 1, mh, mH, mA, mHp, sba, lambda6,
+                  lambda7, m12_2, tan_beta, lambda1_input,
+                  lambda1_recomputed, abs_error, warning_flag};
+    write_random_sample(out, sample);
+
+    if (warning_flag) {
+      ++warnings;
+    }
+    if (abs_error > max_abs_error) {
+      max_abs_error = abs_error;
+      worst_sample = sample;
+    }
+
+    ++accepted;
   }
 
-  ::closedir(dir);
+  if (accepted != n_samples) {
+    std::cerr << "Failed to generate requested samples. accepted=" << accepted
+              << " requested=" << n_samples << " attempts=" << attempts << "\n";
+    return 4;
+  }
+
+  std::cout << std::setprecision(17)
+            << "Wrote " << accepted << " samples to " << output_csv << "\n"
+            << "Seed: " << seed << "\n"
+            << "Attempts: " << attempts << "\n"
+            << "Warnings: " << warnings << "\n"
+            << "Warning rate: "
+            << static_cast<double>(warnings) / static_cast<double>(accepted) << "\n"
+            << "Max abs error: " << max_abs_error << "\n"
+            << "Worst sample index: " << worst_sample.sample_index << "\n"
+            << "Worst lambda1 input: " << worst_sample.lambda1_input << "\n"
+            << "Worst lambda1 recomputed: " << worst_sample.lambda1_recomputed << "\n";
+
+  return 0;
 }
 
-std::vector<std::string> discover_candidate_csvs(const std::string &input_path) {
-  std::vector<std::string> csvs;
+int run_single_point_mode(double mh,
+                          double mH,
+                          double mA,
+                          double mHp,
+                          double sba,
+                          double lambda6,
+                          double lambda7,
+                          double lambda1_input,
+                          double tan_beta,
+                          int yukawas_type) {
+  THDM model;
+  SM sm;
+  model.set_SM(sm);
+  model.set_yukawas_type(yukawas_type);
 
-  if (!path_exists(input_path)) {
-    return csvs;
+  const bool ok = model.set_param_phys_lam1(
+      mh, mH, mA, mHp, sba, lambda1_input, lambda6, lambda7, tan_beta);
+  std::cout << std::setprecision(17);
+  std::cout << "set_param_ok=" << (ok ? 1 : 0) << "\n";
+  if (!ok) {
+    return 2;
   }
 
-  if (is_regular_file_path(input_path)) {
-    csvs.push_back(absolute_path_string(input_path));
-    return csvs;
-  }
+  Constraints check(model);
+  const bool pos = check.check_positivity();
+  const bool uni = check.check_unitarity();
+  const bool pert = check.check_perturbativity();
+  std::cout << "positivity_ok=" << (pos ? 1 : 0) << "\n";
+  std::cout << "unitarity_ok=" << (uni ? 1 : 0) << "\n";
+  std::cout << "perturbativity_ok=" << (pert ? 1 : 0) << "\n";
+  std::cout << "TRIPLE_OK_POINTS " << ((pos && uni && pert) ? 1 : 0) << "\n";
 
-  if (!is_directory_path(input_path)) {
-    return csvs;
-  }
+  double lam1_g = qnan();
+  double lam2_g = qnan();
+  double lam3_g = qnan();
+  double lam4_g = qnan();
+  double lam5_g = qnan();
+  double lam6_g = qnan();
+  double lam7_g = qnan();
+  double m12_2_g = qnan();
+  double tanb_g = qnan();
+  model.get_param_gen(lam1_g, lam2_g, lam3_g, lam4_g, lam5_g,
+                      lam6_g, lam7_g, m12_2_g, tanb_g);
+  std::cout << "m12=" << m12_2_g << "\n";
+  std::cout << "computed_lam1=" << lam1_g << "\n";
+  std::cout << "computed_lam2=" << lam2_g << "\n";
 
-  discover_candidate_csvs_recursive(input_path, csvs);
-  std::sort(csvs.begin(), csvs.end());
-  return csvs;
+  DecayTable table(model);
+  table.print_decays(2);
+  return 0;
 }
 
-bool load_eligible_rows_from_csv(const std::string &input_csv,
-                                 const std::string &mode,
-                                 std::vector<LakeRow> &eligible_rows,
-                                 FileLoadStats &stats) {
-  std::ifstream input(input_csv.c_str());
-  if (!input) {
+int run_quarantine_mode(const std::string& input_csv,
+                        const std::string& output_csv,
+                        int yukawas_type) {
+  std::ifstream in(input_csv.c_str());
+  if (!in) {
     std::cerr << "Failed to open input CSV: " << input_csv << "\n";
-    return false;
+    return 2;
+  }
+
+  std::ofstream out(output_csv.c_str());
+  if (!out) {
+    std::cerr << "Failed to open output CSV: " << output_csv << "\n";
+    return 3;
   }
 
   std::string header_line;
-  if (!std::getline(input, header_line)) {
+  if (!std::getline(in, header_line)) {
     std::cerr << "Input CSV is empty: " << input_csv << "\n";
-    return false;
+    return 4;
   }
 
-  const HeaderMap header_map = parse_header_map(header_line);
-  const std::vector<std::string> required_columns = {
-      "m_phi", "mA", "lambda6", "lambda7", "m12", "sin_ba", "tan_beta",
-      "positivity_ok", "unitarity_ok", "perturbativity_ok"};
-
-  for (std::size_t i = 0; i < required_columns.size(); ++i) {
-    const std::string &column = required_columns[i];
-    if (header_map.find(column) == header_map.end()) {
-      std::cerr << "Missing required column: " << column << " in " << input_csv << "\n";
-      return false;
-    }
-  }
-
+  const std::vector<std::string> header = split_csv_simple(header_line);
+  std::vector<QuarantinePointInput> inputs;
   std::string line;
-  std::size_t total_rows_parsed = 0;
-  std::size_t parseable_rows = 0;
-  std::size_t eligible_count = 0;
-
-  while (std::getline(input, line)) {
-    if (line.empty()) {
+  std::size_t row_index = 0;
+  while (std::getline(in, line)) {
+    const std::string trimmed = trim_copy(line);
+    if (trimmed.empty()) {
       continue;
     }
-
-    ++total_rows_parsed;
-    const std::vector<std::string> fields = split_csv_line(line);
-
-    LakeRow row{};
-    row.row_index = total_rows_parsed - 1;
-    row.source_csv = input_csv;
-
-    if (!parse_double_field(fields, header_map, "m_phi", row.m_phi) ||
-        !parse_double_field(fields, header_map, "mA", row.mA) ||
-        !parse_double_field(fields, header_map, "lambda6", row.lambda6) ||
-        !parse_double_field(fields, header_map, "lambda7", row.lambda7) ||
-        !parse_double_field(fields, header_map, "m12", row.m12) ||
-        !parse_double_field(fields, header_map, "sin_ba", row.sin_ba) ||
-        !parse_double_field(fields, header_map, "tan_beta", row.tan_beta) ||
-        !parse_flag_field(fields, header_map, "positivity_ok", row.positivity_ok) ||
-        !parse_flag_field(fields, header_map, "unitarity_ok", row.unitarity_ok) ||
-        !parse_flag_field(fields, header_map, "perturbativity_ok", row.perturbativity_ok)) {
-      continue;
-    }
-
-    ++parseable_rows;
-    if (row_passes_mode(row, mode)) {
-      eligible_rows.push_back(row);
-      ++eligible_count;
-    }
+    const std::vector<std::string> values = split_csv_simple(trimmed);
+    const std::unordered_map<std::string, std::string> row = make_row_map(header, values);
+    inputs.push_back(parse_quarantine_row(row, row_index));
+    ++row_index;
   }
 
-  stats.total_rows_parsed = total_rows_parsed;
-  stats.parseable_rows = parseable_rows;
-  stats.eligible_rows = eligible_count;
-  return true;
-}
-
-std::vector<std::size_t> allocate_quotas(const std::vector<std::size_t> &capacities,
-                                         std::size_t requested_total) {
-  const std::size_t n = capacities.size();
-  std::vector<std::size_t> quotas(n, 0);
-
-  if (n == 0 || requested_total == 0) {
-    return quotas;
+  if (inputs.empty()) {
+    std::cerr << "Input CSV contains 0 data rows: " << input_csv << "\n";
+    return 5;
   }
 
-  const std::size_t total_capacity =
-      std::accumulate(capacities.begin(), capacities.end(), static_cast<std::size_t>(0));
-  const std::size_t target_total = std::min(requested_total, total_capacity);
+  write_recompute_header(out);
 
-  const std::size_t base = target_total / n;
-  const std::size_t rem = target_total % n;
+  std::vector<std::string> serialized_rows(inputs.size());
+  std::vector<std::string> error_messages(inputs.size());
 
-  for (std::size_t i = 0; i < n; ++i) {
-    const std::size_t want = base + (i < rem ? 1 : 0);
-    quotas[i] = std::min(want, capacities[i]);
-  }
+  long long set_param_ok_count = 0;
+  long long set_param_fail_count = 0;
+  long long triple_ok_count = 0;
 
-  std::size_t assigned =
-      std::accumulate(quotas.begin(), quotas.end(), static_cast<std::size_t>(0));
-  std::size_t leftover = target_total - assigned;
-
-  while (leftover > 0) {
-    bool progress = false;
-    for (std::size_t i = 0; i < n && leftover > 0; ++i) {
-      if (quotas[i] < capacities[i]) {
-        ++quotas[i];
-        --leftover;
-        progress = true;
+#pragma omp parallel for schedule(dynamic) reduction(+:set_param_ok_count,set_param_fail_count,triple_ok_count)
+  for (long long i = 0; i < static_cast<long long>(inputs.size()); ++i) {
+    RecomputeRow row{};
+    bool set_param_ok = false;
+    bool triple_ok = false;
+    std::string error_detail;
+    const bool success = compute_quarantine_point(
+        inputs[static_cast<std::size_t>(i)], yukawas_type, row, set_param_ok, triple_ok, error_detail);
+    if (set_param_ok) {
+      ++set_param_ok_count;
+    } else {
+      ++set_param_fail_count;
+      if (!error_detail.empty()) {
+        error_messages[static_cast<std::size_t>(i)] =
+            "row=" + inputs[static_cast<std::size_t>(i)].point_id + " " + error_detail;
       }
     }
-    if (!progress) {
-      break;
+    if (triple_ok) {
+      ++triple_ok_count;
     }
+    serialized_rows[static_cast<std::size_t>(i)] = serialize_recompute_row(row);
+    (void)success;
   }
 
-  return quotas;
+  for (std::size_t i = 0; i < serialized_rows.size(); ++i) {
+    out << serialized_rows[i];
+  }
+  out.close();
+
+  // old warnings
+  // for (std::size_t i = 0; i < error_messages.size(); ++i) {
+  //   if (!error_messages[i].empty()) {
+  //     std::cerr << error_messages[i] << "\n";
+  //   }
+  // }
+  // better
+    std::size_t printed_errors = 0;
+  const std::size_t kMaxPrintedErrors = 20;
+
+  for (std::size_t i = 0; i < error_messages.size(); ++i) {
+    if (error_messages[i].empty()) {
+      continue;
+    }
+    if (printed_errors < kMaxPrintedErrors) {
+      std::cerr << error_messages[i] << "\n";
+    }
+    ++printed_errors;
+  }
+
+  if (printed_errors > kMaxPrintedErrors) {
+    std::cerr << "suppressed "
+              << (printed_errors - kMaxPrintedErrors)
+              << " additional row-level errors\n";
+  }
+
+
+  const long long total_rows = static_cast<long long>(inputs.size());
+  std::cout << std::setprecision(17)
+            << "Processed rows: " << total_rows << "\n"
+            << "Total Attempts: " << total_rows << "\n"
+            << "Total CSV Rows: " << total_rows << "\n"
+            << "set_param_phys_lam1 OK: " << set_param_ok_count << "\n"
+            << "set_param_phys_lam1 FAIL: " << set_param_fail_count << "\n"
+            << "TRIPLE_OK_POINTS " << triple_ok_count << "\n";
+  return 0;
+}
+
+void print_usage(const char* argv0) {
+  std::cout
+      << "Usage:\n"
+      << "  Legacy random mode (backward compatible):\n"
+      << "    " << argv0 << " output_csv [n_samples] [seed]\n\n"
+      << "  Explicit random mode:\n"
+      << "    " << argv0 << " random output_csv [n_samples] [seed]\n\n"
+      << "  Quarantine recompute mode:\n"
+      << "    " << argv0 << " quarantine input_points.csv output_scan.csv [yukawas_type]\n\n"
+      << "  Single-point debug mode:\n"
+      << "    " << argv0 << " single mh mH mA mHp sba lambda6 lambda7 lambda1 tan_beta [yukawas_type]\n";
 }
 
 }  // namespace
 
 int main(int argc, char *argv[]) {
-  if (argc < 3 || argc > 7) {
-    print_usage();
+  try {
+    // error 231
+    gsl_set_error_handler_off();
+    if (argc >= 2 && argc <= 4 &&
+        std::string(argv[1]) != "random" &&
+        std::string(argv[1]) != "quarantine" &&
+        std::string(argv[1]) != "single") {
+      const std::string output_csv = argv[1];
+      const std::size_t n_samples =
+          (argc >= 3) ? static_cast<std::size_t>(std::strtoull(argv[2], NULL, 10))
+                      : 5000;
+      const unsigned long long seed =
+          (argc >= 4) ? std::strtoull(argv[3], NULL, 10)
+                      : 123456ULL;
+      return run_random_mode(output_csv, n_samples, seed);
+    }
+
+    if (argc >= 2 && std::string(argv[1]) == "random") {
+      if (argc < 3 || argc > 5) {
+        print_usage(argv[0]);
+        return 1;
+      }
+      const std::string output_csv = argv[2];
+      const std::size_t n_samples =
+          (argc >= 4) ? static_cast<std::size_t>(std::strtoull(argv[3], NULL, 10))
+                      : 5000;
+      const unsigned long long seed =
+          (argc >= 5) ? std::strtoull(argv[4], NULL, 10)
+                      : 123456ULL;
+      return run_random_mode(output_csv, n_samples, seed);
+    }
+
+    if (argc >= 4 && std::string(argv[1]) == "quarantine") {
+      if (argc != 4 && argc != 5) {
+        print_usage(argv[0]);
+        return 1;
+      }
+      const int yukawas_type = (argc == 5) ? std::stoi(argv[4]) : kDefaultYukawasType;
+      return run_quarantine_mode(argv[2], argv[3], yukawas_type);
+    }
+
+    if (argc >= 11 && std::string(argv[1]) == "single") {
+      if (argc != 11 && argc != 12) {
+        print_usage(argv[0]);
+        return 1;
+      }
+      const double mh = std::stod(argv[2]);
+      const double mH = std::stod(argv[3]);
+      const double mA = std::stod(argv[4]);
+      const double mHp = std::stod(argv[5]);
+      const double sba = std::stod(argv[6]);
+      const double lambda6 = std::stod(argv[7]);
+      const double lambda7 = std::stod(argv[8]);
+      const double lambda1_input = std::stod(argv[9]);
+      const double tan_beta = std::stod(argv[10]);
+      const int yukawas_type = (argc == 12) ? std::stoi(argv[11]) : kDefaultYukawasType;
+      return run_single_point_mode(
+          mh, mH, mA, mHp, sba, lambda6, lambda7, lambda1_input, tan_beta, yukawas_type);
+    }
+
+    print_usage(argv[0]);
     return 1;
+  } catch (const std::exception& ex) {
+    std::cerr << "Fatal error: " << ex.what() << "\n";
+    return 10;
+  } catch (...) {
+    std::cerr << "Fatal unknown error\n";
+    return 11;
   }
-
-  const std::string input_path = argv[1];
-  const std::string output_csv = argv[2];
-  const std::size_t requested_samples =
-      (argc >= 4) ? static_cast<std::size_t>(std::strtoull(argv[3], NULL, 10)) : 5000;
-  const unsigned long long seed =
-      (argc >= 5) ? std::strtoull(argv[4], NULL, 10) : 123456ULL;
-  const std::string raw_mode = (argc >= 6) ? argv[5] : "triple_ok";
-  const std::string mode = normalize_mode(raw_mode);
-  const std::size_t requested_input_files =
-      (argc >= 7) ? static_cast<std::size_t>(std::strtoull(argv[6], NULL, 10)) : 5;
-
-  if (!valid_mode(raw_mode)) {
-    std::cerr << "Unknown mode: " << raw_mode << "\n";
-    print_usage();
-    return 2;
-  }
-
-  std::vector<std::string> candidate_csvs = discover_candidate_csvs(input_path);
-  if (candidate_csvs.empty()) {
-    std::cerr << "No input CSVs found under: " << input_path << "\n";
-    return 3;
-  }
-
-  std::mt19937_64 rng(seed);
-  std::shuffle(candidate_csvs.begin(), candidate_csvs.end(), rng);
-
-  const bool input_is_directory = is_directory_path(input_path);
-  const std::size_t selected_file_count =
-      input_is_directory ? std::min(requested_input_files, candidate_csvs.size()) : 1;
-
-  candidate_csvs.resize(selected_file_count);
-
-  std::vector<std::vector<LakeRow> > eligible_rows_by_file(candidate_csvs.size());
-  std::vector<FileLoadStats> stats_by_file(candidate_csvs.size());
-
-  std::size_t total_rows_parsed = 0;
-  std::size_t total_parseable_rows = 0;
-  std::size_t total_eligible_rows = 0;
-
-  for (std::size_t i = 0; i < candidate_csvs.size(); ++i) {
-    if (!load_eligible_rows_from_csv(candidate_csvs[i], mode, eligible_rows_by_file[i], stats_by_file[i])) {
-      return 4;
-    }
-
-    total_rows_parsed += stats_by_file[i].total_rows_parsed;
-    total_parseable_rows += stats_by_file[i].parseable_rows;
-    total_eligible_rows += stats_by_file[i].eligible_rows;
-  }
-
-  if (total_eligible_rows == 0) {
-    std::cerr << "No eligible rows found for mode " << mode << " in selected inputs.\n";
-    return 5;
-  }
-
-  std::vector<std::size_t> capacities;
-  capacities.reserve(eligible_rows_by_file.size());
-  for (std::size_t i = 0; i < eligible_rows_by_file.size(); ++i) {
-    capacities.push_back(eligible_rows_by_file[i].size());
-  }
-
-  const std::vector<std::size_t> quotas = allocate_quotas(capacities, requested_samples);
-  const std::size_t actual_samples =
-      std::accumulate(quotas.begin(), quotas.end(), static_cast<std::size_t>(0));
-
-  std::ofstream output(output_csv.c_str());
-  if (!output) {
-    std::cerr << "Failed to open output CSV: " << output_csv << "\n";
-    return 6;
-  }
-  write_header(output);
-
-  const double nan = std::numeric_limits<double>::quiet_NaN();
-  std::size_t baseline_failures = 0;
-  std::size_t probe_failures = 0;
-  std::size_t warning_abs_count = 0;
-  std::size_t warning_rel_count = 0;
-  std::size_t warning_scaled_count = 0;
-  std::size_t exact_equal_count = 0;
-  std::size_t compared_rows = 0;
-  double max_abs_error = 0.0;
-  double max_rel_error = 0.0;
-  double max_scaled_error = 0.0;
-  std::uint64_t max_ulp_diff = 0;
-  std::size_t global_sample_index = 0;
-
-  for (std::size_t file_index = 0; file_index < candidate_csvs.size(); ++file_index) {
-    std::vector<LakeRow> &rows = eligible_rows_by_file[file_index];
-    std::shuffle(rows.begin(), rows.end(), rng);
-
-    if (quotas[file_index] < rows.size()) {
-      rows.resize(quotas[file_index]);
-    }
-
-    for (std::size_t row_i = 0; row_i < rows.size(); ++row_i) {
-      const LakeRow &row = rows[row_i];
-
-      OutputRow out_row{global_sample_index, row.row_index, row.source_csv,
-                        row.m_phi, row.mA, row.mA, row.sin_ba,
-                        row.lambda6, row.lambda7, row.m12, row.tan_beta,
-                        nan, nan, nan, nan, nan,
-                        false, 0,
-                        false, false, false, false, false, false, mode};
-
-      THDM baseline;
-      if (!baseline.set_param_phys(125.0, row.m_phi, row.mA, row.mA,
-                                   row.sin_ba, row.lambda6, row.lambda7,
-                                   row.m12, row.tan_beta)) {
-        ++baseline_failures;
-        write_output_row(output, out_row);
-        ++global_sample_index;
-        continue;
-      }
-      baseline.set_yukawas_type(1);
-      out_row.baseline_ok = true;
-
-      double lambda1_truth = 0.0;
-      double lambda2_truth = 0.0;
-      double lambda3_truth = 0.0;
-      double lambda4_truth = 0.0;
-      double lambda5_truth = 0.0;
-      double lambda6_truth = 0.0;
-      double lambda7_truth = 0.0;
-      double m12_truth = 0.0;
-      double tan_beta_truth = 0.0;
-      baseline.get_param_gen(lambda1_truth, lambda2_truth, lambda3_truth, lambda4_truth,
-                             lambda5_truth, lambda6_truth, lambda7_truth, m12_truth,
-                             tan_beta_truth);
-
-      THDM probe;
-      if (!probe.set_param_phys_lam1(125.0, row.m_phi, row.mA, row.mA,
-                                     row.sin_ba, lambda1_truth,
-                                     row.lambda6, row.lambda7, row.tan_beta)) {
-        ++probe_failures;
-        out_row.lambda1_input = lambda1_truth;
-        write_output_row(output, out_row);
-        ++global_sample_index;
-        continue;
-      }
-      probe.set_yukawas_type(1);
-      out_row.probe_ok = true;
-
-      if (!probe.has_param_phys_lam1_validation()) {
-        ++probe_failures;
-        out_row.lambda1_input = lambda1_truth;
-        out_row.probe_ok = false;
-        write_output_row(output, out_row);
-        ++global_sample_index;
-        continue;
-      }
-
-      probe.get_param_phys_lam1_validation(out_row.lambda1_input,
-                                           out_row.lambda1_recomputed,
-                                           out_row.abs_error,
-                                           out_row.warning_internal);
-
-      ++compared_rows;
-      out_row.exact_equal = (out_row.lambda1_input == out_row.lambda1_recomputed);
-      out_row.ulp_diff = ulp_distance(out_row.lambda1_input, out_row.lambda1_recomputed);
-
-      if (out_row.exact_equal) {
-        ++exact_equal_count;
-      }
-
-      out_row.rel_error =
-          out_row.abs_error / std::max(std::abs(out_row.lambda1_input), 1.0);
-      out_row.scaled_error =
-          out_row.abs_error /
-          std::max(std::max(std::abs(out_row.lambda1_input),
-                            std::abs(out_row.lambda1_recomputed)),
-                   1.0);
-
-      out_row.warning_abs = out_row.abs_error > 1e-12;
-      out_row.warning_rel = out_row.rel_error > 1e-12;
-      out_row.warning_scaled = out_row.scaled_error > 1e-12;
-
-      if (out_row.warning_abs) {
-        ++warning_abs_count;
-      }
-      if (out_row.warning_rel) {
-        ++warning_rel_count;
-      }
-      if (out_row.warning_scaled) {
-        ++warning_scaled_count;
-      }
-
-      max_abs_error = std::max(max_abs_error, out_row.abs_error);
-      max_rel_error = std::max(max_rel_error, out_row.rel_error);
-      max_scaled_error = std::max(max_scaled_error, out_row.scaled_error);
-      max_ulp_diff = std::max(max_ulp_diff, out_row.ulp_diff);
-
-      write_output_row(output, out_row);
-      ++global_sample_index;
-    }
-  }
-
-  const double exact_equal_fraction =
-      (compared_rows > 0)
-          ? static_cast<double>(exact_equal_count) / static_cast<double>(compared_rows)
-          : 0.0;
-
-  std::cout << "Selected input CSV files (" << candidate_csvs.size() << "):\n";
-  for (std::size_t i = 0; i < candidate_csvs.size(); ++i) {
-    std::cout << "  [" << i << "] " << candidate_csvs[i]
-              << " | eligible_rows=" << stats_by_file[i].eligible_rows
-              << " | sampled=" << quotas[i] << "\n";
-  }
-
-  std::cout << std::scientific << std::setprecision(17)
-            << "Input rows parsed: " << total_rows_parsed << "\n"
-            << "Parseable rows: " << total_parseable_rows << "\n"
-            << "Eligible rows after filtering: " << total_eligible_rows << "\n"
-            << "Requested samples: " << requested_samples << "\n"
-            << "Actual samples written: " << actual_samples << "\n"
-            << "Baseline failures: " << baseline_failures << "\n"
-            << "Probe failures: " << probe_failures << "\n"
-            << "Max absolute error: " << max_abs_error << "\n"
-            << "Max relative error: " << max_rel_error << "\n"
-            << "Max scaled error: " << max_scaled_error << "\n"
-            << "Max ULP diff: " << max_ulp_diff << "\n"
-            << "Exact-equal rows: " << exact_equal_count << "\n"
-            << "Exact-equal fraction: " << exact_equal_fraction << "\n"
-            << "Warning rate abs: "
-            << (actual_samples > 0 ? static_cast<double>(warning_abs_count) /
-                                         static_cast<double>(actual_samples)
-                                   : 0.0)
-            << "\n"
-            << "Warning rate rel: "
-            << (actual_samples > 0 ? static_cast<double>(warning_rel_count) /
-                                         static_cast<double>(actual_samples)
-                                   : 0.0)
-            << "\n"
-            << "Warning rate scaled: "
-            << (actual_samples > 0 ? static_cast<double>(warning_scaled_count) /
-                                         static_cast<double>(actual_samples)
-                                   : 0.0)
-            << "\n"
-            << "Selected mode: " << mode << "\n"
-            << "Seed: " << seed << "\n"
-            << "Output CSV: " << output_csv << "\n";
-
-  if (max_ulp_diff == 0) {
-    std::cout << "ULP interpretation: all compared lambda1 values were bitwise identical in this sampled set.\n";
-  } else {
-    std::cout << "ULP interpretation: nonzero ULP differences were observed in this sampled set.\n";
-  }
-
-  return 0;
 }
