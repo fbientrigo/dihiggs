@@ -891,7 +891,7 @@ class THDM {
 	*  Minimum value used for widths, branching ratios etc. to determine when
 	*  something should be considered zero.
 	*/
-  constexpr static double EPS = 1E-12;
+  constexpr static double EPS = 1E-9;
 
  private:
   double      lambda[8];
