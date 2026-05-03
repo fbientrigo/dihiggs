@@ -2,7 +2,8 @@
 
 # Choose your C++ compiler here (in general g++ on Linux systems):
 CC = g++
-LDFLAGS=-lgsl -lgslcblas
+LDFLAGS=-fopenmp -lgsl -lgslcblas
+
 
 #Optimisation level, eg: -O3
 OPT=-O3
@@ -11,7 +12,7 @@ DEBUG=
 
 VPATH=src
 
-CFLAGS= -std=c++11 -Wall $(DEBUG) $(OPT)
+CFLAGS= -std=c++11 -Wall $(DEBUG) $(OPT) -fopenmp
 
 OBJDIR=lib
 LIBDIR=$(OBJDIR)
@@ -21,7 +22,7 @@ LIB=lib2HDMC.a
 LDFLAGS+=-L$(LIBDIR) -l2HDMC -lgsl -lgslcblas -lm
 #LDFLAGS+=-L$(LIBDIR) -l2HDMC
 LIBS=
-PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo
+PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo CalcRoundTrip CalcLam1Scan CalcLam1ScanFromLake
 INCLUDE=
 
 # To use HiggsBounds/HiggsSignals for Higgs constraints, set both of the

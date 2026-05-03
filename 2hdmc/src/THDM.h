@@ -183,8 +183,40 @@ class THDM {
   * @returns Boolean \a true if all parameters were set correctly, \a false otherwise
   */
   bool set_param_phys(double m_h,double m_H, double m_A, double m_Hp,
-                      double sba, double lambda6, double lambda7,
-                      double m12_2, double tan_beta);
+                       double sba, double lambda6, double lambda7,
+                       double m12_2, double tan_beta);
+
+  /**
+   * @brief Specifies 2HDM in the physical basis with λ1 input
+   *
+   * This method lets the user specify the 2HDM using the basis of physical
+   * Higgs masses. Unlike set_param_phys, this method takes λ1 as input instead
+   * of m12². The soft Z₂-breaking parameter m12² is reconstructed from the
+   * other parameters and the supplied λ1 value.
+   *
+   * @param m_h  Mass of lightest CP-even Higgs \f$ h \f$
+   * @param m_H  Mass of heavier CP-even Higgs \f$ H \f$
+   * @param m_A  Mass of CP-odd Higgs \f$ A \f$
+   * @param m_Hp Mass of charged Higgs
+   * @param sba  Mixing parameter \f$ \sin(\beta-\alpha) \f$. NB: Correct sign on \f$ \sin(\beta-\alpha) \f$ must be determined from the condition \f$ \cos(\beta-\alpha) \geq 0 \f$
+   * @param lambda1  Value of \f$ \lambda_1 \f$ in generic potential
+   * @param lambda6  Value of \f$ \lambda_6 \f$ in generic potential
+   * @param lambda7  Value of \f$ \lambda_7 \f$ in generic potential
+   * @param tan_beta Ratio of vevs, \f$ \tan\beta=v_2/v_1 \f$
+   *
+   * @returns Boolean \a true if all parameters were set correctly, \a false otherwise
+   */
+  bool set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
+                           double sba, double lambda1,
+                           double lambda6, double lambda7,
+                           double tan_beta);
+
+  bool has_param_phys_lam1_validation() const;
+
+  void get_param_phys_lam1_validation(double &lambda1_input,
+                                      double &lambda1_recomputed,
+                                      double &abs_error,
+                                      bool &warning_flag) const;
 
   bool set_param_sm(double mh);
 
@@ -868,6 +900,11 @@ class THDM {
   double      sinba;
   bool        params_set;
   double      v2;
+  bool        lam1_validation_available;
+  double      lam1_validation_input;
+  double      lam1_validation_recomputed;
+  double      lam1_validation_abs_error;
+  bool        lam1_validation_warning;
   gsl_matrix *kappa_D;
   gsl_matrix *kappa_U;
   gsl_matrix *kappa_L;
@@ -883,6 +920,7 @@ class THDM {
   SM sm;
 
   void init();
+  void clear_param_phys_lam1_validation();
   double get_m12_2();
   void set_kappa();
   void set_kappa_D();

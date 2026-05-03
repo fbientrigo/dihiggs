@@ -1,0 +1,40 @@
+{
+  "config": {
+    "lake_root": "/mnt/c/Users/Asus/cern_db/dihiggs_lake",
+    "binary": "/home/fabi/wt_dihiggs_exploratory/2hdmc/CalcLam1ScanFromLake",
+    "mode": "triple_ok",
+    "n_campaigns": 3,
+    "n_files_per_campaign": 1,
+    "samples_per_file": 500,
+    "seed": 123456,
+    "campaign_regex": "",
+    "require_header_match": true,
+    "max_files_scan": 5000
+  },
+  "selected": [
+    {
+      "path": "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=physdisc_zoom_tb6p3e6_l60p00082/fixed_sinba=1p0000_l6=0p0008_l7=0p0000_mA=300p0/physdisc_zoom_tb6p3e6_l60p00082_iter0001_bin095/tb_6300000/scan_tb_6300000.csv",
+      "campaign": "campaign=physdisc_zoom_tb6p3e6_l60p00082",
+      "size_bytes": 1417573,
+      "mtime": 1774893420.6098344,
+      "header_match": true,
+      "scan_tb_like": true
+    },
+    {
+      "path": "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=physdisc_nb_tb6p3e6_l60p00082/fixed_sinba=1p0000_l6=0p0008_l7=0p0000_mA=300p0/physdisc_nb_tb6p3e6_l60p00082_iter0001_bin127/tb_6300000/scan_tb_6300000.csv",
+      "campaign": "campaign=physdisc_nb_tb6p3e6_l60p00082",
+      "size_bytes": 762253,
+      "mtime": 1774836771.4202218,
+      "header_match": true,
+      "scan_tb_like": true
+    },
+    {
+      "path": "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=physdisc_nb_tb4p4e6_l60p00115/fixed_sinba=1p0000_l6=0p0011_l7=0p0000_mA=300p0/physdisc_nb_tb4p4e6_l60p00115_iter0002_bin125/tb_4400000/scan_tb_4400000.csv",
+      "campaign": "campaign=physdisc_nb_tb4p4e6_l60p00115",
+      "size_bytes": 4712253,
+      "mtime": 1774829672.7023177,
+      "header_match": true,
+      "scan_tb_like": true
+    }
+  ]
+}

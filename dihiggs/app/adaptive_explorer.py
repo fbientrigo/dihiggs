@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import subprocess
@@ -9,11 +10,51 @@ import sys
 from dataclasses import dataclass
 from collections.abc import Iterable
 from pathlib import Path
+
 from types import ModuleType
 from typing import Protocol, TypeAlias, cast
 
+import time
+import logging
+
+# Configuración modular del logger para consola
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] AdaptiveExplorer: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
 JSONPrimitive: TypeAlias = None | bool | int | float | str
 JSONValue: TypeAlias = JSONPrimitive | list["JSONValue"] | dict[str, "JSONValue"]
+
+DEFAULT_DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+PROJECT_CONFIG_FILE = "project_config.json"
+
+
+def _load_data_lake_defaults(default_data_lake_dir: str = DEFAULT_DATA_LAKE_DIR) -> tuple[str, str]:
+    this_file = Path(__file__).resolve()
+    cfg_path = next(
+        (parent / PROJECT_CONFIG_FILE for parent in [this_file.parent, *this_file.parents] if (parent / PROJECT_CONFIG_FILE).exists()),
+        None,
+    )
+    if cfg_path is None:
+        path = Path(default_data_lake_dir)
+        return str(path.parent), path.name
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+        configured = payload.get("data_lake_dir") if isinstance(payload, dict) else None
+        if isinstance(configured, str) and configured.strip():
+            path = Path(configured)
+            return str(path.parent), path.name
+    except Exception:
+        pass
+    path = Path(default_data_lake_dir)
+    return str(path.parent), path.name
+
+
+DEFAULT_CERNBOX_OUTDIR, DEFAULT_LAKE_DIRNAME = _load_data_lake_defaults()
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -130,6 +171,9 @@ def _build_orchestrator_command(
     run_name: str,
     n_lam1_map: str | None = None,
 ) -> list[str]:
+    """
+    Compila las instrucciones para ejecutar el orquestador con los parámetros dados. Si n_lam1_map es proporcionado, se incluye en los argumentos.
+    """
     cmd: list[str] = [
         sys.executable,
         str(_orchestrator_path()),
@@ -162,6 +206,7 @@ def _build_orchestrator_command(
 
 
 def _run_orchestrator(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Ejecuta el comando dado para el orquestador y devuelve el resultado. No lanza excepciones por códigos de retorno no cero, sino que captura toda la salida y el código de retorno en el objeto resultante."""
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
@@ -226,6 +271,9 @@ def _do_replay(checkpoint_dir: Path, *, list_commands: bool) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """
+    Establece los argumentos de línea de comandos para el explorador adaptativo. Permite configurar los rangos y presupuestos para lam1, así como los parámetros de ejecución del orquestador. También incluye opciones para reproducir comandos desde un checkpoint existente.
+    """
     p = argparse.ArgumentParser(description="Adaptive lam1 explorer (CLI wrapper over orchestrate_scans.py)")
 
     _ = p.add_argument("--lam1-min", type=float, required=False, default=0.0)
@@ -239,8 +287,8 @@ def build_parser() -> argparse.ArgumentParser:
     _ = p.add_argument("--checkpoint-root", type=str, required=False, default=None)
 
     _ = p.add_argument("--exec", dest="exec_path", type=str, required=False, default="./PhysScanWithFixings")
-    _ = p.add_argument("--outdir", type=str, required=False, default="/mnt/c/Users/Asus/cern_db")
-    _ = p.add_argument("--lake-name", type=str, required=False, default="dihiggs_lake")
+    _ = p.add_argument("--outdir", type=str, required=False, default=DEFAULT_CERNBOX_OUTDIR)
+    _ = p.add_argument("--lake-name", type=str, required=False, default=DEFAULT_LAKE_DIRNAME)
     _ = p.add_argument("--campaign", type=str, required=False, default="scan")
     _ = p.add_argument("--threads", type=int, required=False, default=None)
     _ = p.add_argument("--run-name-prefix", type=str, required=False, default="adaptive")
@@ -277,7 +325,10 @@ class Args(Protocol):
 
 
 def main() -> int:
-    args = cast(Args, cast(object, build_parser().parse_args()))
+    # 1. Parsea los argumentos conocidos y guarda el resto en 'extra_args'
+    parser = build_parser()
+    parsed_args, extra_args = parser.parse_known_args()
+    args = cast(Args, cast(object, parsed_args))
 
     if args.replay:
         return _do_replay(Path(args.replay), list_commands=bool(args.list_commands))
@@ -297,6 +348,9 @@ def main() -> int:
 
     checkpoint_root = Path(args.checkpoint_root)
     checkpoint_root.mkdir(parents=True, exist_ok=True)
+
+    logger.info(f"🚀 Iniciando Exploración Adaptativa: {args.n_iters} iteraciones programadas.")
+    global_t0 = time.perf_counter() # <-- Inicia cronómetro global
 
     ocfg = OrchestratorConfig(
         exec_path=str(args.exec_path),
@@ -385,7 +439,6 @@ def main() -> int:
                         parts.append(f"{tb_tag}:{n_for_tb}")
                     n_lam1_map = ",".join(parts)
                     n_lam1 = max(1, int(args.floor_points))
-
             cmd = _build_orchestrator_command(
                 ocfg=ocfg,
                 lam1_min=lam1_lo,
@@ -394,6 +447,10 @@ def main() -> int:
                 run_name=run_name,
                 n_lam1_map=n_lam1_map,
             )
+            
+            # 2. Inyectar cualquier argumento físico adicional (ej. --tanbeta)
+            cmd.extend(extra_args)
+            
             commands.append(cmd)
 
             proposals.append(
@@ -404,7 +461,16 @@ def main() -> int:
                 }
             )
 
+            #-- logging --
+            logger.info(f"⏳ Iteración {iter_index_1based}/{args.n_iters} | Bin: {bid} | Presupuesto: {n_lam1} pts...")
+            
+            t0 = time.perf_counter()
             result = _run_orchestrator(cmd)
+            elapsed = time.perf_counter() - t0
+            
+            logger.info(f"✅ {bid} finalizado en {elapsed:.2f}s (RC: {result.returncode})")
+            #--
+
             run_dir = adaptive_artifacts.parse_run_dir_from_orchestrator_output(
                 (result.stdout or "") + "\n" + (result.stderr or "")
             )
@@ -416,6 +482,7 @@ def main() -> int:
                 "status": "DONE",
                 "command": shlex.join(cmd),
                 "returncode": int(result.returncode),
+                "elapsed_sec": float(elapsed),  # logging del tiempo de ejecución del orquestador para este bin
                 "run_name": run_name,
                 "bin_id": bid,
                 "bin_index": bidx,
@@ -506,6 +573,9 @@ def main() -> int:
             commands=commands,
         )
 
+    global_elapsed = time.perf_counter() - global_t0
+    logger.info(f"🎉 Exploración adaptativa completa. Tiempo total: {global_elapsed / 60:.2f} minutos.")
+    
     return 0
 
 

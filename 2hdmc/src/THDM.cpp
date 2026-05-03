@@ -7,9 +7,9 @@
 
 #include "THDM.h"
 #include "DecayTable.h"
-#include "Constraints.h"
 #include "HBHS.h"
 #include "Util.h"
+#include "Constraints.h"
 #include <string>
 #include <algorithm>
 #include <iostream>
@@ -193,6 +193,7 @@ void THDM::init() {
 
   params_set = false;
   yukawas_type = -1;
+  clear_param_phys_lam1_validation();
 
   v2 = sm.get_v2();
 
@@ -220,10 +221,20 @@ void THDM::init() {
   gsl_matrix_set_zero(rho_N);
 }
 
+void THDM::clear_param_phys_lam1_validation() {
+  lam1_validation_available = false;
+  lam1_validation_input = 0.;
+  lam1_validation_recomputed = 0.;
+  lam1_validation_abs_error = 0.;
+  lam1_validation_warning = false;
+}
+
 
 bool THDM::set_param_gen(double lambda1, double lambda2, double lambda3,
 			 double lambda4, double lambda5, double lambda6,
 			 double lambda7, double m12_2, double tan_beta) {
+
+  clear_param_phys_lam1_validation();
 
   // tan(beta) must be greater than 0 for valid basis
   if (tan_beta<=0) {
@@ -307,6 +318,8 @@ bool THDM::set_param_phys(double m_h,double m_H, double m_A, double m_Hp,
 			  double sba, double lambda6, double lambda7,
 			  double m12_2,double tan_beta) {
 
+  clear_param_phys_lam1_validation();
+
   if (m_h>m_H) {
     cerr << "WARNING: Cannot set physical masses such that m_H < m_h\n";
     params_set = false;
@@ -352,10 +365,82 @@ bool THDM::set_param_phys(double m_h,double m_H, double m_A, double m_Hp,
 }
 
 
+bool THDM::set_param_phys_lam1(double m_h,double m_H, double m_A, double m_Hp,
+			       double sba, double lambda1,
+			       double lambda6, double lambda7,
+			       double tan_beta) {
+
+  clear_param_phys_lam1_validation();
+
+  if (m_h>m_H) {
+    cerr << "WARNING: Cannot set physical masses such that m_H < m_h\n";
+    params_set = false;
+    return params_set;
+  }
+
+  // Problematic parameter choices
+  if ((tan_beta<=0)||(abs(sba)>1)||(m_h<0)||(m_H<0)||(m_A<0)||(m_Hp<0)) {
+    params_set=false;
+    return params_set;
+  }
+
+
+  // old comparison, provided error with 1 order of magnitude worse
+  // quickness was marginal, so I prefer the more stable version below
+  // double beta_loc = atan(tan_beta);
+  // double cb = 1./sqrt(1.+tan_beta*tan_beta);
+  // double cb2 = cb*cb;
+  // double sb = tan_beta/sqrt(1.+tan_beta*tan_beta);
+  // double tb = tan_beta;
+  // double cba = sqrt(1.-sba*sba);
+  // // double alpha_loc = -asin(sba)+beta_loc;
+  // double sa  = sb * cba - cb * sba;
+  // double sa2 = sa*sa;
+  // double ca  = cb * cba + sb * sba;
+  // double ca2 = ca*ca;
+
+  double beta_loc = atan(tan_beta);
+  double cb = cos(beta_loc);
+  double cb2 = cb*cb;
+  double tb = tan(beta_loc);
+
+  double alpha_loc = -asin(sba)+beta_loc;
+  double sa  = sin(alpha_loc);
+  double sa2 = sa*sa;
+  double ca  = cos(alpha_loc);
+  double ca2 = ca*ca;
+
+  // Reconstruct m12_2 from lambda1 by inverting the set_param_phys formula
+  double m12_2 = (m_H*m_H*ca2+m_h*m_h*sa2
+                 - v2*cb2*(lambda1+1.5*lambda6*tb-0.5*lambda7*tb*tb*tb))/tb;
+
+  const bool ok = set_param_phys(m_h,m_H,m_A,m_Hp,sba,lambda6,lambda7,m12_2,tan_beta);
+  if (!ok) {
+    return false;
+  }
+
+  double lambda1_rt,lambda2_rt,lambda3_rt,lambda4_rt,lambda5_rt,lambda6_rt,lambda7_rt,m12_rt,tanb_rt;
+  get_param_gen(lambda1_rt,lambda2_rt,lambda3_rt,lambda4_rt,lambda5_rt,lambda6_rt,lambda7_rt,m12_rt,tanb_rt);
+
+  lam1_validation_available = true;
+  lam1_validation_input = lambda1;
+  lam1_validation_recomputed = lambda1_rt;
+  lam1_validation_abs_error = abs(lambda1_rt-lambda1);
+  lam1_validation_warning = (lam1_validation_abs_error > THDM::EPS);
+
+  if (lam1_validation_warning) {
+    cerr << "WARNING: set_param_phys_lam1 lambda_1 round-trip abs error = "
+         << lam1_validation_abs_error << " exceeds threshold " << THDM::EPS << "\n";
+  }
+
+  return true;
+}
+
+
 bool THDM::set_param_higgs(double Lambda1, double Lambda2, double Lambda3,
 			   double Lambda4, double Lambda5, double Lambda6,
 			   double Lambda7, double m_Hp) {
-
+  clear_param_phys_lam1_validation();
   if (m_Hp<0) {
     params_set = false;
     return params_set;
@@ -2656,6 +2741,20 @@ void THDM::print_param_phys() {
   printf("tan(beta): %12.5f\n",tan_beta);
 }
 
+bool THDM::has_param_phys_lam1_validation() const {
+  return lam1_validation_available;
+}
+
+void THDM::get_param_phys_lam1_validation(double &lambda1_input,
+                                          double &lambda1_recomputed,
+                                          double &abs_error,
+                                          bool &warning_flag) const {
+  lambda1_input = lam1_validation_input;
+  lambda1_recomputed = lam1_validation_recomputed;
+  abs_error = lam1_validation_abs_error;
+  warning_flag = lam1_validation_warning;
+}
+
 void THDM::print_param_higgs() {
   double Lambda1,Lambda2,Lambda3,Lambda4,Lambda5,Lambda6,Lambda7,mHp;
   get_param_higgs(Lambda1,Lambda2,Lambda3,Lambda4,Lambda5,Lambda6,Lambda7,mHp);
@@ -2699,6 +2798,7 @@ SM THDM::get_SM() {
 
 
 void THDM::set_SM(SM sm_in) {
+  clear_param_phys_lam1_validation();
   sm=sm_in;
   v2 = sm.get_v2();
 
