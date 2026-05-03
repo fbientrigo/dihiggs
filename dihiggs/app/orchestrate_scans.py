@@ -10,7 +10,7 @@ This script is designed to be:
   and scan-grid settings (including ranges and point counts).
 
 Folder layout (default):
-    /mnt/c/Users/Asus/cern_db/dihiggs_lake/
+    <data_lake_dir from project_config.json>/
         campaign=<campaign>/
             fixed_sinba=<...>_l6=<...>_l7=<...>_mA=<...>/
                 run_<run_id>_host=<host>_git=<sha>/
@@ -71,8 +71,32 @@ from typing import Any, Dict, List, Optional, Tuple
 # -----------------------------------------------------------------------------
 # Defaults (safe + convenient for WSL + CERNBox Desktop on Windows)
 # -----------------------------------------------------------------------------
-DEFAULT_CERNBOX_OUTDIR = "/mnt/c/Users/Asus/cern_db"
-DEFAULT_LAKE_DIRNAME = "dihiggs_lake"
+DEFAULT_DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+PROJECT_CONFIG_FILE = "project_config.json"
+
+
+def _load_data_lake_defaults(default_data_lake_dir: str = DEFAULT_DATA_LAKE_DIR) -> tuple[str, str]:
+    this_file = Path(__file__).resolve()
+    cfg_path = next(
+        (parent / PROJECT_CONFIG_FILE for parent in [this_file.parent, *this_file.parents] if (parent / PROJECT_CONFIG_FILE).exists()),
+        None,
+    )
+    if cfg_path is None:
+        path = Path(default_data_lake_dir)
+        return str(path.parent), path.name
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+        configured = payload.get("data_lake_dir") if isinstance(payload, dict) else None
+        if isinstance(configured, str) and configured.strip():
+            path = Path(configured)
+            return str(path.parent), path.name
+    except Exception:
+        pass
+    path = Path(default_data_lake_dir)
+    return str(path.parent), path.name
+
+
+DEFAULT_CERNBOX_OUTDIR, DEFAULT_LAKE_DIRNAME = _load_data_lake_defaults()
 
 # Original defaults (kept as defaults, but now configurable via CLI)
 DEFAULT_MPHI_MIN = 130.0
