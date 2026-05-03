@@ -1,7 +1,0 @@
-Case generic: FAIL
-  m12_2: ref=20000 new=-57677.5
-  tanb : ref=2 new=2
-Case near-alignment: FAIL
-  m12_2: ref=20000 new=-56239.7
-  tanb : ref=2 new=2
-Case invalid-input: PASS

@@ -1,1 +1,0 @@
-g++ src/CalcRoundTrip.cpp -Isrc -std=c++11 -Wall -O3 -lgsl -lgslcblas -Llib -l2HDMC -lgsl -lgslcblas -lm -o CalcRoundTrip

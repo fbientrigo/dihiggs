@@ -211,6 +211,13 @@ class THDM {
                            double lambda6, double lambda7,
                            double tan_beta);
 
+  bool has_param_phys_lam1_validation() const;
+
+  void get_param_phys_lam1_validation(double &lambda1_input,
+                                      double &lambda1_recomputed,
+                                      double &abs_error,
+                                      bool &warning_flag) const;
+
   bool set_param_sm(double mh);
 
 
@@ -893,6 +900,11 @@ class THDM {
   double      sinba;
   bool        params_set;
   double      v2;
+  bool        lam1_validation_available;
+  double      lam1_validation_input;
+  double      lam1_validation_recomputed;
+  double      lam1_validation_abs_error;
+  bool        lam1_validation_warning;
   gsl_matrix *kappa_D;
   gsl_matrix *kappa_U;
   gsl_matrix *kappa_L;
@@ -908,6 +920,7 @@ class THDM {
   SM sm;
 
   void init();
+  void clear_param_phys_lam1_validation();
   double get_m12_2();
   void set_kappa();
   void set_kappa_D();

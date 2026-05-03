@@ -1,8 +1,0 @@
-2hdmc/lib/Constraints.o
-2hdmc/lib/DecayTable.o
-2hdmc/lib/SM.o
-2hdmc/lib/THDM.o
-2hdmc/lib/Util.o
-2hdmc/lib/lib2HDMC.a
-2hdmc/src/THDM.cpp
-2hdmc/src/THDM.h
