@@ -94,3 +94,16 @@ mlpython/valid_points_extended.csv
 mlpython/2603/analyze_counts.py
 mlpython/2603/column_counts.txt
 mlpython/Analysis/compare_methods.py
+/.sisyphus
+/2hdmc/graphify-out
+/2hdmc/CalcLam1Scan
+/2hdmc/CalcLam1ScanFromLake
+/2hdmc/.graphify_analysis.json
+/2hdmc/.graphify_detect.json
+/2hdmc/.graphify_ast.json
+/2hdmc/.graphify_labels.json
+/2hdmc/docs_changes/metrics
+/codex_notes
+/dihiggs/.sisyphus/notepads/physlam1scan
+/dihiggs/app/PhysLam1Scan
+/logs/night_topk_260325_020215
