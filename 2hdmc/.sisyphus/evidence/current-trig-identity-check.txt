@@ -1,4 +1,0 @@
-tan_beta=2.0
-expected: sb=0.8944271909999159, cb=0.4472135954999579
-current code: sb=0.4472135954999579, cb=0.8944271909999159
-observation: sb/cb are swapped relative to identities in code comment

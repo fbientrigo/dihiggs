@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/home/fabi/wt_dihiggs_exploratory/2hdmc/CalcLam1ScanFromLake",
+    "/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=sinba_0p9999_tb_hi/fixed_sinba=0p9999_l6=0p1000_l7=0p0000_mA=300p0/run_20260126T214835Z_host=zephyrus_git=a718276/tb_20000/scan_tb_20000.csv",
+    "/home/fabi/wt_dihiggs_exploratory/2hdmc/working/lam1_lake_benchmark_smoke_official_known/runs/001_campaign_sinba_0p9999_tb_hi_scan_tb_20000/validator_output.csv",
+    "500",
+    "715696446",
+    "triple_ok"
+  ],
+  "returncode": 0,
+  "elapsed_sec": 16.007753197000056,
+  "seed": 715696446,
+  "mode": "triple_ok"
+}

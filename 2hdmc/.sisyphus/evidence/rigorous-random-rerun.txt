@@ -1,5 +1,0 @@
-WARNING: Cannot set physical masses such that m_H < m_h
-PASS: 400 random round-trip points validated
-PASS: invalid-input guards validated (3 cases)
-Max abs diff: 2.6193447411060333e-09
-Max rel diff: 2.2463382265407876e-12
