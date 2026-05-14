@@ -335,8 +335,10 @@ def build_subcampaign(
         if lambda1_fixed != 1.0:
             raise ValueError("template_grid_probe requires lambda1_fixed == 1.0")
         n_lam1_req = int(s_cfg.get("n_lam1", 1))
-        if n_lam1_req != 1:
-            raise ValueError("template_grid_probe requires n_lam1 == 1")
+        sens_cfg = s_cfg.get("sensitivity_probe") if isinstance(s_cfg.get("sensitivity_probe"), dict) else {}
+        sens_var = str(sens_cfg.get("variable", "")).strip()
+        if n_lam1_req != 1 and sens_var != "lambda1":
+            raise ValueError("template_grid_probe requires n_lam1 == 1 unless sensitivity_probe variable=lambda1")
         tan_beta_center = float(s_cfg.get("tan_beta_center", anchor.get("tan_beta", (envelope["tan_beta"][0] + envelope["tan_beta"][1]) / 2)))
         lambda6_center = float(s_cfg.get("lambda6_center", anchor.get("lambda6", (envelope["lambda6"][0] + envelope["lambda6"][1]) / 2)))
         mA_values = [float(v) for v in s_cfg.get("mA_values", [envelope["mA"][1]])]
@@ -371,8 +373,8 @@ def build_subcampaign(
         expanded_subruns = []
         for ma in mA_values:
             for l6 in lambda6_locals:
-                expanded_subruns.append({"mA": float(ma), "lambda6": float(l6), "tanbeta_values": [float(v) for v in tanbeta_locals], "mphi_min": mphi_min, "mphi_max": mphi_max, "n_mphi": n_mphi_req, "n_lam1": 1})
-        planned_points = int(len(mA_values) * len(lambda6_locals) * len(tanbeta_locals) * int(n_mphi_req) * 1)
+                expanded_subruns.append({"mA": float(ma), "lambda6": float(l6), "tanbeta_values": [float(v) for v in tanbeta_locals], "mphi_min": mphi_min, "mphi_max": mphi_max, "n_mphi": n_mphi_req, "n_lam1": n_lam1_req})
+        planned_points = int(len(mA_values) * len(lambda6_locals) * len(tanbeta_locals) * int(n_mphi_req) * int(n_lam1_req))
         expected_direction = "larger_ctau_or_smaller_total_width"
     else:
         raise ValueError(f"unknown strategy {strategy}")
@@ -397,7 +399,7 @@ def build_subcampaign(
         tan_beta_values = tanbeta_locals
         lambda6_local_values = lambda6_locals
         n_mphi = int(s_cfg.get("n_mphi", 10))
-        n_lam1 = 1
+        n_lam1 = int(s_cfg.get("n_lam1", 1))
         raw_points = int(planned_points or 0)
         reject = None
         if raw_points < int(budget["min_raw_points_per_subrun"]) and not bool(budget.get("operational_smoke", False)):

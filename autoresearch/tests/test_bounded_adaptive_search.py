@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from scripts.gemini_contract_templates import materialize_template
 from autoresearch.harness.bounded_adaptive_search import (
     attempt_isolated_summary,
     build_orchestrator_command_for_subrun,
+    build_orchestrator_commands_for_subcampaign,
     build_subcampaign,
     calculate_raw_points,
     calculate_raw_points_multiplicative,
@@ -484,6 +486,41 @@ def test_canonicalize_normalizes_alias_and_derives_br_bb() -> None:
     assert c["lambda1"] == 1.0
     assert abs(c["br_bb"] - 0.02) < 1e-12
 
+
+
+
+def test_sensitivity_probe_contract_template_grid_probe_compatible() -> None:
+    env = {
+        "sin_ba": [1.0, 1.0], "lambda7": [0.0, 0.0], "lambda1": [1.0, 1.0],
+        "lambda6": [0.0003, 0.0060], "tan_beta": [30000, 500000], "mphi": [160, 350], "mA": [300, 500],
+    }
+    tm = materialize_template(
+        template_name="sensitivity_probe",
+        overrides={
+            "variable": "tan_beta",
+            "relative_steps": [-0.10, 0.0, 0.10],
+            "anchor": {"tan_beta": 126904.3, "lambda6": 0.0019, "mA": 500.0, "lambda1": 1.0, "mphi_min": 180.0, "mphi_max": 220.0},
+        },
+        envelope=env,
+        min_points=1000,
+        max_points=3000,
+        iteration=1,
+        max_total_points=9000,
+        tan_beta_center_default=124416,
+        lambda6_center_default=0.0019683,
+    )
+    sc = build_subcampaign(
+        1,
+        "template_grid_probe",
+        {k: tuple(v) for k, v in tm.contract["search_envelope"].items()},
+        anchor={"lambda6": 0.0019, "tan_beta": 126904.3, "mphi": 200.0, "lambda1": 1.0, "mA": 500.0, "lambda7": 0.0, "sin_ba": 1.0},
+        budget=tm.contract["budget"],
+        strategy_cfg=tm.contract["strategy"],
+    )
+    assert sc.strategy == "template_grid_probe"
+    assert sc.n_lam1 == 1
+    cmds = build_orchestrator_commands_for_subcampaign(sc, tm.contract["runtime"], 4, "r")
+    assert len(cmds) == len(tm.contract["strategy"]["mA_values"]) * len(tm.contract["strategy"]["lambda6_values"])
 
 def test_progress_files_written(monkeypatch, tmp_path: Path) -> None:
     from autoresearch.harness import bounded_adaptive_search as mod

@@ -1,0 +1,139 @@
+{
+  "campaign_id": "dihiggs-explorers-lam1-tb1000-debug-no-convergence",
+  "paths": {
+    "repo_root": "/home/fabi/dihiggs",
+    "outdir": "/home/fabi/dihiggs/runs/lam1-tb1000-mphi130-debug-no-convergence",
+    "lake_name": "events.jsonl"
+  },
+  "runtime": {
+    "python_exe": "{sys_executable}",
+    "threads": 3,
+    "timeout_sec": 1800,
+    "max_empty_rounds": 3
+  },
+  "dihiggs": {
+    "phys_exec": "{repo_root}/dihiggs/app/PhysLam1Scan",
+    "hb_dataset_env": "HB_DATASET",
+    "hs_dataset_env": "HS_DATASET"
+  },
+  "supervisor": {
+    "campaign_id": "lam1-tb1000-mphi130-debug-no-convergence",
+    "enable_autoscaling": true,
+    "enable_alerting": true,
+    "enable_convergence": false,
+    "max_rounds": 20,
+    "rebuild_telemetry": true
+  },
+  "convergence": {
+    "warmup_rounds": 200,
+    "window_rounds": 25,
+    "confirmation_required": 29,
+    "thresholds": {
+      "coverage_delta": 0.01,
+      "diversity_delta": 0.05,
+      "yield_delta": 0.005,
+      "composite_delta": 0.01
+    }
+  },
+  "alerts": {
+    "dedupe_window_sec": 900,
+    "channels": ["stderr", "file"],
+    "severity_levels": ["CRITICAL", "WARNING", "INFO"]
+  },
+  "autoscaling": {
+    "min_threads": 2,
+    "max_threads": 4,
+    "cooldown_rounds": 3,
+    "scale_up_factor": 1.5,
+    "scale_down_factor": 0.67
+  },
+  "search": {
+    "tb_values": [1000],
+    "lam1": {
+      "min": 0.0,
+      "max": 12.0,
+      "n_bins": 2000
+    },
+    "mphi": {
+      "min": 130.0,
+      "max": 150.0,
+      "n_bins": 20
+    }
+  },
+"limits": {
+    "max_new_run_dirs_per_round": 200,
+    "max_new_run_dirs_per_arm_call": 200
+  },
+  "metrics": {
+    "floors": {
+      "yield_norm": 0.01,
+      "coverage_norm": 0.0,
+      "diversity_norm": 0.0
+    },
+    "weights": {
+      "yield": 0.4,
+      "coverage": 0.3,
+      "diversity": 0.3
+    },
+    "multi_axis": {
+      "enabled": true,
+      "collapse_axes": ["tb", "lam1_bin"],
+      "coverage_axes": [
+        {
+          "name": "tb",
+          "kind": "categorical",
+          "domain": [1000],
+          "weight": 0.5
+        },
+        {
+          "name": "lam1_bin",
+          "kind": "discrete",
+          "domain_size": 2000,
+          "weight": 0.5
+        }
+      ],
+      "diversity_axes": [
+        {
+          "name": "tb",
+          "weight": 0.5
+        },
+        {
+          "name": "lam1_bin",
+          "weight": 0.5
+        }
+      ],
+      "diversity_pairs": []
+    }
+  },
+  "adaptation": {
+    "ucb_c": 1.414,
+    "warm_start_each_arm": false
+  },
+  "arms": [
+    {
+      "id": "adaptive-smoke",
+      "explorer": "adaptive",
+      "timeout_sec": 1800,
+      "cmd": [
+        "{python}",
+        "{repo_root}/dihiggs/app/adaptive_explorer_lam1.py",
+        "--checkpoint-root",
+        "{checkpoint_root}/adaptive-smoke",
+        "--tb-values",
+        "{tb}",
+        "--lam1-range={lam1_min}:{lam1_max}",
+        "--n-bins",
+        "{lam1_n_bins}",
+"--n-proposals",
+        "100",
+        "--iter",
+        "{iter}"
+      ],
+      "env": {
+        "HB_DATASET": "{hb_dataset}",
+        "HS_DATASET": "{hs_dataset}",
+        "OMP_NUM_THREADS": "1"
+      }
+    }
+  ]
+}

@@ -329,3 +329,105 @@ def test_contamination_flag_when_isolated_rows_exceed_executed(monkeypatch, tmp_
     assert state["status"] == "stopped_contamination_detected"
     assert state["contaminated_summary_count"] == 1
     assert state["last_iteration_summary_for_prompt"] is None
+
+
+def test_sensitivity_probe_registered() -> None:
+    assert "sensitivity_probe" in TEMPLATES
+
+
+def test_sensitivity_probe_tan_beta_relative_steps() -> None:
+    cfg = _cfg()
+    tm = materialize_template(
+        template_name="sensitivity_probe",
+        overrides={
+            "variable": "tan_beta",
+            "relative_steps": [-0.10, 0.0, 0.10],
+            "anchor": {
+                "tan_beta": 126904.3,
+                "lambda6": 0.0019,
+                "mA": 500.0,
+                "lambda1": 1.0,
+                "mphi_min": 180.0,
+                "mphi_max": 220.0,
+            },
+        },
+        envelope=cfg["envelope"],
+        min_points=1000,
+        max_points=3000,
+        iteration=1,
+        max_total_points=9000,
+        tan_beta_center_default=124416,
+        lambda6_center_default=0.0019683,
+    )
+    vals = tm.contract["strategy"]["tan_beta_values"]
+    assert len(vals) == 3
+    assert vals[1] == 126904.3
+    assert tm.contract["strategy"]["lambda6_values"] == [0.0019]
+    assert tm.contract["strategy"]["mA_values"] == [500.0]
+    assert tm.contract["strategy"]["n_lam1"] == 1
+    assert tm.real_points >= 1000
+
+
+def test_sensitivity_probe_lambda6_relative_steps() -> None:
+    cfg = _cfg()
+    tm = materialize_template(
+        template_name="sensitivity_probe",
+        overrides={
+            "variable": "lambda6",
+            "relative_steps": [-0.10, 0.0, 0.10],
+            "anchor": {"tan_beta": 126904.3, "lambda6": 0.0019, "mA": 500.0, "lambda1": 1.0, "mphi_min": 180.0, "mphi_max": 220.0},
+        },
+        envelope=cfg["envelope"],
+        min_points=1000,
+        max_points=3000,
+        iteration=1,
+        max_total_points=9000,
+        tan_beta_center_default=124416,
+        lambda6_center_default=0.0019683,
+    )
+    vals = tm.contract["strategy"]["lambda6_values"]
+    assert len(vals) == 3
+    assert vals[1] == 0.0019
+    assert tm.contract["strategy"]["tan_beta_values"] == [126904.3]
+    assert tm.contract["strategy"]["n_lam1"] == 1
+
+
+def test_sensitivity_probe_mA_relative_steps_respects_envelope() -> None:
+    cfg = _cfg()
+    tm = materialize_template(
+        template_name="sensitivity_probe",
+        overrides={
+            "variable": "mA",
+            "relative_steps": [-0.10, 0.0, 0.10],
+            "anchor": {"tan_beta": 126904.3, "lambda6": 0.0019, "mA": 450.0, "lambda1": 1.0, "mphi_min": 180.0, "mphi_max": 220.0},
+        },
+        envelope=cfg["envelope"],
+        min_points=1000,
+        max_points=3000,
+        iteration=1,
+        max_total_points=9000,
+        tan_beta_center_default=124416,
+        lambda6_center_default=0.0019683,
+    )
+    mAs = tm.contract["strategy"]["mA_values"]
+    assert min(mAs) >= cfg["envelope"]["mA"][0]
+    assert max(mAs) <= cfg["envelope"]["mA"][1]
+
+
+def test_sensitivity_probe_lambda1_rejected_by_default() -> None:
+    cfg = _cfg()
+    try:
+        materialize_template(
+            template_name="sensitivity_probe",
+            overrides={"variable": "lambda1", "relative_steps": [-0.10, 0.0, 0.10], "anchor": {"lambda1": 1.0}},
+            envelope=cfg["envelope"],
+            min_points=1000,
+            max_points=3000,
+            iteration=1,
+            max_total_points=9000,
+            tan_beta_center_default=124416,
+            lambda6_center_default=0.0019683,
+        )
+        assert False
+    except ValueError as e:
+        assert "lambda1 variation disabled" in str(e)
