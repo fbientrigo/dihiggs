@@ -12,6 +12,7 @@ from autoresearch.harness.bounded_adaptive_search import (
     calculate_raw_points_multiplicative,
     canonicalize_physical_row,
     detect_ctau_metric_source,
+    derive_step_accounting_v3,
     enforce_raw_point_rules,
     next_thread_attempts,
     proposal_inside_envelope,
@@ -487,6 +488,67 @@ def test_canonicalize_normalizes_alias_and_derives_br_bb() -> None:
     assert abs(c["br_bb"] - 0.02) < 1e-12
 
 
+
+
+def test_header_only_csv_counted_zero_data_rows_and_excluded(tmp_path: Path) -> None:
+    good = tmp_path / "good.csv"
+    good.write_text("a,b\n1,2\n3,4\n", encoding="utf-8")
+    hdr = tmp_path / "header_only.csv"
+    hdr.write_text("a,b\n", encoding="utf-8")
+
+    rows = [
+        {"positivity_ok": "1", "perturbativity_ok": "1", "unitarity_ok": "1", "total_width": "1e-12"},
+        {"positivity_ok": "1", "perturbativity_ok": "1", "unitarity_ok": "1", "total_width": "2e-12"},
+    ]
+    acc = derive_step_accounting_v3(
+        csv_paths=[str(good), str(hdr)],
+        rows=rows,
+        planned_points=21,
+        attempted_points=21,
+        failure_reason_codes=["gate_failed_due_to_header_only_csv"],
+    )
+    assert acc["raw_csv_rows"] == 2
+    assert acc["accepted_csv_rows"] == 2
+    assert acc["header_only_csv_count"] == 1
+    assert acc["accepted_physics_points"] == 2
+    assert acc["learning_points"] == 2
+
+
+def test_accepted_physics_points_cannot_exceed_accepted_csv_rows(tmp_path: Path) -> None:
+    one = tmp_path / "one.csv"
+    one.write_text("a,b\n1,2\n", encoding="utf-8")
+    rows = [
+        {"positivity_ok": "1", "perturbativity_ok": "1", "unitarity_ok": "1", "total_width": "1e-12"},
+        {"positivity_ok": "1", "perturbativity_ok": "1", "unitarity_ok": "1", "total_width": "2e-12"},
+    ]
+    try:
+        derive_step_accounting_v3(
+            csv_paths=[str(one)],
+            rows=rows,
+            planned_points=10,
+            attempted_points=10,
+            failure_reason_codes=[],
+        )
+        raised = False
+    except ValueError as exc:
+        raised = "learning_points exceeds accepted_physics_points" in str(exc)
+    assert raised
+
+
+def test_planned_points_do_not_become_executed_points(tmp_path: Path) -> None:
+    one = tmp_path / "slice.csv"
+    one.write_text("a,b\n1,2\n", encoding="utf-8")
+    rows = [{"positivity_ok": "1", "perturbativity_ok": "1", "unitarity_ok": "1", "total_width": "1e-12"}]
+    acc = derive_step_accounting_v3(
+        csv_paths=[str(one)],
+        rows=rows,
+        planned_points=21000,
+        attempted_points=21000,
+        failure_reason_codes=[],
+    )
+    assert acc["planned_points"] == 21000
+    assert acc["accepted_csv_rows"] == 1
+    assert acc["accepted_physics_points"] == 1
 
 
 def test_sensitivity_probe_contract_template_grid_probe_compatible() -> None:
