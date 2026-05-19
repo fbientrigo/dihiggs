@@ -117,3 +117,13 @@ higgstools/build/
 # Local archived/generated scripts
 # =============================================================================
 scripts/archive/
+/dihiggs/app/ColabRecomputeValidation
+/dihiggs/app/HBHS_testing
+/dihiggs/app/Oracle
+/dihiggs/app/PhysLam1Scan
+/dihiggs/app/PhysParamScan
+/dihiggs/app/PhysScanWithFixings
+/dihiggs/app/PostProcessHBHS
+/higgstools/doc/_static
+/higgstools/.gitignore
+/mlpython/Analysis
