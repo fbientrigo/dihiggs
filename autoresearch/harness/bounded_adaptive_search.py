@@ -529,15 +529,29 @@ def build_orchestrator_commands_for_subcampaign(sc: Subcampaign, runtime: dict[s
     return out
 
 
-def _scan_rows_for_run(lake_dir: Path, campaign_name: str, run_name: str) -> tuple[list[dict[str, Any]], list[str]]:
+def _scan_rows_for_run(out_lake: Path, campaign: str, run_name: str) -> tuple[list[dict[str, Any]], list[str]]:
     rows: list[dict[str, Any]] = []
     csvs: list[str] = []
-    marker = f"campaign={campaign_name}"
-    run_marker = f"run={run_name}"
-    for csv_path in sorted(lake_dir.glob("**/tb_*/scan_tb_*.csv")):
+    marker_a = f"campaign={campaign}"
+    marker_b = f"/{campaign}/"
+    for csv_path in out_lake.rglob("*.csv"):
         sp = str(csv_path)
-        run_scoped = (run_marker in sp) or (f"/{run_name}__" in sp) or (f"/{run_name}/" in sp)
-        if marker not in sp or not run_scoped:
+        run_token = run_name.replace('.', 'p')
+        run_scoped = (
+            (f"run={run_name}" in sp)
+            or (f"run={run_name}_" in sp)
+            or (f"/{run_name}/" in sp)
+            or (f"/{run_name}__" in sp)
+            or (f"/{run_name}_" in sp)
+            or (f"run={run_token}" in sp)
+            or (f"run={run_token}_" in sp)
+            or (f"/{run_token}/" in sp)
+            or (f"/{run_token}__" in sp)
+            or (f"/{run_token}_" in sp)
+        )
+        if not ((marker_a in sp) or (marker_b in sp)):
+            continue
+        if not run_scoped:
             continue
         csvs.append(sp)
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
@@ -547,6 +561,77 @@ def _scan_rows_for_run(lake_dir: Path, campaign_name: str, run_name: str) -> tup
                 rec["_source_csv"] = sp
                 rows.append(rec)
     return rows, csvs
+
+
+def csv_line_and_data_rows(csv_path: Path) -> tuple[int, int, bool]:
+    with csv_path.open("r", encoding="utf-8", errors="replace") as handle:
+        line_count = sum(1 for _ in handle)
+    data_rows = max(0, line_count - 1)
+    return line_count, data_rows, line_count == 1
+
+
+def derive_step_accounting_v3(
+    *,
+    csv_paths: list[str],
+    rows: list[dict[str, Any]],
+    planned_points: int,
+    attempted_points: int | None,
+    failure_reason_codes: list[str] | None,
+) -> dict[str, Any]:
+    reasons = list(failure_reason_codes or [])
+    raw_csv_rows = 0
+    accepted_csv_rows = 0
+    header_only_csv_count = 0
+    rejected_csv_count = 0
+
+    gsl_markers = ("gsl", "sigabrt", "header_only", "header-only", "fail")
+    failed_code = any(any(m in str(code).lower() for m in gsl_markers) for code in reasons)
+
+    for sp in sorted(set(csv_paths)):
+        p = Path(sp)
+        if not p.exists():
+            reasons.append("missing_csv")
+            rejected_csv_count += 1
+            continue
+        _, data_rows, is_header_only = csv_line_and_data_rows(p)
+        raw_csv_rows += data_rows
+        if is_header_only:
+            header_only_csv_count += 1
+            rejected_csv_count += 1
+            continue
+        if failed_code and data_rows == 0:
+            rejected_csv_count += 1
+            continue
+        accepted_csv_rows += data_rows
+
+    tok_rows = [r for r in rows if compute_triple_ok(r)]
+    learning_points = len(tok_rows)
+    accepted_physics_points = accepted_csv_rows
+    if accepted_physics_points > accepted_csv_rows:
+        raise ValueError("accepted_physics_points exceeds accepted_csv_rows")
+    if learning_points > accepted_physics_points:
+        raise ValueError("learning_points exceeds accepted_physics_points")
+
+    inferred_attempted = int(attempted_points) if attempted_points is not None else int(raw_csv_rows)
+    if inferred_attempted < raw_csv_rows:
+        inferred_attempted = raw_csv_rows
+
+    failed_slice_count = header_only_csv_count + (1 if failed_code else 0)
+    triple_ok_rate = (learning_points / accepted_csv_rows) if accepted_csv_rows > 0 else 0.0
+
+    return {
+        "planned_points": int(max(0, planned_points)),
+        "attempted_points": int(max(0, inferred_attempted)),
+        "raw_csv_rows": int(raw_csv_rows),
+        "accepted_csv_rows": int(accepted_csv_rows),
+        "header_only_csv_count": int(header_only_csv_count),
+        "failed_slice_count": int(max(0, failed_slice_count)),
+        "accepted_physics_points": int(accepted_physics_points),
+        "learning_points": int(learning_points),
+        "triple_ok_rate": float(triple_ok_rate),
+        "failure_reason_codes": sorted(set(reasons)),
+        "rejected_csv_count": int(rejected_csv_count),
+    }
 
 
 def _top_rows(rows: list[dict[str, Any]], *, key: str, reverse: bool, top_k: int = 10) -> list[dict[str, Any]]:
