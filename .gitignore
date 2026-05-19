@@ -1,50 +1,82 @@
-__pycache__
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
 
-# entornos
+# Virtual environments
+.venv/
+venv/
+env/
 */env/
 */ubenv/
-.venv/
-datasets
-app/*
-.agent
-.vscode
+
+# =============================================================================
+# Local editor / agent / machine state
+# =============================================================================
+.vscode/
+.idea/
+.agent/
 .install-state/
 project_config.json
 
-*.csv
-*.pdf
+# Agent scratch space / local notes
+.sisyphus/
+codex_notes/
+session-*.md
+
+# =============================================================================
+# Data, datasets, and generated analysis outputs
+# =============================================================================
+datasets/
+artifacts/
 plots/
+outputs/
+results/
 
-2hdmc/lib/*.o
-2hdmc/lib/lib2HDMC.a
-2hdmc/CalcRoundTrip
-
-# ignorar datasets de HB/HS pesados
-datasets/*
-
-# instalaciones que se deben configurar por cada pc
-higgstools/installation
-higgstools/build
-
-# artefactos grandes opcionales (si no quieres versionarlos)
-# results/**        # <- descomenta si prefieres que NO entren por defecto
-# mlpython/outs/**  # idem
-
-# binarios y builds
-/dihiggs/app/PostProcessHBHS
-/dihiggs/app/Oracle
-/dihiggs/app/PhysParamScan
-/dihiggs/app/HBHS_testing
+*.csv
 *.parquet
+*.pdf
 *.joblib
 *.model
 *.h5
+*.hdf5
 *.pth
 *.ckpt
-*.so
+
+# Project-specific generated outputs
+dihiggs/app/outcsv/
+mlpython/2603/outputs/
+mlpython/2603/ctau_plots/
+mlpython/2603/paper_plots_mphi_br/
+mlpython/2603/parallel_plots/
+
+# =============================================================================
+# C/C++ build artifacts
+# =============================================================================
+*.a
 *.o
+*.so
+*.dylib
 *.dll
-# executables from 2hdmc
+*.exe
+
+*.obj
+*.lib
+*.exp
+*.pdb
+
+# =============================================================================
+# 2HDMC generated libraries, objects, and executables
+# =============================================================================
+2hdmc/lib/
+2hdmc/CalcRoundTrip
+2hdmc/CalcLam1Scan
+2hdmc/CalcLam1ScanFromLake
+
+# Upstream/example 2HDMC executables
 2hdmc/Demo
 2hdmc/CalcGen
 2hdmc/CalcHiggs
@@ -54,56 +86,34 @@ higgstools/build
 2hdmc/CalcLH
 2hdmc/CalcMSSM
 2hdmc/CalcPhys
-dihiggs/app/PhysParamScan
-dihiggs/app/Oracle
-dihiggs/app/PhysScanWithFixings
-dihiggs/app/PostProcessHBHS
-2hdmc/CalcGen
-2hdmc/CalcHiggs
-2hdmc/CalcHMSSM
-2hdmc/CalcHybrid
-2hdmc/CalcInert
-2hdmc/CalcLH
-2hdmc/CalcMSSM
-2hdmc/CalcPhys
-2hdmc/Demo
 
-# Executables
-dihiggs/app/HBHS_testing
-dihiggs/app/Oracle
-dihiggs/app/PhysParamScan
-dihiggs/app/PhysScanWithFixings
-dihiggs/app/PostProcessHBHS
-dihiggs/obj/*.o
-2hdmc/CalcGen
-# CSVs
-dihiggs/app/outcsv/*
-mlpython/0b1_samplings.ipynb
+# =============================================================================
+# dihiggs generated build products
+# =============================================================================
+dihiggs/obj/
 
+# If some files inside dihiggs/app must be versioned later, add exceptions:
+# !dihiggs/app/README.md
+# !dihiggs/app/*.cpp
+# !dihiggs/app/*.hpp
+# !dihiggs/app/*.h
+
+# =============================================================================
+# Unit-test binaries
+# =============================================================================
 tests/unit/run_tests
 tests/unit/dihiggs_unit_tests
 
-# Apptainer container
+# =============================================================================
+# Containers / local installation products
+# =============================================================================
 *.sif
 dihiggs-base.tar
-mlpython/valid_points_extended.csv
-.gitignore
-mlpython/06_valid_points/elite_candidates_report.csv
-mlpython/valid_points_extended.csv
 
-mlpython/2603/analyze_counts.py
-mlpython/2603/column_counts.txt
-mlpython/Analysis/compare_methods.py
-/.sisyphus
-/2hdmc/graphify-out
-/2hdmc/CalcLam1Scan
-/2hdmc/CalcLam1ScanFromLake
-/2hdmc/.graphify_analysis.json
-/2hdmc/.graphify_detect.json
-/2hdmc/.graphify_ast.json
-/2hdmc/.graphify_labels.json
-/2hdmc/docs_changes/metrics
-/codex_notes
-/dihiggs/.sisyphus/notepads/physlam1scan
-/dihiggs/app/PhysLam1Scan
-/logs/night_topk_260325_020215
+higgstools/installation/
+higgstools/build/
+
+# =============================================================================
+# Local archived/generated scripts
+# =============================================================================
+scripts/archive/

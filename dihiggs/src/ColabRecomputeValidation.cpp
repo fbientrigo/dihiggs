@@ -366,7 +366,6 @@ bool compute_validation_row(
     THDM model;
     SM sm;
     model.set_SM(sm);
-    model.set_yukawas_type(yukawas_type);
 
     const bool ok = model.set_param_phys_lam1(
         in.mh,
@@ -379,12 +378,15 @@ bool compute_validation_row(
         in.lambda7,
         in.tan_beta);
 
+    
     out_row.set_param_ok = ok ? 1 : 0;
 
     if (!ok) {
       error_detail = "set_param_phys_lam1 returned false";
       return false;
     }
+
+    model.set_yukawas_type(yukawas_type);
 
     if (model.has_param_phys_lam1_validation()) {
       double lambda1_input = out_row.lambda1_input;
