@@ -36,7 +36,8 @@ MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
 			   $(SRC_DIR)/ColabRecomputeValidation.cpp)
 
-COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp
+COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp \
+               $(SRC_DIR)/ReplaySafeOutput.cpp
 
 # Generación de rutas de objetos
 MAIN_OBJS   := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))
@@ -48,7 +49,7 @@ TARGET_LIB  := $(LIB_DIR)/libdihiggs.a
 # REGLAS DE CONSTRUCCIÓN
 # =============================================================================
 
-.PHONY: all clean cleanall directories
+.PHONY: all clean cleanall directories ci-calcphys-gate
 
 # Forzamos que 'directories' ocurra antes de cualquier otra cosa
 all: directories
@@ -86,3 +87,11 @@ clean:
 
 cleanall: clean
 	@rm -rf data/*
+
+GATE_THREADS_HI ?= 4
+GATE_STEPS ?= 25
+GATE_OUT_DIR ?= /tmp/calcphys_ci_gate
+
+ci-calcphys-gate: $(BIN_DIR)/PhysScanWithFixings
+	@echo "[CI] Running CalcPhys parity + thread gate (1 thread vs >=4 threads)"
+	@python3 ../scripts/out/calcphys_ci_gate.py --repo-root .. --scan-exe ./dihiggs/app/PhysScanWithFixings --calcphys ./2hdmc/CalcPhys --threads-hi $(GATE_THREADS_HI) --steps $(GATE_STEPS) --out-dir $(GATE_OUT_DIR)
