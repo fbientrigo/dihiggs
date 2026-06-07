@@ -33,8 +33,9 @@ LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
 # Fuentes y Objetos
 MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
-               $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
-			   $(SRC_DIR)/ColabRecomputeValidation.cpp)
+	               $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
+	               $(SRC_DIR)/Phys_M2BoundaryScan.cpp \
+				   $(SRC_DIR)/ColabRecomputeValidation.cpp)
 
 COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp \
                $(SRC_DIR)/ReplaySafeOutput.cpp
