@@ -12,4 +12,5 @@ cli/adaptive_explorer
 artifacts
 hpc
 api/index
+contracts/phys_m2_boundary_v1
 ```

@@ -107,3 +107,29 @@ CSV output uses scientific notation with `setprecision(17)` for numeric values.
 ## Compatibility Warning
 
 `phys_m2_boundary_v1` is not schema-compatible with old lambda1-based campaigns. In particular, it does not emit `computed_lam1`, and `lambda1` must not be interpreted as a controlled or requested coordinate. Downstream tooling that expects `lam1`/`computed_lam1` round-trip columns needs an explicit migration path before reading this contract.
+
+## Usage Guide
+
+To launch a scan using this contract, ensure you calculate `M2_input` appropriately if seeding from historical data. In historical CSV files, the `m12` column typically contains the value of `m12_sq` in GeV². 
+
+**Correct formula for translating historical `m12` column to `M2_input`**:
+```python
+m12_sq = m12_csv_value  # Do NOT square this value again!
+beta = math.atan(tan_beta)
+M2_input = m12_sq / (math.sin(beta) * math.cos(beta))
+```
+
+**Example CLI Execution**:
+```bash
+./dihiggs/app/Phys_M2BoundaryScan \
+  129.5 130.5 7 \
+  16622.4637 16958.2710 7 \
+  300.0 0.999 100.0 0.1 0.0 \
+  output.csv
+```
+
+**Validation**:
+You can validate the output using the included validation script to ensure no algebraic drift occurred and all outputs are finite:
+```bash
+python3 scripts/validate_m2_boundary_smoke.py output.csv
+```
