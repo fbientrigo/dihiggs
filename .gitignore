@@ -127,3 +127,4 @@ scripts/archive/
 /higgstools/doc/_static
 /higgstools/.gitignore
 /mlpython/Analysis
+/dihiggs/app/Phys_M2BoundaryScan
