@@ -22,7 +22,7 @@ THDMC_SRC         := ../2hdmc/src
 THDMC_LIB         := ../2hdmc/lib
 
 # Flags
-CXXFLAGS := -I$(THDMC_SRC) -I$(HIGGSTOOLS_INC) -I$(SRC_DIR)
+CXXFLAGS := -I$(THDMC_SRC) -I$(HIGGSTOOLS_INC) -I$(SRC_DIR) -Iinclude
 CXXFLAGS += -fopenmp -std=gnu++17 -Wall -Wextra -Wpedantic -O0 -g
 LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
             -L$(THDMC_LIB) -l2HDMC \
@@ -34,10 +34,17 @@ LDFLAGS  := -L$(LIB_DIR) -ldihiggs \
 MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
                $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
-			   $(SRC_DIR)/ColabRecomputeValidation.cpp)
+			   $(SRC_DIR)/ColabRecomputeValidation.cpp \
+               $(SRC_DIR)/Phys_M2BandTracker.cpp)
 
 COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp \
-               $(SRC_DIR)/ReplaySafeOutput.cpp
+               $(SRC_DIR)/ReplaySafeOutput.cpp \
+               $(SRC_DIR)/M2PointEvaluator.cpp \
+               $(SRC_DIR)/M2BatchEvaluator.cpp \
+               $(SRC_DIR)/M2IntervalDetector.cpp \
+               $(SRC_DIR)/M2ContinuationPredictor.cpp \
+               $(SRC_DIR)/M2BoundaryRefiner.cpp \
+               $(SRC_DIR)/M2FallbackPolicy.cpp
 
 # Generación de rutas de objetos
 MAIN_OBJS   := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(MAIN_SRCS))

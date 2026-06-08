@@ -81,10 +81,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--engine",
         type=str,
         default="lambda1",
-        choices=["lambda1", "m2"],
+        choices=["lambda1", "m2", "m2_tracker"],
         help=(
             "Physics engine: 'lambda1' → PhysScanWithFixings (second axis = lambda_1); "
-            "'m2' → Phys_M2BoundaryScan (second axis = M^2 in GeV^2)."
+            "'m2' → Phys_M2BoundaryScan (second axis = M^2); "
+            "'m2_tracker' → Phys_M2BandTracker (second axis = M^2 tracked dynamically). "
         ),
     )
 
@@ -253,6 +254,9 @@ def main(argv: list[str] | None = None) -> int:
         engine = Lambda1Engine()
     elif args.engine == "m2":
         engine = M2Engine()
+    elif args.engine == "m2_tracker":
+        from dihiggs.app.orchestrator.engines.m2_tracker import M2TrackerEngine
+        engine = M2TrackerEngine()
     else:
         print(f"[ERROR] Unknown engine: {args.engine}", file=sys.stderr)
         return 2
