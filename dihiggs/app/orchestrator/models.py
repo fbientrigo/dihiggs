@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 # ---------------------------------------------------------------------------
@@ -52,8 +52,9 @@ class FixedParams:
     lambda7:
         Quartic coupling lambda_7 (dimensionless).  Almost always 0.
     lambda1:
-        Quartic coupling lambda_1.  Relevant for Phys_M2BoundaryScan only;
-        for PhysScanWithFixings this is the scan axis (leave as None).
+        Quartic coupling lambda_1. For PhysScanWithFixings this is the scan axis
+        (leave as None). For Phys_M2BoundaryScan, it is a derived output and not
+        a physical fixed input, but can be provided as an optional reference value.
 
     Semantics note
     --------------
@@ -150,7 +151,7 @@ class TaskResult:
     total_attempts:
         Parsed from C++ stdout; ``None`` if not found or not run.
     triple_ok_points:
-        Parsed from C++ stdout; ``None`` if not found or not run.
+        Parsed from C++ stdout; ``None`` if not found or not run. Can be int or str.
     returncode:
         Subprocess return code; ``None`` for skip/dry_run/crash.
     error_message:
@@ -169,7 +170,7 @@ class TaskResult:
     output_csv: Path
     elapsed_s: float = 0.0
     total_attempts: Optional[int] = None
-    triple_ok_points: Optional[str] = None
+    triple_ok_points: Optional[Union[int, str]] = None
     returncode: Optional[int] = None
     error_message: Optional[str] = None
     stdout_path: Optional[Path] = None

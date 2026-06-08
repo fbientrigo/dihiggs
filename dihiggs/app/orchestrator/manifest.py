@@ -68,6 +68,8 @@ def write_initial_manifest(
         "created_utc": utc_now_iso(),
         "campaign": campaign,
         "run_name": run_name,
+        "engine_name": engine_name,
+        "engine": engine_name,
         "paths": {
             "outdir": str(outdir),
             "lake_name": lake_name,
@@ -185,6 +187,7 @@ def write_scan_meta(
             "axis_min": grid.axis_min,
             "axis_max": grid.axis_max,
             "n_axis": grid.n_axis,
+            "grid_signature": grid_sig,
         },
         "fixed_params": fixed.as_dict(),
         "command": cmd,

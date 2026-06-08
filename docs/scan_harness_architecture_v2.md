@@ -89,6 +89,14 @@ the column name `m12` while actually storing **GeV^2** values (`m12_sq`).  The
 `axis_metadata()` returned by each engine documents this unambiguously and is
 written into every `scan_meta.json` and `run_manifest.json`.
 
+### M2 vs m12_sq contract
+
+* M2 is NOT identical to m12_sq.
+* The exact relation is:
+  `M2 = m12_sq / (sin_beta * cos_beta)`
+  `m12_sq = M2 * sin_beta * cos_beta`
+* Ensure that you interpret historical CSV columns correctly!
+
 **Rule**: Never infer axis units from CSV column names alone.  Always read
 `axis_metadata` from the scan metadata.
 

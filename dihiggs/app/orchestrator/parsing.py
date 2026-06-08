@@ -13,10 +13,9 @@ output format for these two tokens.
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
-
-def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[str]]:
+def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[Union[int, str]]]:
     """
     Parse key statistics from C++ stdout.
 
@@ -31,8 +30,8 @@ def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[str]]:
         Integer value following ``"Total Attempts:"`` if found; else ``None``.
     triple_ok_points:
         Last whitespace-delimited token on the ``"TRIPLE_OK_POINTS"`` line
-        if found; else ``None``.  Returned as a string to preserve any
-        suffix the binary might append (e.g. ``"42"`` or ``"42/100"``).
+        if found; else ``None``. Returned as an integer if parsing is successful,
+        otherwise as a string.
 
     Notes
     -----
@@ -42,7 +41,7 @@ def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[str]]:
       behaviour in orchestrate_scans.py L649–678).
     """
     total_attempts: Optional[int] = None
-    triple_ok_points: Optional[str] = None
+    triple_ok_points: Optional[Union[int, str]] = None
 
     for line in stdout.splitlines():
         stripped = line.strip()
@@ -56,6 +55,10 @@ def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[str]]:
         if "TRIPLE_OK_POINTS" in stripped:
             parts = stripped.split()
             if parts:
-                triple_ok_points = parts[-1]
+                val_str = parts[-1]
+                try:
+                    triple_ok_points = int(val_str)
+                except ValueError:
+                    triple_ok_points = val_str
 
     return total_attempts, triple_ok_points

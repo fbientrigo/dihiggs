@@ -59,10 +59,10 @@ class TestSuccessRecordsLambda1:
         assert results[0].total_attempts == 100
 
     def test_triple_ok_parsed(self, tmp_outdir, fake_success_exe):
-        """triple_ok_points must be '42' (from fake_success_exe stdout)."""
+        """triple_ok_points must be 42 (from fake_success_exe stdout)."""
         runner = self._make_runner(tmp_outdir, fake_success_exe)
         results = runner.run()
-        assert results[0].triple_ok_points == "42"
+        assert results[0].triple_ok_points == 42
 
     def test_output_csv_created(self, tmp_outdir, fake_success_exe):
         """The fake executable creates the CSV; it must exist after the run."""
@@ -85,7 +85,7 @@ class TestSuccessRecordsLambda1:
 
         rec = done_records[0]
         assert rec["total_attempts"] == 100
-        assert rec["triple_ok_points"] == "42"
+        assert rec["triple_ok_points"] == 42
         assert "grid_signature" in rec
         assert rec["engine_name"] == "lambda1"
 
@@ -101,7 +101,7 @@ class TestSuccessRecordsLambda1:
         assert "axis_metadata" in meta
         assert meta["axis_metadata"]["scan_axis"] == "lambda1"
         assert meta["total_attempts"] == 100
-        assert meta["triple_ok_points"] == "42"
+        assert meta["triple_ok_points"] == 42
 
     def test_grid_signature_in_task_result(self, tmp_outdir, fake_success_exe):
         runner = self._make_runner(tmp_outdir, fake_success_exe)

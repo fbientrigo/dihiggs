@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help=(
-            "Fixed lambda_1 (REQUIRED for --engine m2). "
+            "Fixed lambda_1. "
             "For --engine lambda1 this must be omitted (lambda1 is the scan axis)."
         ),
     )
@@ -299,14 +299,10 @@ def main(argv: list[str] | None = None) -> int:
         axis_min = axis_min if axis_min is not None else _DEFAULT_M2_MIN
         axis_max = axis_max if axis_max is not None else _DEFAULT_M2_MAX
         n_axis = n_axis if n_axis is not None else _DEFAULT_N_M2
-        if args.lambda1 is None:
-            print(
-                "[ERROR] --lambda1 is required for --engine m2 "
-                "(lambda1 is a fixed constant in Phys_M2BoundaryScan).",
-                file=sys.stderr,
-            )
-            return 2
-        fixed_lambda1 = args.lambda1
+        if args.lambda1 is not None:
+            fixed_lambda1 = args.lambda1
+        else:
+            fixed_lambda1 = None
 
     # ---- build grid and fixed ------------------------------------------------
     grid = ScanGrid(

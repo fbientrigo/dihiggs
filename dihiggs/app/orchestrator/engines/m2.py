@@ -89,13 +89,6 @@ class M2Engine:
         ValueError
             If ``fixed.lambda1`` is None (M2 scans require a fixed lambda1).
         """
-        if fixed.lambda1 is None:
-            raise ValueError(
-                "M2Engine: fixed.lambda1 must be set because lambda1 is a "
-                "fixed constant for Phys_M2BoundaryScan scans. "
-                "Pass it via FixedParams(lambda1=<value>, ...)"
-            )
-
         # Note: the CLI positional layout is structurally identical to
         # PhysScanWithFixings (same 13 positions).  The second triplet
         # carries M2 instead of lambda1.  The C++ binary interprets them
@@ -131,16 +124,16 @@ class M2Engine:
             "executable_basename": self.executable_basename,
             "scan_axis": self.scan_axis.value,
             "axis_units": "GeV^2",
-            "axis_label": "M2 (m12_sq)",
+            "axis_label": "M2",
             "axis_description": (
-                "Soft-breaking parameter M^2 = m12^2 in units of GeV^2. "
-                "Typical scan range [0, 500000] GeV^2."
+                "Soft-breaking parameter M2 in units of GeV^2. "
+                "M2 = m12_sq / (sin_beta * cos_beta) and m12_sq = M2 * sin_beta * cos_beta. "
+                "Typical scan range [0, 500000] GeV^2. lambda1 is a derived output."
             ),
             "csv_column_note": (
-                "IMPORTANT: historical CSV output from Phys_M2BoundaryScan may "
-                "label this column as 'm12' while storing GeV^2 values (m12_sq). "
-                "Always treat this column as M^2 in GeV^2, not as m12 in GeV. "
-                "Do NOT conflate M2/m12_sq with lambda1 (dimensionless)."
+                "IMPORTANT: M2_input is the scanned M2 value. "
+                "m12_sq_input and m12_sq_out are the actual soft-breaking m12^2 values passed/recovered through 2HDMC. "
+                "Historical columns named 'm12' may mean m12_sq in GeV^2, not sqrt(m12_sq) in GeV."
             ),
         }
 

@@ -87,20 +87,20 @@ class TestM2CommandConstruction:
         cmd = self._cmd()
         assert cmd[12] == str(self.output_csv)
 
-    def test_raises_if_lambda1_missing(self):
-        """M2Engine must raise ValueError when fixed.lambda1 is None."""
+    def test_does_not_raise_if_lambda1_missing(self):
+        """M2Engine must not raise ValueError when fixed.lambda1 is None."""
         bad_fixed = FixedParams(
             mA=500.0, sin_ba=1.0, tan_beta=50.0,
             lambda6=0.001, lambda7=0.0,
-            lambda1=None,  # Error: M2 scans require a fixed lambda1
+            lambda1=None,  # Not required for M2 scans anymore
         )
-        with pytest.raises(ValueError, match="lambda1"):
-            self.engine.build_command(
-                executable=self.exe,
-                grid=self.grid,
-                fixed=bad_fixed,
-                output_csv=self.output_csv,
-            )
+        cmd = self.engine.build_command(
+            executable=self.exe,
+            grid=self.grid,
+            fixed=bad_fixed,
+            output_csv=self.output_csv,
+        )
+        assert len(cmd) == 13
 
     def test_engine_name(self):
         assert self.engine.engine_name == "m2"
