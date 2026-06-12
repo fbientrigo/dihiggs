@@ -154,6 +154,51 @@ def _as_int_like(value: object) -> int:
     return int(parsed)
 
 
+# Status / event vocabularies accepted from real orchestrator task summaries.
+# The orchestrator emits status="done"|"fail"|"crash"|"skip"|"dry_run", while
+# older/aggregated summaries used "failed"/"skipped"/"timeout".  Accept both so
+# no real failure or skip event is silently dropped.
+_DONE_STATUSES = frozenset({"done", "success", "succeeded", "complete", "completed", "ok"})
+_FAIL_STATUSES = frozenset({"fail", "failed", "crash", "crashed", "error"})
+_SKIP_STATUSES = frozenset({"skip", "skipped"})
+_TIMEOUT_STATUSES = frozenset({"timeout", "timed_out", "timedout"})
+
+
+def _summary_attempts(event: Mapping[str, object]) -> int:
+    """Read the attempt count using the documented fallback order.
+
+    Order: ``total_attempts`` → ``attempts`` → ``metrics.total_attempts`` →
+    ``metrics.attempts``.
+    """
+    for key in ("total_attempts", "attempts"):
+        if event.get(key) is not None:
+            return _as_int_like(event.get(key))
+    metrics = event.get("metrics")
+    if isinstance(metrics, Mapping):
+        for key in ("total_attempts", "attempts"):
+            if metrics.get(key) is not None:
+                return _as_int_like(metrics.get(key))
+    return 0
+
+
+def _summary_triple_ok(event: Mapping[str, object]) -> int:
+    triple_ok_points = event.get("triple_ok_points")
+    if triple_ok_points is None and isinstance(event.get("metrics"), Mapping):
+        metrics = event["metrics"]
+        assert isinstance(metrics, Mapping)
+        triple_ok_points = metrics.get("triple_ok_points")
+    return _as_int_like(triple_ok_points)
+
+
+def _summary_return_code(event: Mapping[str, object]) -> int | None:
+    for key in ("returncode", "return_code", "rc", "exit_code"):
+        if event.get(key) is not None:
+            parsed = finite_float(event.get(key))
+            if parsed is not None:
+                return int(parsed)
+    return None
+
+
 def _new_task_summary_metrics() -> dict[str, object]:
     return {
         "tasks_total": 0,
@@ -194,26 +239,27 @@ def score_task_summary(path: str | Path) -> dict[str, object]:
 
             out["tasks_total"] = int(out["tasks_total"]) + 1
 
-            status_raw = event.get("status", event.get("task_status", event.get("outcome", event.get("result"))))
+            status_raw = event.get(
+                "status",
+                event.get("task_status", event.get("event", event.get("outcome", event.get("result")))),
+            )
             status = str(status_raw).strip().lower() if status_raw is not None else ""
-            if status == "done":
+            return_code = _summary_return_code(event)
+            if status in _DONE_STATUSES:
                 out["tasks_done"] = int(out["tasks_done"]) + 1
-            elif status == "failed":
-                out["tasks_failed"] = int(out["tasks_failed"]) + 1
-            elif status == "skipped":
+            elif status in _SKIP_STATUSES:
                 out["tasks_skipped"] = int(out["tasks_skipped"]) + 1
-            elif status == "timeout":
+            elif status in _TIMEOUT_STATUSES:
                 out["tasks_timeout"] = int(out["tasks_timeout"]) + 1
+            elif status in _FAIL_STATUSES:
+                out["tasks_failed"] = int(out["tasks_failed"]) + 1
+            elif return_code is not None and return_code != 0:
+                # No recognized status but the runner reported a nonzero exit:
+                # treat it as a failure rather than dropping it.
+                out["tasks_failed"] = int(out["tasks_failed"]) + 1
 
-            attempts = event.get("attempts")
-            if attempts is None and isinstance(event.get("metrics"), Mapping):
-                attempts = event["metrics"].get("attempts")  # type: ignore[index]
-            out["attempts_total"] = int(out["attempts_total"]) + _as_int_like(attempts)
-
-            triple_ok_points = event.get("triple_ok_points")
-            if triple_ok_points is None and isinstance(event.get("metrics"), Mapping):
-                triple_ok_points = event["metrics"].get("triple_ok_points")  # type: ignore[index]
-            out["triple_ok_total"] = int(out["triple_ok_total"]) + _as_int_like(triple_ok_points)
+            out["attempts_total"] = int(out["attempts_total"]) + _summary_attempts(event)
+            out["triple_ok_total"] = int(out["triple_ok_total"]) + _summary_triple_ok(event)
 
     attempts_total = int(out["attempts_total"])
     triple_ok_total = int(out["triple_ok_total"])
