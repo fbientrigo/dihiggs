@@ -9,7 +9,7 @@
 ## 1. Purpose
 
 The modular orchestrator (`dihiggs/app/orchestrator/`) manages 2HDM parameter
-scans against compiled C++ binaries.  It supports two physics engines with
+scans against compiled C++ binaries.  It supports three physics engines with
 explicitly distinct axis semantics, preventing the historical confusion between
 `lambda1`, `M2`, `m12`, and `m12_sq`.
 
@@ -27,7 +27,8 @@ dihiggs/app/orchestrator/
 │   ├── __init__.py
 │   ├── base.py        EngineAdapter protocol + ScanAxis enum
 │   ├── lambda1.py     PhysScanWithFixings adapter
-│   └── m2.py          Phys_M2BoundaryScan adapter
+│   ├── m2.py          Phys_M2BoundaryScan adapter
+│   └── gen_fixings.py GenScanWithFixings adapter (Stage 2 calibration)
 ├── grid.py            ScanGrid dataclass + grid_signature()
 ├── models.py          FixedParams, TaskSpec, TaskResult dataclasses
 ├── layout.py          Data-lake path construction
@@ -48,9 +49,9 @@ Each engine implements the `EngineAdapter` protocol:
 | Method | Purpose |
 |--------|---------|
 | `engine_name` | Stable identifier included in grid signature |
-| `scan_axis` | `ScanAxis.LAMBDA1` or `ScanAxis.M2` |
+| `scan_axis` | `ScanAxis.LAMBDA1`, `ScanAxis.M2`, or `ScanAxis.GEN_FIXINGS` |
 | `executable_basename` | Default binary name |
-| `build_command(exe, grid, fixed, csv)` | Build the 13-token CLI command |
+| `build_command(exe, grid, fixed, csv)` | Build the CLI command (13-token positional for lambda1/m2; named flags for gen_fixings) |
 | `axis_metadata()` | Authoritative dict: units, labels, m12/m12_sq note |
 | `expected_csv_columns()` | Partial column list for validation |
 
@@ -71,6 +72,29 @@ Each engine implements the `EngineAdapter` protocol:
 
 - Second triplet (positions 4–6): **M^2 = m12_sq** (units: **GeV^2**)
 - `fixed.lambda1` must be **set** (lambda1 is a fixed constant here)
+
+### GenFixingsEngine (GenScanWithFixings, "Stage 2" calibration)
+
+```
+./GenScanWithFixings --bronze-csv=<shard.csv> --output-csv=<validated.csv> \
+    [--calibration-n=50] [--calibration-frac=0.10] [--rng-seed=0]
+```
+
+- `scan_axis` = `ScanAxis.GEN_FIXINGS`: there is **no generated (m_phi, axis)
+  grid**. The `ScanGrid` passed to `build_command` is a required-but-unused
+  placeholder (its `mphi_*`/`axis_*` fields are ignored).
+- The scan domain is a pre-generated **bronze shard CSV**
+  (`chris/CalcLambda1ScanFixings` output, `fixed.bronze_shard_csv`), one
+  shard = one `(tan_beta, m_A, lambda6, lambda7, sin_ba)` fixing tuple.
+- `cli.py` derives `mA`/`sin_ba`/`lambda6`/`lambda7`/`tan_beta` from the
+  bronze shard's first data row (not from `--mA`/`--sin-ba`/etc.), so
+  run-dir naming and grid signatures can't silently diverge from the data
+  being processed. `--mA`/`--sin-ba`/`--lambda6`/`--lambda7`/`--tanbeta` are
+  ignored for this engine.
+- Each row is calibrated against 2HDMC via a `±calibration-frac`
+  `N=calibration-n` random search (`GenScanPointEvaluator`), producing a
+  "validated/silver" CSV (legacy 29-column schema + calibration/stability/
+  chris cross-check diagnostics).
 
 ---
 
@@ -100,6 +124,14 @@ written into every `scan_meta.json` and `run_manifest.json`.
 **Rule**: Never infer axis units from CSV column names alone.  Always read
 `axis_metadata` from the scan metadata.
 
+### gen_fixings: no generated axis
+
+`ScanAxis.GEN_FIXINGS` is **not a numeric scan axis** — `axis_metadata()`
+reports `axis_units: "n/a"`. The "axis" is which bronze shard CSV
+(`fixed.bronze_shard_csv`) is being calibrated; the per-row `(tan_beta, m_A,
+lambda6, lambda7, sin_ba)` values come from the shard itself, not from a
+generated grid.
+
 ---
 
 ## 5. Grid Signature
@@ -116,8 +148,12 @@ between lambda1 and M2 scans that share the same numeric ranges.
 SHA-256({engine, mphi_min, mphi_max, n_mphi,
          axis_min, axis_max, n_axis,
          mA, sin_ba, tan_beta, lambda6, lambda7,
-         [lambda1_fixed]})[:16]
+         [lambda1_fixed],
+         [bronze_shard_csv, calibration_n, calibration_frac]})[:16]
 ```
+
+For `gen_fixings`, the bronze shard path and calibration config are folded
+into the hash so distinct shards/configs don't collide on the dedup key.
 
 ---
 
@@ -169,14 +205,16 @@ Preserved 1:1 from the legacy orchestrator.
 | Feature | Where |
 |---------|-------|
 | Engine adapter protocol (`EngineAdapter`) | `engines/base.py` |
-| `ScanAxis` enum (LAMBDA1 / M2) | `engines/base.py` |
+| `ScanAxis` enum (LAMBDA1 / M2 / GEN_FIXINGS) | `engines/base.py` |
 | Engine-specific grid signatures | `grid.py` |
-| Engine-specific command builders | `engines/lambda1.py`, `engines/m2.py` |
+| Engine-specific command builders | `engines/lambda1.py`, `engines/m2.py`, `engines/gen_fixings.py` |
 | Engine-specific `axis_metadata()` in every JSON | `manifest.py` |
 | M2 engine support | `engines/m2.py` |
-| `--engine lambda1|m2` CLI flag | `cli.py` |
+| gen_fixings ("Stage 2" calibration) engine support | `engines/gen_fixings.py` |
+| `--engine lambda1|m2|m2_tracker|gen_fixings` CLI flag | `cli.py` |
 | Generic `--axis-min/max/n-axis` flags | `cli.py` |
 | Legacy `--lam1-*` flags kept as aliases | `cli.py` |
+| `--bronze-csv/--calibration-n/--calibration-frac/--rng-seed` flags | `cli.py` |
 | Fake-executable tests (no C++ compile needed) | `tests/test_orchestrator/` |
 
 ---
@@ -202,6 +240,16 @@ python -m dihiggs.app.orchestrator \
     --tanbeta 50.0 \
     --axis-min 0 --axis-max 500000 --n-axis 50
 
+# gen_fixings calibration (Stage 2: validate a bronze shard against 2HDMC)
+python -m dihiggs.app.orchestrator \
+    --engine gen_fixings \
+    --exec ./GenScanWithFixings \
+    --campaign gen_fixings_001 \
+    --bronze-csv chris/bronze/tb_10000_mA_300/shard.csv \
+    --calibration-n 50 --calibration-frac 0.10 --rng-seed 0
+# Note: --mA/--sin-ba/--lambda6/--lambda7/--tanbeta are ignored here -- they
+# are derived from the bronze shard's first row instead.
+
 # Dry-run
 python -m dihiggs.app.orchestrator --dry-run --engine lambda1 ...
 
@@ -226,3 +274,9 @@ separate task.
 - `autoresearch` modifications
 - Heavy dependencies (pandas, Ray, Optuna, MLflow, rich)
 - Per-tanbeta `--n-lam1-map` override (deferred to v1.1)
+
+## 12. Known Gaps
+
+- `gen_fixings` has no `tests/test_orchestrator/test_command_gen_fixings.py`
+  yet, unlike `lambda1`/`m2` (see `test_command_lambda1.py`,
+  `test_command_m2.py`). Follow-up work.
