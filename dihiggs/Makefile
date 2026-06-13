@@ -35,7 +35,8 @@ MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
                $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
 			   $(SRC_DIR)/ColabRecomputeValidation.cpp \
-               $(SRC_DIR)/Phys_M2BandTracker.cpp)
+               $(SRC_DIR)/Phys_M2BandTracker.cpp \
+               $(SRC_DIR)/GenScanWithFixings.cpp)
 
 COMMON_SRCS := $(SRC_DIR)/ParamUtils.cpp \
                $(SRC_DIR)/ReplaySafeOutput.cpp \
@@ -84,8 +85,23 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# GenScanWithFixings is built standalone, bypassing libdihiggs.a: COMMON_SRCS
+# (M2PointEvaluator.cpp etc.) currently fails to compile because
+# M2PointEvaluator.hpp does not exist (pre-existing breakage, unrelated to
+# this binary). Once that's fixed, this could be folded back into the
+# default $(BIN_DIR)/% pattern rule.
+# Note: deliberately does NOT link -lHiggsTools (HiggsTools is not built in
+# this checkout, and GenScanPointEvaluator/GenScanWithFixings only use
+# 2HDMC's THDM/Constraints/DecayTable, never HiggsTools).
+$(BIN_DIR)/GenScanWithFixings: $(OBJ_DIR)/GenScanWithFixings.o $(OBJ_DIR)/GenScanPointEvaluator.o $(OBJ_DIR)/ReplaySafeOutput.o
+	@echo "[LD] Linking executable $@ (standalone, bypasses libdihiggs.a)"
+	@mkdir -p $(BIN_DIR)
+	@$(CXX) -fopenmp $^ -o $@ \
+	    -L$(THDMC_LIB) -l2HDMC \
+	    -lgsl -lgslcblas -lm
+
 directories:
-	@mkdir -p $(BIN_DIR) $(OBJ_DIR) $(LIB_DIR)
+	@mkdir -p $(BIN_DIR) $(OBJ_DIR) $(LIB_DIR) include
 
 clean:
 	@echo "[CLEAN] Removing objects and binaries"
