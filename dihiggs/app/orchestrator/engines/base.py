@@ -47,6 +47,7 @@ class ScanAxis(Enum):
 
     LAMBDA1 = "lambda1"
     M2 = "M2"
+    GEN_FIXINGS = "gen_fixings"
 
 
 @runtime_checkable

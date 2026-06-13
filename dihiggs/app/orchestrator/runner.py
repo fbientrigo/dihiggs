@@ -141,6 +141,10 @@ class ScanRunner:
             lambda6=self.fixed_base.lambda6,
             lambda7=self.fixed_base.lambda7,
             lambda1=self.fixed_base.lambda1,
+            bronze_shard_csv=self.fixed_base.bronze_shard_csv,
+            calibration_n=self.fixed_base.calibration_n,
+            calibration_frac=self.fixed_base.calibration_frac,
+            rng_seed=self.fixed_base.rng_seed,
         )
         run_dir = build_run_dir(
             outdir=self.outdir,
@@ -225,6 +229,10 @@ class ScanRunner:
                 lambda6=self.fixed_base.lambda6,
                 lambda7=self.fixed_base.lambda7,
                 lambda1=self.fixed_base.lambda1,
+                bronze_shard_csv=self.fixed_base.bronze_shard_csv,
+                calibration_n=self.fixed_base.calibration_n,
+                calibration_frac=self.fixed_base.calibration_frac,
+                rng_seed=self.fixed_base.rng_seed,
             )
             sig = grid_signature(self.engine.engine_name, self.grid, task_fixed)
 

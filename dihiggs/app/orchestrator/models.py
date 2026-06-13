@@ -55,6 +55,18 @@ class FixedParams:
         Quartic coupling lambda_1. For PhysScanWithFixings this is the scan axis
         (leave as None). For Phys_M2BoundaryScan, it is a derived output and not
         a physical fixed input, but can be provided as an optional reference value.
+    bronze_shard_csv:
+        ``gen_fixings``-only. Path to a chris/CalcLambda1ScanFixings bronze shard
+        CSV consumed by GenScanWithFixings. None for all other engines.
+    calibration_n:
+        ``gen_fixings``-only. Number of calibration candidates (N) for the
+        ±10% random search. None means use the C++ binary's default.
+    calibration_frac:
+        ``gen_fixings``-only. Fractional jitter half-width for the calibration
+        random search (e.g. 0.10 = ±10%). None means use the C++ binary's default.
+    rng_seed:
+        ``gen_fixings``-only. Base RNG seed for the calibration random search.
+        None means use the C++ binary's default.
 
     Semantics note
     --------------
@@ -71,6 +83,10 @@ class FixedParams:
     lambda6: float
     lambda7: float
     lambda1: Optional[float] = None  # None for lambda1-engine tasks
+    bronze_shard_csv: Optional[str] = None  # gen_fixings-only
+    calibration_n: Optional[int] = None  # gen_fixings-only
+    calibration_frac: Optional[float] = None  # gen_fixings-only
+    rng_seed: Optional[int] = None  # gen_fixings-only
 
     def as_dict(self) -> Dict[str, Any]:
         """Serialise to a plain dictionary (suitable for JSON)."""
@@ -83,6 +99,14 @@ class FixedParams:
         }
         if self.lambda1 is not None:
             d["lambda1"] = self.lambda1
+        if self.bronze_shard_csv is not None:
+            d["bronze_shard_csv"] = self.bronze_shard_csv
+        if self.calibration_n is not None:
+            d["calibration_n"] = self.calibration_n
+        if self.calibration_frac is not None:
+            d["calibration_frac"] = self.calibration_frac
+        if self.rng_seed is not None:
+            d["rng_seed"] = self.rng_seed
         return d
 
 

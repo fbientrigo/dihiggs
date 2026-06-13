@@ -32,6 +32,7 @@ Force overwrite:
 from __future__ import annotations
 
 import argparse
+import csv
 import sys
 from pathlib import Path
 
@@ -66,6 +67,33 @@ _DEFAULT_L7 = 0.0
 _DEFAULT_TANBETA = "10000,15000,20000"
 
 
+def _read_bronze_fixing(bronze_csv: str) -> dict:
+    """
+    Read (tan_beta, m_A, lambda6, lambda7, sin_ba) from the first data row of
+    a chris/CalcLambda1ScanFixings bronze shard CSV.
+
+    A bronze shard is one fixing tuple, so these columns are constant across
+    all rows; the first row is authoritative.
+    """
+    with open(bronze_csv, newline="") as fh:
+        reader = csv.DictReader(fh)
+        row = next(reader, None)
+    if row is None:
+        raise ValueError(f"Bronze CSV has no data rows: {bronze_csv}")
+    try:
+        return {
+            "tan_beta": float(row["tan_beta"]),
+            "mA": float(row["m_A"]),
+            "lambda6": float(row["lambda6"]),
+            "lambda7": float(row["lambda7"]),
+            "sin_ba": float(row["sin_ba"]),
+        }
+    except KeyError as exc:
+        raise ValueError(
+            f"Bronze CSV missing expected column {exc}: {bronze_csv}"
+        ) from exc
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m dihiggs.app.orchestrator",
@@ -81,11 +109,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--engine",
         type=str,
         default="lambda1",
-        choices=["lambda1", "m2", "m2_tracker"],
+        choices=["lambda1", "m2", "m2_tracker", "gen_fixings"],
         help=(
             "Physics engine: 'lambda1' → PhysScanWithFixings (second axis = lambda_1); "
             "'m2' → Phys_M2BoundaryScan (second axis = M^2); "
-            "'m2_tracker' → Phys_M2BandTracker (second axis = M^2 tracked dynamically). "
+            "'m2_tracker' → Phys_M2BandTracker (second axis = M^2 tracked dynamically); "
+            "'gen_fixings' → GenScanWithFixings (Stage 2: calibrates/validates a "
+            "chris/CalcLambda1ScanFixings bronze shard against 2HDMC). "
         ),
     )
 
@@ -243,6 +273,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated tan(beta) values, e.g. '10000,15000,20000'.",
     )
 
+    # gen_fixings (Stage 2) options
+    p.add_argument(
+        "--bronze-csv",
+        type=str,
+        default=None,
+        help=(
+            "[gen_fixings engine] Path to a chris/CalcLambda1ScanFixings "
+            "bronze shard CSV to calibrate/validate. Required for "
+            "--engine gen_fixings."
+        ),
+    )
+    p.add_argument(
+        "--calibration-n",
+        type=int,
+        default=None,
+        help=(
+            "[gen_fixings engine] Number of calibration candidates (N) for "
+            "the +/-frac random search. Omit to use the C++ binary's default (50)."
+        ),
+    )
+    p.add_argument(
+        "--calibration-frac",
+        type=float,
+        default=None,
+        help=(
+            "[gen_fixings engine] Fractional jitter half-width for the "
+            "calibration random search (e.g. 0.10 = +/-10%%). Omit to use "
+            "the C++ binary's default (0.10)."
+        ),
+    )
+    p.add_argument(
+        "--rng-seed",
+        type=int,
+        default=None,
+        help=(
+            "[gen_fixings engine] Base RNG seed for the calibration random "
+            "search. Omit to use the C++ binary's default (0)."
+        ),
+    )
+
     return p
 
 
@@ -257,6 +327,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.engine == "m2_tracker":
         from dihiggs.app.orchestrator.engines.m2_tracker import M2TrackerEngine
         engine = M2TrackerEngine()
+    elif args.engine == "gen_fixings":
+        from dihiggs.app.orchestrator.engines.gen_fixings import GenFixingsEngine
+        engine = GenFixingsEngine()
     else:
         print(f"[ERROR] Unknown engine: {args.engine}", file=sys.stderr)
         return 2
@@ -279,6 +352,15 @@ def main(argv: list[str] | None = None) -> int:
     axis_max = args.axis_max
     n_axis = args.n_axis
 
+    # mA/sin_ba/lambda6/lambda7/tan_beta: normally taken from CLI flags, but
+    # for gen_fixings these are derived from the bronze shard itself (below)
+    # to avoid silently writing mismatched provenance into the run_dir name.
+    mA_val = args.mA
+    sin_ba_val = args.sin_ba
+    lambda6_val = args.lambda6
+    lambda7_val = args.lambda7
+    tanbeta_override = None
+
     if args.engine == "lambda1":
         axis_min = axis_min if axis_min is not None else (
             args.lam1_min if args.lam1_min is not None else _DEFAULT_LAM1_MIN
@@ -299,6 +381,43 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         fixed_lambda1 = None
 
+    elif args.engine == "gen_fixings":
+        if not args.bronze_csv:
+            print(
+                "[ERROR] --bronze-csv is required for --engine gen_fixings.",
+                file=sys.stderr,
+            )
+            return 2
+        # No generated grid for this engine; ScanGrid is a required-but-unused
+        # placeholder (see GenFixingsEngine.build_command docstring).
+        axis_min = axis_min if axis_min is not None else 0.0
+        axis_max = axis_max if axis_max is not None else 0.0
+        n_axis = n_axis if n_axis is not None else 1
+        fixed_lambda1 = args.lambda1
+
+        # GenScanWithFixings reads (tan_beta, m_A, lambda6, lambda7, sin_ba)
+        # per-row from the bronze shard itself, not from --mA/--sin-ba/etc.
+        # Derive run-dir/grid-signature provenance from the shard so it can't
+        # silently diverge from the data being processed.
+        try:
+            bronze_fixing = _read_bronze_fixing(args.bronze_csv)
+        except (OSError, ValueError) as exc:
+            print(f"[ERROR] {exc}", file=sys.stderr)
+            return 2
+        mA_val = bronze_fixing["mA"]
+        sin_ba_val = bronze_fixing["sin_ba"]
+        lambda6_val = bronze_fixing["lambda6"]
+        lambda7_val = bronze_fixing["lambda7"]
+        tanbeta_override = [bronze_fixing["tan_beta"]]
+        print(
+            f"[gen_fixings] Derived fixed params from bronze shard "
+            f"{args.bronze_csv}: mA={mA_val}, sin_ba={sin_ba_val}, "
+            f"lambda6={lambda6_val}, lambda7={lambda7_val}, "
+            f"tan_beta={tanbeta_override[0]} "
+            f"(--mA/--sin-ba/--lambda6/--lambda7/--tanbeta are ignored "
+            f"for this engine)."
+        )
+
     else:  # m2
         axis_min = axis_min if axis_min is not None else _DEFAULT_M2_MIN
         axis_max = axis_max if axis_max is not None else _DEFAULT_M2_MAX
@@ -317,19 +436,26 @@ def main(argv: list[str] | None = None) -> int:
         axis_max=axis_max,
         n_axis=n_axis,
     )
-    tanbeta_list = parse_csv_floats(args.tanbeta)
+    if tanbeta_override is not None:
+        tanbeta_list = tanbeta_override
+    else:
+        tanbeta_list = parse_csv_floats(args.tanbeta)
     if not tanbeta_list:
         print("[ERROR] --tanbeta list is empty.", file=sys.stderr)
         return 2
 
     # fixed_base.tan_beta is overridden per-task inside ScanRunner; 0.0 here.
     fixed_base = FixedParams(
-        mA=args.mA,
-        sin_ba=args.sin_ba,
+        mA=mA_val,
+        sin_ba=sin_ba_val,
         tan_beta=0.0,
-        lambda6=args.lambda6,
-        lambda7=args.lambda7,
+        lambda6=lambda6_val,
+        lambda7=lambda7_val,
         lambda1=fixed_lambda1,
+        bronze_shard_csv=args.bronze_csv if args.engine == "gen_fixings" else None,
+        calibration_n=args.calibration_n if args.engine == "gen_fixings" else None,
+        calibration_frac=args.calibration_frac if args.engine == "gen_fixings" else None,
+        rng_seed=args.rng_seed if args.engine == "gen_fixings" else None,
     )
 
     # ---- construct and run ---------------------------------------------------

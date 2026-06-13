@@ -102,5 +102,14 @@ def grid_signature(engine_name: str, grid: "ScanGrid", fixed: "FixedParams") -> 
     if fixed.lambda1 is not None:
         payload["lambda1_fixed"] = fixed.lambda1
 
+    # gen_fixings: fold in bronze shard identity + calibration config so
+    # distinct shards/configs don't collide on the dedup key.
+    if fixed.bronze_shard_csv is not None:
+        payload["bronze_shard_csv"] = fixed.bronze_shard_csv
+    if fixed.calibration_n is not None:
+        payload["calibration_n"] = fixed.calibration_n
+    if fixed.calibration_frac is not None:
+        payload["calibration_frac"] = fixed.calibration_frac
+
     blob = json.dumps(payload, sort_keys=True)
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
