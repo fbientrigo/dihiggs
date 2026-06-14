@@ -149,7 +149,10 @@ def validate_region(region: Mapping[str, object], contract: Mapping[str, object]
 
     fixed_mh = _to_finite_float(_get_fixed(contract, "mh"))
     fixed_mA = _to_finite_float(_get_fixed(contract, "mA"))
-    raw_mh = bounds.get("mH")
+    # Honor the same heavy-scalar aliases (mH / m_phi / mphi) used by the
+    # ordinary bounds validation above so the mh < mH < mA hierarchy is
+    # enforced regardless of how the heavy scalar is spelled.
+    raw_mh = _get_first(bounds, ALIASES["mH"])
     if isinstance(raw_mh, (list, tuple)) and len(raw_mh) == 2 and fixed_mh is not None and fixed_mA is not None:
         m_lo = _to_finite_float(raw_mh[0])
         m_hi = _to_finite_float(raw_mh[1])

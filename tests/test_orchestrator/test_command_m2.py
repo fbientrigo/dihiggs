@@ -106,7 +106,18 @@ class TestM2CommandConstruction:
         assert self.engine.engine_name == "m2"
 
     def test_executable_basename(self):
-        assert self.engine.executable_basename == "Phys_M2BoundaryScan"
+        assert self.engine.executable_basename == "Phys_M2BandTracker"
+
+    def test_executable_basename_is_buildable_makefile_target(self):
+        """The default M2 binary must be one the repo Makefile actually builds."""
+        repo_root = Path(__file__).resolve().parents[2]
+        makefile = (repo_root / "dihiggs" / "Makefile").read_text(encoding="utf-8")
+        # The basename must appear as a built source under MAIN_SRCS, e.g.
+        # ``$(SRC_DIR)/Phys_M2BandTracker.cpp``.
+        assert f"{self.engine.executable_basename}.cpp" in makefile
+        # And the corresponding C++ source must exist in the tree.
+        src = repo_root / "dihiggs" / "src" / f"{self.engine.executable_basename}.cpp"
+        assert src.exists(), f"missing source for default M2 binary: {src}"
 
     def test_axis_metadata_is_gev2(self):
         """axis_metadata must declare axis as M2 in GeV^2, not lambda1."""

@@ -82,6 +82,31 @@ def test_validate_region_rejects_mh_ordering_violations() -> None:
     assert any("mH" in msg for msg in errors_high)
 
 
+def test_validate_region_rejects_mh_ordering_violations_via_aliases() -> None:
+    # The mh < mH < mA hierarchy must be enforced regardless of how the
+    # heavy scalar is spelled in the region bounds.
+    for alias in ("mH", "m_phi", "mphi"):
+        region_low = _valid_region()
+        del region_low["mH"]
+        region_low[alias] = [125.0, 250.0]
+        errors_low = validate_region(region_low, _contract())
+        assert any("mH" in msg for msg in errors_low), alias
+
+        region_high = _valid_region()
+        del region_high["mH"]
+        region_high[alias] = [130.0, 300.0]
+        errors_high = validate_region(region_high, _contract())
+        assert any("mH" in msg for msg in errors_high), alias
+
+
+def test_validate_region_accepts_valid_heavy_scalar_aliases() -> None:
+    for alias in ("mH", "m_phi", "mphi"):
+        region = _valid_region()
+        del region["mH"]
+        region[alias] = [130.0, 250.0]
+        assert validate_region(region, _contract()) == [], alias
+
+
 def test_validate_region_rejects_lambda7_not_zero_if_supplied() -> None:
     region = _valid_region()
     region["lambda7"] = 1e-3

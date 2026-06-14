@@ -107,8 +107,19 @@ def should_skip(
     if force:
         return False, ""
 
-    # Check if the output CSV already exists (same-run or leftover)
+    # Check if the output CSV already exists (same-run or leftover).
+    #
+    # A non-empty CSV may only be reused if its recorded grid signature
+    # matches the current effective grid + fixed parameters.  Otherwise the
+    # CSV is stale (left over from a previous run with a different grid or
+    # fixed config) and must be re-run rather than silently skipped.  If the
+    # metadata is missing, not "done", or mismatched, we do NOT skip.
     if output_csv.exists() and output_csv.stat().st_size > 0:
+        existing_sig = _grid_sig_from_meta(output_csv.parent)
+        if existing_sig is None:
+            return False, "stale_csv_meta_missing_or_not_done"
+        if existing_sig != grid_sig:
+            return False, "stale_csv_grid_signature_mismatch"
         return True, "output_csv_exists"
 
     # Check if this grid signature was already completed in this run

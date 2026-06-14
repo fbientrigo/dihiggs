@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import math
+import re
 import subprocess
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -18,6 +19,37 @@ from autoresearch.harness.safe_automation_layer import run_safe_campaign
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _checkout_root() -> Path | None:
+    """Locate the repository checkout root containing ``dihiggs/app``.
+
+    This module lives at ``<root>/autoresearch/harness/bounded_adaptive_search.py``;
+    we walk parents until we find one that holds the ``dihiggs/app`` tree.
+    """
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "dihiggs" / "app").is_dir():
+            return parent
+    return None
+
+
+def default_exec_path() -> str:
+    """Derive the PhysScanWithFixings executable path from the checkout.
+
+    Raises
+    ------
+    ValueError
+        If the checkout root cannot be located, so callers fail with a clear
+        validation error instead of falling back to a user-local absolute path.
+    """
+    root = _checkout_root()
+    if root is None:
+        raise ValueError(
+            "runtime.exec_path is required: could not derive the PhysScanWithFixings "
+            "executable path from the repository checkout (no 'dihiggs/app' directory "
+            "found relative to this module). Provide runtime.exec_path explicitly."
+        )
+    return str(root / "dihiggs" / "app" / "PhysScanWithFixings")
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
@@ -529,6 +561,44 @@ def build_orchestrator_commands_for_subcampaign(sc: Subcampaign, runtime: dict[s
     return out
 
 
+def sanitize_run_name(s: str) -> str:
+    """Mirror ``dihiggs.app.orchestrator.io_utils.sanitize_for_path``.
+
+    The orchestrator sanitizes run names before they appear on disk by mapping
+    ``.`` -> ``p``, ``-`` -> ``m`` and every other non ``[A-Za-z0-9_=]``
+    character to ``_`` (then stripping leading/trailing ``_``).
+
+    This is duplicated here (rather than imported) deliberately: the
+    ``autoresearch.harness`` package otherwise has no runtime dependency on the
+    ``dihiggs.app.orchestrator`` package, and we do not want to introduce one
+    just for a six-line string transform. The behavior is kept in lock-step via
+    regression tests in ``test_bounded_adaptive_search.py``.
+    """
+    s = s.replace(".", "p").replace("-", "m")
+    s = re.sub(r"[^A-Za-z0-9_=]+", "_", s)
+    return s.strip("_")
+
+
+def _run_name_tokens(run_name: str) -> set[str]:
+    """Candidate on-disk spellings of *run_name* (raw, legacy dot->p, sanitized)."""
+    return {run_name, run_name.replace(".", "p"), sanitize_run_name(run_name)}
+
+
+def _path_is_run_scoped(sp: str, run_name: str) -> bool:
+    for token in _run_name_tokens(run_name):
+        if not token:
+            continue
+        if (
+            (f"run={token}" in sp)
+            or (f"run={token}_" in sp)
+            or (f"/{token}/" in sp)
+            or (f"/{token}__" in sp)
+            or (f"/{token}_" in sp)
+        ):
+            return True
+    return False
+
+
 def _scan_rows_for_run(out_lake: Path, campaign: str, run_name: str) -> tuple[list[dict[str, Any]], list[str]]:
     rows: list[dict[str, Any]] = []
     csvs: list[str] = []
@@ -536,22 +606,9 @@ def _scan_rows_for_run(out_lake: Path, campaign: str, run_name: str) -> tuple[li
     marker_b = f"/{campaign}/"
     for csv_path in out_lake.rglob("*.csv"):
         sp = str(csv_path)
-        run_token = run_name.replace('.', 'p')
-        run_scoped = (
-            (f"run={run_name}" in sp)
-            or (f"run={run_name}_" in sp)
-            or (f"/{run_name}/" in sp)
-            or (f"/{run_name}__" in sp)
-            or (f"/{run_name}_" in sp)
-            or (f"run={run_token}" in sp)
-            or (f"run={run_token}_" in sp)
-            or (f"/{run_token}/" in sp)
-            or (f"/{run_token}__" in sp)
-            or (f"/{run_token}_" in sp)
-        )
         if not ((marker_a in sp) or (marker_b in sp)):
             continue
-        if not run_scoped:
+        if not _path_is_run_scoped(sp, run_name):
             continue
         csvs.append(sp)
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
@@ -808,6 +865,35 @@ def should_retry_due_to_gate(stop_report: dict[str, Any], policy: dict[str, Any]
     return False
 
 
+def aggregate_stop_reports(reports: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate per-subrun stop/gate reports into a single report.
+
+    Gate failures in any subrun must be preserved: ``gates.passed`` is the
+    logical AND across all subruns and ``gates.failures`` is the union of every
+    subrun's failures.  This prevents a later passing subrun from masking an
+    earlier failing one in an expanded (multi-command) subcampaign.
+    """
+    if not reports:
+        return {"gates": {"passed": True, "failures": []}, "production_validation": False}
+    passed = True
+    production = True
+    all_failures: list[Any] = []
+    for rep in reports:
+        gates = rep.get("gates", {}) if isinstance(rep, dict) else {}
+        if not isinstance(gates, dict) or not bool(gates.get("passed", False)):
+            passed = False
+        failures = gates.get("failures", []) if isinstance(gates, dict) else []
+        if isinstance(failures, list):
+            all_failures.extend(failures)
+        if not bool(rep.get("production_validation", False) if isinstance(rep, dict) else False):
+            production = False
+    return {
+        "gates": {"passed": passed, "failures": all_failures},
+        "production_validation": production,
+        "subrun_reports": reports,
+    }
+
+
 def select_strategy(iteration: int, accepted_summaries: list[dict[str, Any]]) -> str:
     if iteration == 1:
         return "box_partition"
@@ -895,7 +981,9 @@ def run_bounded_search(contract: dict[str, Any], *, execute: bool, plan_only: bo
     envelope = validate_envelope(dict(contract["search_envelope"]))
     budget = validate_budget(dict(contract["budget"]))
     runtime = dict(contract.get("runtime", {}))
-    runtime.setdefault("exec_path", "/home/fabi/dihiggs/dihiggs/app/PhysScanWithFixings")
+    if not runtime.get("exec_path"):
+        # No user-local default: derive from the checkout, or fail clearly.
+        runtime["exec_path"] = default_exec_path()
     runtime.setdefault("outdir", "scripts/out")
     runtime.setdefault("lake_name", "dihiggs_lake")
     runtime.setdefault("campaign", f"bounded_adaptive_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
@@ -974,7 +1062,7 @@ def run_bounded_search(contract: dict[str, Any], *, execute: bool, plan_only: bo
             rc, stdout, stderr = 0, "", ""
             all_rows: list[dict[str, Any]] = []
             all_csv_paths: list[str] = []
-            stop_report = {"gates": {"passed": True, "failures": []}, "production_validation": False}
+            subrun_reports: list[dict[str, Any]] = []
             for ridx, (run_name_i, cmd, proposal) in enumerate(run_cmds, start=1):
                 _append_jsonl(outdir / "commands.jsonl", {"iteration": iteration, "subcampaign_id": sc.subcampaign_id, "attempt_index": aidx, "run_index": ridx, "command": cmd, "threads": threads})
                 if execute and not plan_only:
@@ -985,10 +1073,13 @@ def run_bounded_search(contract: dict[str, Any], *, execute: bool, plan_only: bo
                     stderr += se_i
                 safe_contract = _safe_layer_contract(runtime, state["campaign"], run_name_i, proposal)
                 safe = run_safe_campaign(safe_contract, workdir=".", execute=False)
-                stop_report = safe["stop_report"]
+                subrun_reports.append(safe["stop_report"])
                 rows_i, csv_paths_i = _scan_rows_for_run(Path(runtime["outdir"]) / runtime.get("lake_name", "dihiggs_lake"), state["campaign"], run_name_i)
                 all_rows.extend(rows_i)
                 all_csv_paths.extend(csv_paths_i)
+            # Aggregate across all subruns so an earlier gate failure is never
+            # overwritten by a later passing subrun in an expanded subcampaign.
+            stop_report = aggregate_stop_reports(subrun_reports)
             stop_path = outdir / f"stop_report_iter{iteration:02d}_attempt{aidx}.json"
             stop_path.write_text(json.dumps(stop_report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
