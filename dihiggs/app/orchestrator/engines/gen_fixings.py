@@ -119,6 +119,7 @@ class GenFixingsEngine:
             "lam3", "lam4", "lam5",
             "mA_target", "mH_target", "mh_calibrated", "mHp_calibrated",
             "sba_calibrated", "calibration_score", "calibration_n_used",
+            "variation_idx",
             "stability_ok",
             "chris_width_bb", "chris_width_tautau", "chris_width_gg",
             "chris_width_gaga", "chris_width_Zga", "chris_ctau_mm",

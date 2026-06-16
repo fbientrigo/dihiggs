@@ -132,6 +132,7 @@ void write_result_row(std::ostream& out, const gen_scan::GenFixingsPointResult& 
         << r.lam3 << "," << r.lam4 << "," << r.lam5 << ","
         << r.mA_target << "," << r.mH_target << "," << r.mh_calibrated << "," << r.mHp_calibrated << ","
         << r.sba_calibrated << "," << r.calibration_score << "," << r.calibration_n_used << ","
+        << r.variation_idx << ","
         << r.stability_ok << ","
         << r.chris_width_bb << "," << r.chris_width_tautau << "," << r.chris_width_gg << ","
         << r.chris_width_gaga << "," << r.chris_width_Zga << "," << r.chris_ctau_mm << ","
@@ -223,16 +224,18 @@ int main(int argc, char** argv) {
         #pragma omp for schedule(dynamic)
         for (long long idx = 0; idx < total_rows; ++idx) {
             const unsigned int thread_seed = cfg.rng_seed + static_cast<unsigned int>(idx);
-            const gen_scan::GenFixingsPointResult result =
+            const std::vector<gen_scan::GenFixingsPointResult> cloud =
                 gen_scan::evaluate_gen_fixings_point(rows[idx], cfg, thread_seed);
 
-            write_result_row(local_buffer, result);
+            for (const gen_scan::GenFixingsPointResult& result : cloud) {
+                write_result_row(local_buffer, result);
+                ++local_rows;
+                if (result.positivity_ok && result.unitarity_ok && result.perturbativity_ok) {
+                    ++local_triple_ok;
+                }
+            }
 
             ++local_attempts;
-            ++local_rows;
-            if (result.positivity_ok && result.unitarity_ok && result.perturbativity_ok) {
-                ++local_triple_ok;
-            }
 
             if (local_rows >= BATCH_SIZE) {
                 #pragma omp critical

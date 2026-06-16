@@ -5,14 +5,17 @@
 //
 // "Stage 2" point evaluator for GenScanWithFixings: takes one row of a
 // chris/CalcLambda1ScanFixings bronze shard (fast-reconstructed generic-basis
-// lambdas + chris's 6-channel widths/ctau) and runs a small ±10% random-search
-// calibration of (lambda2,lambda3,lambda4,lambda5,m12sq) against
-// 2HDMC::THDM::set_param_gen -> get_param_phys so the recovered
-// (mA, mH, mh=125, mHp=mA, sba=1) match the bronze fixing's targets.  The
-// winning candidate is then re-evaluated with the full 2HDMC
-// Constraints (incl. stability) and DecayTable (incl. H->hh), producing a
-// "validated point" in the existing 29-column schema plus calibration,
-// stability, and chris-cross-check diagnostic columns.
+// lambdas + chris's 6-channel widths/ctau) and produces a *cloud* of
+// n_samples generic-basis variation points: lambda1..lambda4 and m12sq are
+// jittered by ±variation_fraction around the bronze reconstruction, with
+// lambda5 tied to lambda4 (m_A = m_Hp), lambda6 held fixed, lambda7 = 0
+// (variation_idx 0 = unperturbed reconstruction). Each candidate is fed to
+// 2HDMC::THDM::set_param_gen, recovered to the physical basis, and fully
+// re-evaluated with Constraints (incl. stability) and DecayTable (incl. H->hh).
+// Every candidate is emitted (the 29-column schema plus calibration, stability,
+// variation, and chris-cross-check diagnostic columns); calibration_score
+// reports how closely that candidate reproduces the bronze fixing's target
+// masses (mA, mH, mh=125, mHp=mA, sba=1).
 
 #include "ReplaySafeOutput.hpp"
 
@@ -74,6 +77,7 @@ struct GenFixingsPointResult {
     double mh_calibrated = 0.0, mHp_calibrated = 0.0, sba_calibrated = 0.0;
     double calibration_score = 0.0;
     int calibration_n_used = 0;
+    int variation_idx = 0;
 
     // ---- stability (only computed here) ----
     int stability_ok = 0;
@@ -91,9 +95,10 @@ struct GenFixingsPointResult {
     replay_safe_output::Metadata meta;
 };
 
-// Run the ±variation_fraction / n_samples calibration search and full
-// Constraints+DecayTable evaluation for one bronze row.
-GenFixingsPointResult evaluate_gen_fixings_point(
+// Generate and fully evaluate the ±variation_fraction / n_samples generic-basis
+// variation cloud for one bronze row. Returns one GenFixingsPointResult per
+// candidate (size == cfg.n_samples, clamped to >= 1).
+std::vector<GenFixingsPointResult> evaluate_gen_fixings_point(
     const BronzeRow& row, const CalibrationConfig& cfg, unsigned int thread_rng_seed);
 
 // Full ordered list of output CSV column names (29 legacy + diagnostics +
