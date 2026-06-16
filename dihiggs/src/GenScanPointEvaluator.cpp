@@ -37,7 +37,11 @@ void delta_ratio(double a, double b, double& delta, double& ratio) {
     ratio = (b != 0.0) ? (a / b) : std::numeric_limits<double>::quiet_NaN();
 }
 
+// One generic-basis variation candidate. lambda6 is held fixed (= row value),
+// lambda7 = 0, and lambda5 is tied to lambda4 (the m_A = m_Hp constraint); the
+// free, ±variation_fraction-jittered quantities are lambda1..lambda4 and m12sq.
 struct Candidate {
+    double lambda1 = 0.0;
     double lambda2 = 0.0;
     double lambda3 = 0.0;
     double lambda4 = 0.0;
@@ -45,94 +49,30 @@ struct Candidate {
     double m12sq = 0.0;
 };
 
-struct CandidateScore {
-    bool ok = false;
-    double score = std::numeric_limits<double>::infinity();
-};
-
-// Build the model from a candidate and score it against the five physical
-// targets (mA, mH, mh=125, mHp=mA, sba=1). Does not mutate `model` on failure.
-CandidateScore score_candidate(THDM& model, const BronzeRow& row, const Candidate& cand) {
-    CandidateScore result;
-
-    const bool set_ok = model.set_param_gen(
-        0.0, cand.lambda2, cand.lambda3, cand.lambda4, cand.lambda5,
-        row.lambda6, 0.0, cand.m12sq, row.tan_beta);
-    if (!set_ok) {
-        return result;
-    }
-
-    double mh, mH, mA, mHp, sba, lambda6_out, lambda7_out, m12_2_out, tanb_out;
-    model.get_param_phys(mh, mH, mA, mHp, sba, lambda6_out, lambda7_out, m12_2_out, tanb_out);
-
-    const double mA_target = row.m_A;
-    const double mH_target = row.m_H_input;
-    const double mHp_target = row.m_A;
-
-    const double e_mA = relerr(mA, mA_target);
-    const double e_mH = relerr(mH, mH_target);
+// Sum-of-squared relative errors of the recovered physical spectrum against the
+// bronze fixing's targets (mA, mH, mh=125, mHp=mA, sba=1). Smaller = the
+// variation candidate reproduces Christopher's input masses more closely.
+double mass_match_score(double mh, double mH, double mA, double mHp, double sba,
+                        const BronzeRow& row) {
+    const double e_mA = relerr(mA, row.m_A);
+    const double e_mH = relerr(mH, row.m_H_input);
     const double e_mh = relerr(mh, 125.0);
-    const double e_mHp = relerr(mHp, mHp_target);
+    const double e_mHp = relerr(mHp, row.m_A);
     const double e_sba = relerr(sba, 1.0);
-
-    result.ok = true;
-    result.score = e_mA * e_mA + e_mH * e_mH + e_mh * e_mh + e_mHp * e_mHp + e_sba * e_sba;
-    return result;
+    return e_mA * e_mA + e_mH * e_mH + e_mh * e_mh + e_mHp * e_mHp + e_sba * e_sba;
 }
 
-}  // namespace
-
-GenFixingsPointResult evaluate_gen_fixings_point(
-    const BronzeRow& row, const CalibrationConfig& cfg, unsigned int thread_rng_seed) {
+// Build a 2HDMC model from one generic-basis candidate, evaluate constraints +
+// full DecayTable, and fill all output/diagnostic fields (incl. chris
+// cross-check deltas). variation_idx labels the candidate within the cloud
+// (0 = unperturbed chris reconstruction).
+GenFixingsPointResult evaluate_one_candidate(
+    const BronzeRow& row, const Candidate& cand, const CalibrationConfig& cfg, int variation_idx) {
     GenFixingsPointResult res;
-
+    res.variation_idx = variation_idx;
     res.mA_target = row.m_A;
     res.mH_target = row.m_H_input;
-
-    std::mt19937 rng(thread_rng_seed);
-    std::uniform_real_distribution<double> unit(0.0, 1.0);
-
-    const Candidate baseline{row.lambda2_recon, row.lambda3_recon, row.lambda4_recon,
-                              row.lambda5_recon, row.m12sq_recon};
-
-    Candidate best_cand = baseline;
-    double best_score = std::numeric_limits<double>::infinity();
-    int n_used = 0;
-
-    THDM scratch_model;
-    for (int i = 0; i < cfg.n_samples; ++i) {
-        Candidate cand;
-        if (i == 0) {
-            cand = baseline;
-        } else {
-            auto jitter = [&](double base) {
-                const double lo = (1.0 - cfg.variation_fraction) * base;
-                const double hi = (1.0 + cfg.variation_fraction) * base;
-                return (lo <= hi) ? (lo + (hi - lo) * unit(rng)) : (hi + (lo - hi) * unit(rng));
-            };
-            cand.lambda2 = jitter(baseline.lambda2);
-            cand.lambda3 = jitter(baseline.lambda3);
-            cand.lambda4 = jitter(baseline.lambda4);
-            cand.lambda5 = jitter(baseline.lambda5);
-            cand.m12sq = jitter(baseline.m12sq);
-        }
-
-        const CandidateScore score = score_candidate(scratch_model, row, cand);
-        if (!score.ok) continue;
-        ++n_used;
-        if (score.score < best_score) {
-            best_score = score.score;
-            best_cand = cand;
-        }
-    }
-
-    res.calibration_n_used = n_used;
-    res.calibration_score = best_score;
-
-    THDM model;
-    const bool set_ok = model.set_param_gen(
-        0.0, best_cand.lambda2, best_cand.lambda3, best_cand.lambda4, best_cand.lambda5,
-        row.lambda6, 0.0, best_cand.m12sq, row.tan_beta);
+    res.calibration_n_used = cfg.n_samples;
 
     res.chris_width_bb = row.chris_width_bb;
     res.chris_width_tautau = row.chris_width_tautau;
@@ -141,19 +81,24 @@ GenFixingsPointResult evaluate_gen_fixings_point(
     res.chris_width_Zga = row.chris_width_Zga;
     res.chris_ctau_mm = row.chris_ctau_m * 1000.0;
 
+    THDM model;
+    const bool set_ok = model.set_param_gen(
+        cand.lambda1, cand.lambda2, cand.lambda3, cand.lambda4, cand.lambda5,
+        row.lambda6, 0.0, cand.m12sq, row.tan_beta);
+
     if (!set_ok) {
-        // No candidate (including the unperturbed chris reconstruction) was
-        // accepted by 2HDMC. Leave the 29-col / stability fields at their
-        // struct defaults (all zero) so the row is still emitted and is
-        // trivially filterable via calibration_n_used==0.
+        // 2HDMC rejected this generic-basis point. Leave the 29-col / stability
+        // fields at their defaults (all zero) so the row is still emitted and is
+        // trivially filterable via calibration_score==inf.
         res.tan_beta = row.tan_beta;
         res.lambda6 = row.lambda6;
         res.computed_lam1 = row.lambda1_recon;
         res.computed_lam2 = row.lambda2_recon;
+        res.calibration_score = std::numeric_limits<double>::infinity();
 
-        res.meta = replay_safe_output::make_metadata(best_cand.m12sq, 0.0, row.yukawa_type);
-        res.meta.model_api_path = "THDM::set_param_gen->THDM::get_param_phys (calibrated, set_param_gen failed)";
-        res.meta.replay_semantics_version = "gen_scan_calibrated_v1";
+        res.meta = replay_safe_output::make_metadata(cand.m12sq, 0.0, row.yukawa_type);
+        res.meta.model_api_path = "THDM::set_param_gen->THDM::get_param_phys (variation, set_param_gen failed)";
+        res.meta.replay_semantics_version = "gen_scan_variation_v1";
 
         delta_ratio(0.0, res.chris_width_bb, res.delta_width_bb, res.ratio_width_bb);
         delta_ratio(0.0, res.chris_width_tautau, res.delta_width_tautau, res.ratio_width_tautau);
@@ -171,6 +116,8 @@ GenFixingsPointResult evaluate_gen_fixings_point(
 
     double l1, l2, l3, l4, l5, l6, l7, m12_2_gen, tanb_gen;
     model.get_param_gen(l1, l2, l3, l4, l5, l6, l7, m12_2_gen, tanb_gen);
+
+    res.calibration_score = mass_match_score(mh, mH, mA, mHp, sba, row);
 
     res.mh_calibrated = mh;
     res.mHp_calibrated = mHp;
@@ -228,11 +175,53 @@ GenFixingsPointResult evaluate_gen_fixings_point(
     delta_ratio(res.width_Zga, res.chris_width_Zga, res.delta_width_Zga, res.ratio_width_Zga);
     delta_ratio(ctau_mm, res.chris_ctau_mm, res.delta_ctau_mm, res.ratio_ctau_mm);
 
-    res.meta = replay_safe_output::make_metadata(best_cand.m12sq, m12_2_gen, row.yukawa_type);
-    res.meta.model_api_path = "THDM::set_param_gen->THDM::get_param_phys (calibrated)";
-    res.meta.replay_semantics_version = "gen_scan_calibrated_v1";
+    res.meta = replay_safe_output::make_metadata(cand.m12sq, m12_2_gen, row.yukawa_type);
+    res.meta.model_api_path = "THDM::set_param_gen->THDM::get_param_phys (variation)";
+    res.meta.replay_semantics_version = "gen_scan_variation_v1";
 
     return res;
+}
+
+}  // namespace
+
+std::vector<GenFixingsPointResult> evaluate_gen_fixings_point(
+    const BronzeRow& row, const CalibrationConfig& cfg, unsigned int thread_rng_seed) {
+    std::mt19937 rng(thread_rng_seed);
+    std::uniform_real_distribution<double> unit(0.0, 1.0);
+
+    // Baseline = the unperturbed chris reconstruction. Stage 1 enforces
+    // m_A = m_Hp, so lambda5_recon already equals lambda4_recon.
+    const Candidate baseline{row.lambda1_recon, row.lambda2_recon, row.lambda3_recon,
+                             row.lambda4_recon, row.lambda5_recon, row.m12sq_recon};
+
+    const int n = (cfg.n_samples > 0) ? cfg.n_samples : 1;
+    std::vector<GenFixingsPointResult> cloud;
+    cloud.reserve(static_cast<size_t>(n));
+
+    for (int i = 0; i < n; ++i) {
+        Candidate cand;
+        if (i == 0) {
+            // First variation point is always the unperturbed reconstruction.
+            cand = baseline;
+        } else {
+            auto jitter = [&](double base) {
+                const double lo = (1.0 - cfg.variation_fraction) * base;
+                const double hi = (1.0 + cfg.variation_fraction) * base;
+                return (lo <= hi) ? (lo + (hi - lo) * unit(rng)) : (hi + (lo - hi) * unit(rng));
+            };
+            // Vary lambda1..lambda4 and m12sq by ±variation_fraction; lambda5 is
+            // tied to lambda4 (m_A = m_Hp), lambda6 is held fixed, lambda7 = 0.
+            cand.lambda1 = jitter(baseline.lambda1);
+            cand.lambda2 = jitter(baseline.lambda2);
+            cand.lambda3 = jitter(baseline.lambda3);
+            cand.lambda4 = jitter(baseline.lambda4);
+            cand.lambda5 = cand.lambda4;
+            cand.m12sq = jitter(baseline.m12sq);
+        }
+        cloud.push_back(evaluate_one_candidate(row, cand, cfg, i));
+    }
+
+    return cloud;
 }
 
 std::vector<std::string> output_csv_columns() {
@@ -243,7 +232,7 @@ std::vector<std::string> output_csv_columns() {
         "total_width", "br_gaga",
         "lam1", "computed_lam1", "lam2", "computed_lam2", "lam3", "lam4", "lam5",
         "mA_target", "mH_target", "mh_calibrated", "mHp_calibrated", "sba_calibrated",
-        "calibration_score", "calibration_n_used",
+        "calibration_score", "calibration_n_used", "variation_idx",
         "stability_ok",
         "chris_width_bb", "chris_width_tautau", "chris_width_gg", "chris_width_gaga", "chris_width_Zga", "chris_ctau_mm",
         "delta_width_bb", "ratio_width_bb",

@@ -7,7 +7,7 @@
  * CalcLambda1Core.{h,c} (lifted from CalcLambda1.c, no 2HDMC/GSL deps).
  *
  * Fixed (compile-time) constants: mh=125.0, yukawa_type=1, lambda7=0,
- * lambda1=0, sin(beta-alpha)=1.0, m_Hp=m_A.
+ * sin(beta-alpha)=1.0, m_Hp=m_A.  lambda1 is a runtime CLI argument.
  *
  * Scanned: tan_beta (log-spaced), m_A=m_Hp (linear), lambda_6 (log-spaced),
  * m_H (linear in [130, m_A], computed per (tan_beta,m_A,lambda_6) shard).
@@ -22,6 +22,7 @@
  *       <mA_min> <mA_max> <N_mA> \
  *       <lambda6_min> <lambda6_max> <N_lambda6> \
  *       <N_mH> \
+ *       <lambda1> \
  *       <output_dir>
  */
 
@@ -49,7 +50,6 @@ using Duration = std::chrono::duration<double>;
 constexpr double MH_FIXED = 125.0;
 constexpr int YUKAWA_TYPE_FIXED = 1;
 constexpr double LAMBDA7_FIXED = 0.0;
-constexpr double LAMBDA1_FIXED = 0.0;
 constexpr double SIN_BA_FIXED = 1.0;
 constexpr double MH_LOWER_BOUND = 130.0;
 
@@ -87,7 +87,7 @@ const std::vector<std::string>& bronze_columns() {
 }
 
 // One row = one m_H point evaluated for a fixed (tan_beta, m_A, lambda_6).
-void write_row(std::ostream& out, double tan_beta, double m_A, double lambda6, double m_H) {
+void write_row(std::ostream& out, double tan_beta, double m_A, double lambda6, double m_H, double lambda1_input) {
     InputPoint in;
     in.mh = MH_FIXED;
     in.mH = m_H;
@@ -96,7 +96,7 @@ void write_row(std::ostream& out, double tan_beta, double m_A, double lambda6, d
     in.sba = SIN_BA_FIXED;
     in.lambda6 = lambda6;
     in.lambda7 = LAMBDA7_FIXED;
-    in.lambda1 = LAMBDA1_FIXED;
+    in.lambda1 = lambda1_input;
     in.tanb = tan_beta;
     in.yukawa_type = YUKAWA_TYPE_FIXED;
 
@@ -106,7 +106,7 @@ void write_row(std::ostream& out, double tan_beta, double m_A, double lambda6, d
     ConstraintResultFast C = check_constraints_fast(in, L);
 
     out << tan_beta << "," << m_A << "," << in.mHp << "," << lambda6 << "," << LAMBDA7_FIXED << ","
-        << LAMBDA1_FIXED << "," << SIN_BA_FIXED << "," << MH_FIXED << "," << YUKAWA_TYPE_FIXED << ","
+        << lambda1_input << "," << SIN_BA_FIXED << "," << MH_FIXED << "," << YUKAWA_TYPE_FIXED << ","
         << m_H << ","
         << L.m12sq << ","
         << L.lambda1 << "," << L.lambda2 << "," << L.lambda3 << "," << L.lambda4 << "," << L.lambda5 << "," << L.lambda6 << "," << L.lambda7 << ","
@@ -124,12 +124,13 @@ void write_row(std::ostream& out, double tan_beta, double m_A, double lambda6, d
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 12) {
+    if (argc != 13) {
         std::cerr << "Usage: " << argv[0]
                   << " tan_beta_min tan_beta_max N_tan_beta"
                      " mA_min mA_max N_mA"
                      " lambda6_min lambda6_max N_lambda6"
                      " N_mH"
+                     " lambda1"
                      " output_dir\n";
         return 1;
     }
@@ -144,7 +145,8 @@ int main(int argc, char** argv) {
     const double l6_max = std::atof(argv[8]);
     const int N_l6 = std::atoi(argv[9]);
     const int N_mH = std::atoi(argv[10]);
-    const std::string output_dir = argv[11];
+    const double lambda1_input = std::atof(argv[11]);
+    const std::string output_dir = argv[12];
 
     const fs::path shards_root = fs::path(output_dir) / "bronze" / "points_shards";
 
@@ -196,7 +198,7 @@ int main(int argc, char** argv) {
                 "fixed_sinba=" + path_tags::format_float_tag(SIN_BA_FIXED, 4) +
                 "_l6=" + path_tags::format_float_tag(0.0, 7) +
                 "_l7=" + path_tags::format_float_tag(LAMBDA7_FIXED, 4) +
-                "_l1=" + path_tags::format_float_tag(LAMBDA1_FIXED, 4) +
+                "_l1=" + path_tags::format_float_tag(lambda1_input, 4) +
                 "_mA=" + mA_tag;
 
             const fs::path shard_dir = shards_root / fixed_dir_name / ("tb_" + tb_tag);
@@ -230,7 +232,7 @@ int main(int argc, char** argv) {
 
             for (int i_mH = 0; i_mH < N_mH; ++i_mH) {
                 const double m_H = linspace_value(MH_LOWER_BOUND, m_A, N_mH, i_mH);
-                write_row(shard_file, tan_beta, m_A, lambda6, m_H);
+                write_row(shard_file, tan_beta, m_A, lambda6, m_H, lambda1_input);
 
                 ++local_attempts;
                 // re-derive triple_ok_fast for the global counter without
@@ -238,7 +240,7 @@ int main(int argc, char** argv) {
                 // check_constraints_fast on the same inputs.
                 InputPoint in;
                 in.mh = MH_FIXED; in.mH = m_H; in.mA = m_A; in.mHp = m_A; in.sba = SIN_BA_FIXED;
-                in.lambda6 = lambda6; in.lambda7 = LAMBDA7_FIXED; in.lambda1 = LAMBDA1_FIXED;
+                in.lambda6 = lambda6; in.lambda7 = LAMBDA7_FIXED; in.lambda1 = lambda1_input;
                 in.tanb = tan_beta; in.yukawa_type = YUKAWA_TYPE_FIXED;
                 LambdaSet L = reconstruct_lambdas(in);
                 ConstraintResultFast C = check_constraints_fast(in, L);
