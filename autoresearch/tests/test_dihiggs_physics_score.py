@@ -167,6 +167,62 @@ def test_score_task_summary_aggregates_done_skip_fail_and_timeout(tmp_path) -> N
     assert result["triple_ok_rate_over_attempts"] == pytest.approx(4 / 6)
 
 
+def test_score_task_summary_real_orchestrator_records(tmp_path) -> None:
+    # Records as actually emitted by dihiggs/app/orchestrator/runner.py:
+    # status is one of done|fail|crash|skip and attempts use total_attempts.
+    path = tmp_path / "task_summary.jsonl"
+    path.write_text(
+        "\n".join(
+            [
+                '{"task_id": "tb_10000", "status": "done", "total_attempts": 100, "triple_ok_points": 42, "returncode": 0}',
+                '{"task_id": "tb_20000", "status": "skip", "total_attempts": 0, "triple_ok_points": 0}',
+                '{"task_id": "tb_30000", "status": "fail", "total_attempts": 7, "triple_ok_points": 0, "returncode": 1}',
+                '{"task_id": "tb_40000", "status": "crash", "total_attempts": 3, "triple_ok_points": 0, "returncode": 134}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    result = score_task_summary(path)
+    assert result["tasks_total"] == 4
+    assert result["tasks_done"] == 1
+    assert result["tasks_skipped"] == 1
+    # fail + crash are both failures.
+    assert result["tasks_failed"] == 2
+    assert result["attempts_total"] == 110
+    assert result["triple_ok_total"] == 42
+
+
+def test_score_task_summary_metrics_total_attempts_fallback(tmp_path) -> None:
+    path = tmp_path / "task_summary.jsonl"
+    path.write_text(
+        '{"status": "done", "metrics": {"total_attempts": 5, "triple_ok_points": 2}}\n',
+        encoding="utf-8",
+    )
+    result = score_task_summary(path)
+    assert result["attempts_total"] == 5
+    assert result["triple_ok_total"] == 2
+
+
+def test_score_task_summary_nonzero_returncode_counts_as_failure(tmp_path) -> None:
+    # No recognized status string, but a nonzero exit code must still count.
+    path = tmp_path / "task_summary.jsonl"
+    path.write_text('{"task_id": "x", "returncode": 2, "total_attempts": 4}\n', encoding="utf-8")
+    result = score_task_summary(path)
+    assert result["tasks_failed"] == 1
+    assert result["attempts_total"] == 4
+
+
+def test_score_task_summary_total_attempts_takes_precedence(tmp_path) -> None:
+    path = tmp_path / "task_summary.jsonl"
+    path.write_text(
+        '{"status": "done", "total_attempts": 9, "attempts": 1, "triple_ok_points": 3}\n',
+        encoding="utf-8",
+    )
+    result = score_task_summary(path)
+    assert result["attempts_total"] == 9
+
+
 def test_score_task_summary_invalid_json_raises_line_number(tmp_path) -> None:
     path = tmp_path / "task_summary.jsonl"
     path.write_text('{"status": "done"}\n{bad json}\n', encoding="utf-8")

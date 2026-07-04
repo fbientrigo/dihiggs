@@ -634,10 +634,13 @@ def build_run_dir(
     lake_root = outdir / lake_name
     campaign_dir = lake_root / f"campaign={sanitize_for_path(campaign)}"
 
+    # lambda6 / lambda7 are tiny couplings (~1e-3); 4 decimals aliases
+    # distinct values (e.g. 0.0019683 and 0.0020273 both -> 0.0020), so use
+    # higher precision for these two axes to keep run-dir identity unique.
     fixed_dir_name = (
         f"fixed_sinba={sanitize_for_path(format_float_tag(fixed.sin_ba, 4))}"
-        f"_l6={sanitize_for_path(format_float_tag(fixed.lambda6, 4))}"
-        f"_l7={sanitize_for_path(format_float_tag(fixed.lambda7, 4))}"
+        f"_l6={sanitize_for_path(format_float_tag(fixed.lambda6, 7))}"
+        f"_l7={sanitize_for_path(format_float_tag(fixed.lambda7, 7))}"
         f"_mA={sanitize_for_path(format_float_tag(fixed.mA, 1))}"
     )
     fixed_dir = campaign_dir / fixed_dir_name
