@@ -1,7 +1,7 @@
 # 🚀 Quick Run Guide: Parquet Analysis Pipeline
 **Last Updated:** April 2026  
 **Target Parquet:** `./temp_subspace_l6_tb_high.parquet`  
-**Working Directory:** `/home/fabi/wt_dihiggs_exploratory/mlpython/2603/`
+**Working Directory:** `<repo>/mlpython/lake_pipeline/`
 
 ---
 
@@ -35,7 +35,7 @@ The parquet file `temp_subspace_l6_tb_high.parquet` contains:
 ### 1. Environment Setup
 ```bash
 # Activate your Python environment
-source /home/fabi/higgs_env_py312/bin/activate
+source "$HIGGS_ENV_ACTIVATE"  # optional: your Python 3.12 venv
 
 # Verify required packages
 pip list | grep -E "polars|pandas|matplotlib|numpy|pyarrow"
@@ -49,10 +49,10 @@ pip list | grep -E "polars|pandas|matplotlib|numpy|pyarrow"
 - `pyarrow` (for parquet I/O)
 
 ### 2. File Paths
-All commands assume you're in: `/home/fabi/wt_dihiggs_exploratory/mlpython/2603/`
+All commands assume you're in: `<repo>/mlpython/lake_pipeline/`
 
 ```bash
-cd /home/fabi/wt_dihiggs_exploratory/mlpython/2603
+cd <repo>/mlpython/lake_pipeline
 ```
 
 ---
@@ -123,33 +123,7 @@ python paper_like_mphi_vs_br_patched.py \
 
 ---
 
-### Phase 4: Subspace Comparison (Optional)
-```bash
-python subspace_comparator.py \
-    --force \
-    --br 1e-1 \
-    --dw 1e-11 \
-    --vars "m_phi, lambda6, tan_beta, total_width" \
-    --logy
-```
-
-**Parameters:**
-- `--force`: Use existing parquet (skip rebuild)
-- `--br`: Branching ratio threshold (BR > threshold)
-- `--dw`: Total decay width threshold (DW < threshold)
-- `--vars`: Comma-separated column names or `all`
-- `--logy`: Enable log scale for y-axis
-- `--logx-width`: Enable log scale for width columns
-
-**Produces:**
-- Comparison PNG plots: `subspace_comparisons_logs/compare_*.png`
-- Execution log: `subspace_comparisons_logs/execution_log.txt`
-
-**Time:** 5-10 minutes
-
----
-
-### Phase 5: Parallel Coordinates (Raw + Log, color by ctau)
+### Phase 4: Parallel Coordinates (Raw + Log, color by ctau)
 ```bash
 python parallel_coordinates_roi.py \
         --input ./temp_subspace_l6_tb_high.parquet \
@@ -207,23 +181,11 @@ python ctau_vs_br_multislice_patched.py \
 An example of execution for the paper like
 ```bash
 # Pipeline-compatible family mode (recomendado)
-/home/fabi/higgs_env_py312/bin/python paper_like_mphi_vs_br_patched.py --input ./temp_subspace_l6_tb_high.parquet --mphi-col m_phi --br-col br_gaga
+python paper_like_mphi_vs_br_patched.py --input ./temp_subspace_l6_tb_high.parquet --mphi-col m_phi --br-col br_gaga
 
 # Fixed-cut legacy mode (solo si quieres un corte puntual)
-/home/fabi/higgs_env_py312/bin/python paper_like_mphi_vs_br_patched.py --input temp_subspace.parquet --sin-ba 1 --tan-beta FIXED_VALUE --mA FIXED_VALUE --lambda6 FIXED_VALUE --lambda7 FIXED_VALUE
+python paper_like_mphi_vs_br_patched.py --input temp_subspace.parquet --sin-ba 1 --tan-beta FIXED_VALUE --mA FIXED_VALUE --lambda6 FIXED_VALUE --lambda7 FIXED_VALUE
 ```
----
-
-### 3. `subspace_comparator.py`
-**Purpose:** Compare distributions between full lake and filtered subset
-
-| Aspect | Details |
-|--------|---------|
-| **Use Case** | Validate filtering, understand selection bias |
-| **Input** | Full or filtered parquet + thresholds |
-| **Output Dir** | `subspace_comparisons_logs/` |
-| **Key Outputs** | Overlaid histograms (all data vs subset) |
-
 ---
 
 ## Parallel Coordinates (New)
@@ -294,7 +256,7 @@ Umbrales dinámicos (por cuantiles, default):
 After running the full pipeline, your directory structure will look like:
 
 ```
-2603/
+lake_pipeline/
 ├── temp_subspace_l6_tb_high.parquet          # Your input data
 ├── ctau_plots/
 │   ├── ctau_vs_*.png                         # Lifetime vs BR plots
@@ -374,8 +336,8 @@ print(lf.collect_schema().names())
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Prepare Environment                  (~2 min)           │
-│    source /home/fabi/higgs_env_py312/bin/activate           │
-│    cd /home/fabi/wt_dihiggs_exploratory/mlpython/2603       │
+│    source "$HIGGS_ENV_ACTIVATE"  # optional: your Python 3.12 venv           │
+│    cd <repo>/mlpython/lake_pipeline       │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -396,11 +358,6 @@ print(lf.collect_schema().names())
 │    → Outputs: paper_plots_mphi_br/                          │
 └─────────────────────────────────────────────────────────────┘
                             ↓
-┌─────────────────────────────────────────────────────────────┐
-│ 5. [Optional] Validate Subspace         (~5 min)            │
-│    python subspace_comparator.py --force --vars all         │
-│    → Outputs: subspace_comparisons_logs/                    │
-└─────────────────────────────────────────────────────────────┘
                ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 6. Parallel Coordinates (New)         (~5-12 min)          │
@@ -431,6 +388,5 @@ For detailed parameter documentation, see individual script headers:
 ```bash
 head -30 ctau_vs_br_multislice_patched.py
 head -30 paper_like_mphi_vs_br_patched.py
-head -30 subspace_comparator.py
 ```
 

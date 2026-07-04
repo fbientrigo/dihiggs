@@ -1,6 +1,6 @@
 # 📚 Parquet Analysis Pipeline - Documentation Index
 
-**Location:** `/home/fabi/wt_dihiggs_exploratory/mlpython/2603/`  
+**Location:** `<repo>/mlpython/lake_pipeline/`  
 **Data:** `temp_subspace_l6_tb_high.parquet` (502,250 rows, 29 columns)
 
 ---
@@ -9,8 +9,8 @@
 
 ### For The Impatient 
 ```bash
-cd /home/fabi/wt_dihiggs_exploratory/mlpython/2603
-source /home/fabi/higgs_env_py312/bin/activate
+cd <repo>/mlpython/lake_pipeline
+source "$HIGGS_ENV_ACTIVATE"  # optional: your Python 3.12 venv
 ./run_pipeline.sh check        # Verify setup
 ./run_pipeline.sh all          # Run everything
 ```
@@ -140,7 +140,6 @@ python ctau_vs_br_multislice_patched.py \
 |--------|---------|------|
 | `ctau_vs_br_multislice_patched.py` | Lifetime vs decay plots | 5-15 min |
 | `paper_like_mphi_vs_br_patched.py` | Mass vs BR plots (paper-quality) | 5-15 min |
-| `subspace_comparator.py` | Compare data distributions | 5-10 min |
 | `EDA_subSpace.ipynb` | Exploratory analysis (Jupyter) | 1-2 min |
 
 ---
@@ -160,7 +159,7 @@ python ctau_vs_br_multislice_patched.py \
 After running the pipeline:
 
 ```
-2603/
+lake_pipeline/
 ├── ctau_plots/                    # Lifetime vs branching ratio
 │   ├── ctau_vs_br_gaga_*.png
 │   ├── ctau_vs_br_gaga_*.pdf
@@ -192,7 +191,7 @@ After running the pipeline:
 ## 🔧 Environment
 
 **Python:** 3.12  
-**Environment:** `/home/fabi/higgs_env_py312/`
+**Environment:** Python 3.12 virtualenv
 
 **Key Dependencies:**
 - polars ≥ 0.19
@@ -287,7 +286,7 @@ cat ctau_plots/ctau_summary.json | python -m json.tool
 ## 📝 File Organization
 
 ```
-2603/
+lake_pipeline/
 ├── Documentation/                 # ← YOU ARE HERE
 │   ├── README.md                 # This file
 │   ├── QUICK_REFERENCE.md        # Fast lookup
@@ -298,7 +297,6 @@ cat ctau_plots/ctau_summary.json | python -m json.tool
 │   ├── run_pipeline.sh           # Main runner ✓
 │   ├── ctau_vs_br_multislice_patched.py
 │   ├── paper_like_mphi_vs_br_patched.py
-│   ├── subspace_comparator.py
 │   └── [utilities]
 │
 ├── Data/
@@ -351,5 +349,5 @@ cat ctau_plots/ctau_summary.json | python -m json.tool
 
 **Last Updated:** April 7, 2026  
 **Data Version:** temp_subspace_l6_tb_high.parquet (502,250 rows)  
-**Environment:** Python 3.12 + higgs_env_py312
+**Environment:** Python 3.12
 

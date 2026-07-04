@@ -40,7 +40,7 @@ def _load_data_lake_dir(default: str = DEFAULT_DATA_LAKE_DIR) -> str:
 
 
 DATA_LAKE_DIR = _load_data_lake_dir()
-IMG_DIR = "/home/fabi/dihiggs/mlpython/paper_img/reunion_marzo_streaming"
+IMG_DIR = str(Path(__file__).resolve().parent.parent / "paper_img" / "reunion_marzo_streaming")
 
 TARGET_COLS = [
     "m_phi", "lam1", "tan_beta", "lambda6",

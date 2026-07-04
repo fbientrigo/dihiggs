@@ -1,5 +1,5 @@
 import numpy as np
-from lib.oracle import run_oracle
+from .oracle import run_oracle
 import time
 from itertools import product
 from multiprocessing import Pool, cpu_count

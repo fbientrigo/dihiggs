@@ -60,7 +60,7 @@ def main():
         "--parquet",
         type=str,
         default="temp_subspace.parquet",
-        help="Path to the temporary subset parquet produced by subspace_comparator.py",
+        help="Path to the temporary subset parquet",
     )
     parser.add_argument(
         "--column",

@@ -23,7 +23,7 @@ show_menu() {
   6. run-all       - Full pipeline (30-40 minutes)
   7. run-ctau      - Just ctau plots (10 minutes)
   8. run-mphi      - Just m_phi plots (10 minutes)
-  9. run-compare   - Just comparison plots (5 minutes)
+  9. run-parallel  - Just parallel-coordinates plots
 
 ⚙  UTILITIES:
   10. check        - Verify environment
@@ -89,9 +89,9 @@ case "${1,,}" in
         echo "📊 Running m_phi plots..."
         ./run_pipeline.sh mphi
         ;;
-    run-compare|compare)
-        echo "🔄 Running comparison plots..."
-        ./run_pipeline.sh compare
+    run-parallel|parallel)
+        echo "🔄 Running parallel-coordinates plots..."
+        ./run_pipeline.sh parallel
         ;;
     check|verify)
         echo "✓ Checking environment..."

@@ -1,5 +1,5 @@
 # 📋 Quick Reference Card
-**Parquet Analysis Pipeline** | `/home/fabi/wt_dihiggs_exploratory/mlpython/2603/`
+**Parquet Analysis Pipeline** | `<repo>/mlpython/lake_pipeline/`
 
 ---
 
@@ -7,8 +7,8 @@
 
 ### Full Pipeline (All Phases)
 ```bash
-cd /home/fabi/wt_dihiggs_exploratory/mlpython/2603
-source /home/fabi/higgs_env_py312/bin/activate
+cd <repo>/mlpython/lake_pipeline
+source "$HIGGS_ENV_ACTIVATE"  # optional: your Python 3.12 venv
 ./run_pipeline.sh all
 ```
 
@@ -53,23 +53,11 @@ python paper_like_mphi_vs_br_patched.py \
     --max-slices 3
 ```
 
-### Subspace Comparison
-```bash
-python subspace_comparator.py \
-    --force \
-    --br 1e-1 \
-    --dw 1e-11 \
-    --vars "m_phi, lambda6, tan_beta" \
-    --logy
-```
-
----
-
 ## 📁 Output Structure
 
 After running pipeline:
 ```
-2603/
+lake_pipeline/
 ├── ctau_plots/
 │   ├── ctau_vs_br_gaga_*.png      # Main outputs
 │   ├── ctau_vs_br_gaga_*.pdf

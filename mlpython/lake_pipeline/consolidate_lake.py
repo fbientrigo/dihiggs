@@ -524,7 +524,7 @@ def get_parquet_path(
 def main() -> None:
     parser = argparse.ArgumentParser(description="One-shot CSV -> Parquet consolidator for di-Higgs lake.")
     parser.add_argument("--force", action="store_true", help="Force rebuild of Parquet file")
-    parser.add_argument("--frac", type=float, default=1.0, help="Fraction of files to take per campaign (e.g. 0.1 for 10%)")
+    parser.add_argument("--frac", type=float, default=1.0, help="Fraction of files to take per campaign (e.g. 0.1 for 10%%)")
     parser.add_argument(
         "--no-phys-filter",
         action="store_true",

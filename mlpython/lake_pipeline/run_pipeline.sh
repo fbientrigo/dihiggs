@@ -7,8 +7,7 @@
 #   ./run_pipeline.sh eda                  # Phase 1 only
 #   ./run_pipeline.sh ctau                 # Phase 2 only
 #   ./run_pipeline.sh mphi                 # Phase 3 only
-#   ./run_pipeline.sh compare              # Phase 4 only
-#   ./run_pipeline.sh parallel             # Phase 5 only
+#   ./run_pipeline.sh parallel             # Phase 4 only
 # ============================================================================
 
 set -e  # Exit on error
@@ -22,8 +21,9 @@ NC='\033[0m' # No Color
 
 # Configuration
 PARQUET_FILE="./temp_subspace_l6_tb_high.parquet"
-WORK_DIR="/home/fabi/wt_dihiggs_exploratory/mlpython/2603"
-ENV_PATH="/home/fabi/higgs_env_py312/bin/activate"
+WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Optional: point HIGGS_ENV_ACTIVATE at your virtualenv's activate script
+ENV_PATH="${HIGGS_ENV_ACTIVATE:-}"
 
 # ============================================================================
 # Helper Functions
@@ -49,27 +49,25 @@ print_info() {
 check_environment() {
     print_header "Step 1: Checking Environment"
     
-    if [ ! -f "$ENV_PATH" ]; then
-        print_error "Python environment not found at: $ENV_PATH"
-        exit 1
+    cd "$WORK_DIR"
+    print_success "Working directory: $WORK_DIR"
+
+    if [ -n "$ENV_PATH" ]; then
+        if [ ! -f "$ENV_PATH" ]; then
+            print_error "Python environment not found at: $ENV_PATH"
+            exit 1
+        fi
+        source "$ENV_PATH"
+        print_success "Environment activated"
+    else
+        print_info "HIGGS_ENV_ACTIVATE not set; using current Python environment"
     fi
-    print_success "Python environment found"
-    
-    if [ ! -d "$WORK_DIR" ]; then
-        print_error "Working directory not found: $WORK_DIR"
-        exit 1
-    fi
-    print_success "Working directory exists"
-    
+
     if [ ! -f "$PARQUET_FILE" ]; then
         print_error "Parquet file not found: $PARQUET_FILE"
         exit 1
     fi
     print_success "Parquet file exists: $PARQUET_FILE"
-    
-    cd "$WORK_DIR"
-    source "$ENV_PATH"
-    print_success "Environment activated"
 }
 
 verify_dependencies() {
@@ -163,7 +161,7 @@ run_mphi() {
 }
 
 run_parallel() {
-    print_header "Phase 5: Parallel Coordinates (Global + ROI)"
+    print_header "Phase 4: Parallel Coordinates (Global + ROI)"
     print_info "Generating plots in: parallel_plots/"
     print_info "ROI defaults: ctau < q20 and br_gaga > q80"
 
@@ -218,8 +216,7 @@ Stages:
   eda         Phase 1: Exploratory data analysis (Jupyter notebook)
   ctau        Phase 2: ctau vs BR plots
   mphi        Phase 3: m_phi vs BR plots
-  compare     Phase 4: Subspace comparison plots
-    parallel    Phase 5: Parallel coordinates (global + ROI)
+  parallel    Phase 4: Parallel coordinates (global + ROI)
   help        Show this message
 
 Examples:
