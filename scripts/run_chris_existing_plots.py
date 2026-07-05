@@ -4,7 +4,7 @@ run_chris_existing_plots.py
 ============================
 Minimal wrapper to make Christopher's production run reproducibly plottable.
 
-Converts silver_all.csv to parquet and invokes existing mlpython/2603 plotters
+Converts silver_all.csv to parquet and invokes existing mlpython/lake_pipeline plotters
 without duplicating their logic.
 
 Usage:
@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO, format="[%(name)s] %(message)s")
 logger = logging.getLogger("run_chris_plots")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MLPYTHON_DIR = REPO_ROOT / "mlpython" / "2603"
+MLPYTHON_DIR = REPO_ROOT / "mlpython" / "lake_pipeline"
 
 DEFAULT_INPUT_CSV = (
     REPO_ROOT / "data" / "lam1eq1_allchris_var10000_2026jun" / "chunked" / "silver_all.csv"
@@ -76,9 +76,9 @@ def _write_readme(
         f"- Parquet (zstd): `{parquet_file}`",
         "",
         "## Scripts invoked",
-        f"1. `mlpython/2603/paper_like_mphi_vs_br_patched.py` (color by tan_beta)",
-        f"2. `mlpython/2603/paper_like_mphi_vs_br_patched.py` (color by lambda1)",
-        f"3. `mlpython/2603/ctau_vs_br_multislice_patched.py`",
+        f"1. `mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py` (color by tan_beta)",
+        f"2. `mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py` (color by lambda1)",
+        f"3. `mlpython/lake_pipeline/ctau_vs_br_multislice_patched.py`",
         "",
         "## Output directories",
         f"- `{mphi_br_dir}` — m_phi vs BR, colored by tan_beta",
@@ -87,17 +87,17 @@ def _write_readme(
         "",
         "## Exact commands",
         "```bash",
-        f"{py} mlpython/2603/paper_like_mphi_vs_br_patched.py \\",
+        f"{py} mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py \\",
         f"    --input {parquet_file} \\",
         f"    --output-dir {mphi_br_dir} \\",
         "    --color-by tan_beta",
         "",
-        f"{py} mlpython/2603/paper_like_mphi_vs_br_patched.py \\",
+        f"{py} mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py \\",
         f"    --input {parquet_file} \\",
         f"    --output-dir {mphi_br_lambda1_dir} \\",
         "    --color-by lambda1",
         "",
-        f"{py} mlpython/2603/ctau_vs_br_multislice_patched.py \\",
+        f"{py} mlpython/lake_pipeline/ctau_vs_br_multislice_patched.py \\",
         f"    --input {parquet_file} \\",
         f"    --output-dir {ctau_br_dir} \\",
         "    --color-by both",
@@ -105,7 +105,7 @@ def _write_readme(
         "",
         "## Smoke command (re-run from repo root)",
         "```bash",
-        "bash mlpython/2603/run_chris_existing_plots.sh \\",
+        "bash mlpython/lake_pipeline/run_chris_existing_plots.sh \\",
         f"  {input_csv} \\",
         f"  {output_root}",
         "```",
@@ -117,7 +117,7 @@ def _write_readme(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Wrapper to plot Christopher's production run using existing mlpython/2603 tools."
+        description="Wrapper to plot Christopher's production run using existing mlpython/lake_pipeline tools."
     )
     parser.add_argument(
         "--input",
@@ -210,21 +210,21 @@ def main() -> int:
         "plotters": [
             {
                 "name": "paper_like_mphi_vs_br_patched.py (tan_beta)",
-                "script": "mlpython/2603/paper_like_mphi_vs_br_patched.py",
+                "script": "mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py",
                 "output_dir": str(mphi_br_dir),
-                "command": f"python3 mlpython/2603/paper_like_mphi_vs_br_patched.py --input {parquet_file} --output-dir {mphi_br_dir} --color-by tan_beta",
+                "command": f"python3 mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py --input {parquet_file} --output-dir {mphi_br_dir} --color-by tan_beta",
             },
             {
                 "name": "paper_like_mphi_vs_br_patched.py (lambda1)",
-                "script": "mlpython/2603/paper_like_mphi_vs_br_patched.py",
+                "script": "mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py",
                 "output_dir": str(mphi_br_lambda1_dir),
-                "command": f"python3 mlpython/2603/paper_like_mphi_vs_br_patched.py --input {parquet_file} --output-dir {mphi_br_lambda1_dir} --color-by lambda1",
+                "command": f"python3 mlpython/lake_pipeline/paper_like_mphi_vs_br_patched.py --input {parquet_file} --output-dir {mphi_br_lambda1_dir} --color-by lambda1",
             },
             {
                 "name": "ctau_vs_br_multislice_patched.py",
-                "script": "mlpython/2603/ctau_vs_br_multislice_patched.py",
+                "script": "mlpython/lake_pipeline/ctau_vs_br_multislice_patched.py",
                 "output_dir": str(ctau_br_dir),
-                "command": f"python3 mlpython/2603/ctau_vs_br_multislice_patched.py --input {parquet_file} --output-dir {ctau_br_dir} --color-by both",
+                "command": f"python3 mlpython/lake_pipeline/ctau_vs_br_multislice_patched.py --input {parquet_file} --output-dir {ctau_br_dir} --color-by both",
             },
         ],
     }

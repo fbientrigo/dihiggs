@@ -60,7 +60,11 @@ class M2Engine:
 
     @property
     def executable_basename(self) -> str:
-        return "Phys_M2BoundaryScan"
+        # The Makefile in this checkout builds ``Phys_M2BandTracker`` (there is
+        # no ``Phys_M2BoundaryScan`` source).  Default to the binary that is
+        # actually buildable so the executable can be resolved from the
+        # checkout when ``--exec`` is omitted.
+        return "Phys_M2BandTracker"
 
     def build_command(
         self,

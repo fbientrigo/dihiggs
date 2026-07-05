@@ -48,10 +48,16 @@ results/
 
 # Project-specific generated outputs
 dihiggs/app/outcsv/
-mlpython/2603/outputs/
-mlpython/2603/ctau_plots/
-mlpython/2603/paper_plots_mphi_br/
-mlpython/2603/parallel_plots/
+mlpython/img/
+mlpython/branching_ratio_plots/
+mlpython/graphing/*.png
+mlpython/outs/
+mlpython/docs/_build/
+mlpython/presentaciones/
+mlpython/lake_pipeline/outputs/
+mlpython/lake_pipeline/ctau_plots/
+mlpython/lake_pipeline/paper_plots_mphi_br/
+mlpython/lake_pipeline/parallel_plots/
 
 # =============================================================================
 # C/C++ build artifacts

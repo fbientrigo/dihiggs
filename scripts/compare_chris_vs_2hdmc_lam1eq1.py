@@ -46,7 +46,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # hbar*c in GeV*mm  (6.582119569e-25 GeV*s * 2.99792458e11 mm/s); matches the
-# constant used in GenScanPointEvaluator.cpp and mlpython/2603.
+# constant used in GenScanPointEvaluator.cpp and mlpython/lake_pipeline.
 HBAR_C_GEV_MM = 6.582119569e-25 * 2.99792458e11
 
 # In the GENERIC basis the physical masses are *outputs* of (lambda_i, m12^2),

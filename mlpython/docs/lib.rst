@@ -20,8 +20,3 @@ Library Reference
    :members:
    :undoc-members:
    :show-inheritance:
-
-.. automodule:: lib.pipeline
-   :members:
-   :undoc-members:
-   :show-inheritance:

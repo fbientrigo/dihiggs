@@ -624,3 +624,88 @@ def test_subcampaign_run_identity_suffix_propagates_to_run_names() -> None:
     }
     sc = build_subcampaign(1, "template_grid_probe", env, {"tan_beta": 55000.0, "mphi": 290.0, "lambda1": 1.0, "lambda6": 0.0027, "mA": 300.0, "lambda7": 0.0, "sin_ba": 1.0}, b, strategy_cfg=cfg)
     assert "hdeadbeef" in sc.subcampaign_id
+
+
+# ---------------------------------------------------------------------------
+# Issue 3: bounded-search executable derived from checkout (no user-local path)
+# ---------------------------------------------------------------------------
+
+def test_default_exec_path_is_checkout_relative() -> None:
+    from autoresearch.harness.bounded_adaptive_search import default_exec_path
+
+    p = Path(default_exec_path())
+    assert p.is_absolute()
+    assert p.name == "PhysScanWithFixings"
+    assert p.parent.name == "app" and p.parent.parent.name == "dihiggs"
+    # Must NOT be the old hardcoded user-local default.
+    assert "/home/fabi/" not in str(p)
+    # The derived parent (the checkout) must actually contain dihiggs/app.
+    assert (p.parent.parent / "app").is_dir()
+
+
+def test_omitted_exec_path_resolves_to_checkout(tmp_path: Path) -> None:
+    from autoresearch.harness.bounded_adaptive_search import default_exec_path
+
+    c = _contract(tmp_path)
+    del c["runtime"]["exec_path"]  # type: ignore[union-attr]
+    state = run_bounded_search(c, execute=False, plan_only=True, output_dir=tmp_path / "art", max_iterations_override=1)
+    assert state["campaign"] == "unit_campaign"
+    # The contract no longer carries a user-local absolute path as a default.
+    assert default_exec_path().endswith("dihiggs/app/PhysScanWithFixings")
+
+
+# ---------------------------------------------------------------------------
+# Issue 8: gate failures preserved across expanded subruns
+# ---------------------------------------------------------------------------
+
+def test_aggregate_stop_reports_preserves_earlier_failure() -> None:
+    from autoresearch.harness.bounded_adaptive_search import aggregate_stop_reports
+
+    first = {
+        "gates": {"passed": False, "failures": [{"code": "gate_failed_due_to_header_only_csv"}]},
+        "production_validation": False,
+    }
+    second = {"gates": {"passed": True, "failures": []}, "production_validation": True}
+
+    agg = aggregate_stop_reports([first, second])
+    # Aggregate must remain failing even though the later subrun passed.
+    assert agg["gates"]["passed"] is False
+    assert any(f.get("code") == "gate_failed_due_to_header_only_csv" for f in agg["gates"]["failures"])
+
+
+def test_aggregate_stop_reports_all_pass() -> None:
+    from autoresearch.harness.bounded_adaptive_search import aggregate_stop_reports
+
+    a = {"gates": {"passed": True, "failures": []}, "production_validation": True}
+    b = {"gates": {"passed": True, "failures": []}, "production_validation": True}
+    agg = aggregate_stop_reports([a, b])
+    assert agg["gates"]["passed"] is True
+    assert agg["gates"]["failures"] == []
+
+
+# ---------------------------------------------------------------------------
+# Issue 9: orchestrator-equivalent sanitizer for run-name lookups
+# ---------------------------------------------------------------------------
+
+def test_sanitize_run_name_matches_orchestrator() -> None:
+    from autoresearch.harness.bounded_adaptive_search import sanitize_run_name
+    from dihiggs.app.orchestrator.io_utils import sanitize_for_path
+
+    for name in ("foo-bar", "foo bar", "foo.1", "a.b-c d", "run=1.2-3"):
+        assert sanitize_run_name(name) == sanitize_for_path(name), name
+
+
+def test_scan_rows_discovers_sanitized_run_names(tmp_path: Path) -> None:
+    from autoresearch.harness.bounded_adaptive_search import _scan_rows_for_run, sanitize_run_name
+
+    out_lake = tmp_path / "lake"
+    campaign = "camp1"
+    for raw in ("foo-bar", "foo bar", "foo.1"):
+        run_dir = out_lake / f"campaign={campaign}" / "fixed" / sanitize_run_name(raw) / "tb_10000"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "scan_tb_10000.csv").write_text("mphi,ctau_m\n200.0,1.0\n", encoding="utf-8")
+
+    for raw in ("foo-bar", "foo bar", "foo.1"):
+        rows, csvs = _scan_rows_for_run(out_lake, campaign, raw)
+        assert len(csvs) == 1, raw
+        assert len(rows) == 1, raw

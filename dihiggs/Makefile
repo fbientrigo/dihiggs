@@ -115,6 +115,21 @@ GATE_THREADS_HI ?= 4
 GATE_STEPS ?= 25
 GATE_OUT_DIR ?= /tmp/calcphys_ci_gate
 
+# Paths are anchored to the checkout (MAKEFILE_DIR / REPO_ROOT) so they resolve
+# correctly regardless of the cwd used to invoke the target (e.g.
+# `make -C dihiggs ci-calcphys-gate`). The scan and CalcPhys binaries are built
+# from committed sources at these locations.
+GATE_SCRIPT   ?= $(REPO_ROOT)/scripts/out/calcphys_ci_gate.py
+GATE_SCAN_EXE ?= $(MAKEFILE_DIR)/app/PhysScanWithFixings
+GATE_CALCPHYS ?= $(REPO_ROOT)/2hdmc/CalcPhys
+
 ci-calcphys-gate: $(BIN_DIR)/PhysScanWithFixings
 	@echo "[CI] Running CalcPhys parity + thread gate (1 thread vs >=4 threads)"
-	@python3 ../scripts/out/calcphys_ci_gate.py --repo-root .. --scan-exe ./dihiggs/app/PhysScanWithFixings --calcphys ./2hdmc/CalcPhys --threads-hi $(GATE_THREADS_HI) --steps $(GATE_STEPS) --out-dir $(GATE_OUT_DIR)
+	@if [ ! -f "$(GATE_SCRIPT)" ]; then \
+		echo "[ERROR] CalcPhys CI gate script not found: $(GATE_SCRIPT)"; \
+		echo "[ERROR] This harness is not committed to the repository, so the"; \
+		echo "[ERROR] target cannot run. Provide it via GATE_SCRIPT=/path/to/calcphys_ci_gate.py"; \
+		echo "[ERROR] or restore it into scripts/out/ before invoking this target."; \
+		exit 1; \
+	fi
+	@python3 "$(GATE_SCRIPT)" --repo-root "$(REPO_ROOT)" --scan-exe "$(GATE_SCAN_EXE)" --calcphys "$(GATE_CALCPHYS)" --threads-hi $(GATE_THREADS_HI) --steps $(GATE_STEPS) --out-dir $(GATE_OUT_DIR)
