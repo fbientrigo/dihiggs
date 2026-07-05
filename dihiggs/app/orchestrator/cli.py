@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import sys
 from pathlib import Path
 
@@ -58,6 +59,44 @@ _DEFAULT_N_LAM1 = 666
 # M2 defaults
 _DEFAULT_M2_MIN = 0.0
 _DEFAULT_M2_MAX = 500_000.0
+
+# CPU headroom: cores left free for the OS/sshd so the host never starves.
+_CPU_HEADROOM = 2
+
+
+def _safe_default_threads(reserve: int = _CPU_HEADROOM) -> int:
+    """OMP thread count that always leaves CPU headroom for the OS/sshd.
+
+    A scan that pins *every* core (OMP_NUM_THREADS == ncpu) starves sshd and
+    the rest of the system and can freeze the whole box — this actually
+    happened (jun 2026: a 12-thread run on a 12-core host stopped logging
+    mid-run and had to be power-cycled). We therefore reserve a couple of
+    cores by default so the machine stays interactively reachable no matter
+    how long the job runs. Override with ``--threads N`` or ``--all-cores``.
+    """
+    ncpu = os.cpu_count() or 1
+    return max(1, ncpu - reserve)
+
+
+def resolve_omp_threads(
+    all_cores: bool,
+    threads: int | None,
+    reserve: int = _CPU_HEADROOM,
+) -> int | None:
+    """Resolve the OMP_NUM_THREADS value with safe CPU-headroom defaults.
+
+    Parameters mirror the CLI flags ``--all-cores`` and ``--threads``:
+
+    - ``all_cores=True``  -> ``None`` (no cap; the engine may grab every core).
+    - ``threads`` given   -> that explicit value (passed through unchanged).
+    - otherwise           -> ``_safe_default_threads(reserve)`` so a couple of
+      cores stay free for the OS/sshd.
+    """
+    if all_cores:
+        return None
+    if threads is not None:
+        return threads
+    return _safe_default_threads(reserve)
 _DEFAULT_N_M2 = 50
 
 _DEFAULT_MA = 300.0
@@ -137,7 +176,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--threads",
         type=int,
         default=None,
-        help="OMP_NUM_THREADS. If omitted, inherits from environment.",
+        help=(
+            "OMP_NUM_THREADS for the C++ engine. Default: (logical CPUs - "
+            f"{_CPU_HEADROOM}), leaving headroom so the host stays reachable. "
+            "Pass an explicit value to override, or --all-cores to use every "
+            "core (NOT recommended on a machine you also SSH into)."
+        ),
+    )
+    p.add_argument(
+        "--all-cores",
+        action="store_true",
+        help=(
+            "Disable the automatic CPU-headroom cap and let the engine use "
+            "every core (OMP_NUM_THREADS left to the environment). Can starve "
+            "sshd and freeze the host; only use on a dedicated batch node."
+        ),
     )
     p.add_argument(
         "--force",
@@ -458,6 +511,30 @@ def main(argv: list[str] | None = None) -> int:
         rng_seed=args.rng_seed if args.engine == "gen_fixings" else None,
     )
 
+    # ---- resolve OMP threads (safe-by-default CPU headroom) ------------------
+    ncpu = os.cpu_count() or 1
+    omp_threads = resolve_omp_threads(args.all_cores, args.threads)
+    if args.all_cores:
+        print(
+            "[WARN] --all-cores: no CPU-headroom cap. This can starve sshd and "
+            "freeze a host you also SSH into.",
+            file=sys.stderr,
+        )
+    elif args.threads is not None:
+        if omp_threads is not None and omp_threads >= ncpu:
+            print(
+                f"[WARN] --threads {omp_threads} >= {ncpu} logical CPUs: no "
+                "headroom left for the OS/sshd; the host may become "
+                "unreachable mid-run.",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[INIT] OMP_NUM_THREADS={omp_threads} "
+            f"(auto CPU headroom: {ncpu} logical CPUs - {_CPU_HEADROOM}). "
+            "Override with --threads N or --all-cores."
+        )
+
     # ---- construct and run ---------------------------------------------------
     runner = ScanRunner(
         engine=engine,
@@ -473,7 +550,7 @@ def main(argv: list[str] | None = None) -> int:
         force=args.force,
         resume_scope=args.resume_scope,
         materialize=args.materialize,
-        omp_threads=args.threads,
+        omp_threads=omp_threads,
         timeout_s=args.timeout,
     )
 
