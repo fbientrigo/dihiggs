@@ -303,8 +303,10 @@ def run_analysis_lazy(
 
 
 def main() -> None:
+    global OUTPUT_DIR
     parser = argparse.ArgumentParser(description="Generate ctau vs BR plots sliced by lambda6 or tan_beta.")
     parser.add_argument("--input", type=str, default=str(DEFAULT_PARQUET), help="Path to the parquet file (subset or full lake).")
+    parser.add_argument("--output-dir", type=str, default=str(OUTPUT_DIR), help="Directory where plots and summary are written")
     parser.add_argument("--br-col", type=str, default="br_gaga", help="Name of the Branching Ratio column")
     parser.add_argument("--color-by", type=str, choices=["lambda6", "tan_beta", "both"], default="both", help="Which parameter to vary inside a single plot.")
     parser.add_argument(
@@ -331,6 +333,7 @@ def main() -> None:
         help="Scatter alpha in [0, 1].",
     )
     args = parser.parse_args()
+    OUTPUT_DIR = Path(args.output_dir)
 
     input_path = Path(args.input)
     if not input_path.exists():

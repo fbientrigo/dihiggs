@@ -12,6 +12,7 @@ venv/
 env/
 */env/
 */ubenv/
+.venv-plot/
 
 # =============================================================================
 # Local editor / agent / machine state
@@ -31,10 +32,12 @@ session-*.md
 # Data, datasets, and generated analysis outputs
 # =============================================================================
 datasets/
+data/
 artifacts/
 plots/
 outputs/
 results/
+graphify-out/
 
 *.csv
 *.parquet
@@ -48,6 +51,7 @@ results/
 
 # Project-specific generated outputs
 dihiggs/app/outcsv/
+dihiggs/app/archive/
 mlpython/img/
 mlpython/branching_ratio_plots/
 mlpython/graphing/*.png
@@ -123,7 +127,9 @@ higgstools/build/
 # Local archived/generated scripts
 # =============================================================================
 scripts/archive/
+scripts/out/
 /dihiggs/app/ColabRecomputeValidation
+/dihiggs/app/GenScanWithFixings
 /dihiggs/app/HBHS_testing
 /dihiggs/app/Oracle
 /dihiggs/app/PhysLam1Scan
@@ -134,3 +140,4 @@ scripts/archive/
 /higgstools/.gitignore
 /mlpython/Analysis
 /dihiggs/app/Phys_M2BoundaryScan
+/chris/CalcLambda1ScanFixings
