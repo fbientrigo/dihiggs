@@ -10,7 +10,6 @@ from typing import cast
 
 
 PLACEHOLDER_PATTERN = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
-DIHIGGS_EXPLORERS_MODE = "dihiggs-explorers"
 
 
 @dataclass(frozen=True)

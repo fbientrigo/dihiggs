@@ -13,10 +13,6 @@
 #                       instead of freezing the box. Degrades gracefully if a
 #                       controller isn't delegated.
 #   3. Polite         — nice + idle ionice, so interactive work always preempts.
-#   4. Auto-graphs    — optional `--then "<cmd>"` hooks run after the main job
-#                       succeeds (e.g. the comparison plotter), under the SAME
-#                       limits. Repeatable.
-#
 # Everything is tee'd to a timestamped log under DIHIGGS_RUN_LOGS.
 #
 # WHY THIS EXISTS: jun 2026 a `--threads 12` gen_fixings run on a 12-core host
@@ -39,16 +35,12 @@
 #   --name NAME        label for the scope unit + log file
 #   --log-dir DIR      where to write logs                 (default $DIHIGGS_RUN_LOGS
 #                                                            or ~/dihiggs/data/_runlogs)
-#   --then "<cmd>"     post-success hook (repeatable), run under the same limits
 #   --no-cgroup        skip systemd scope; nice/ionice + thread cap only
 #   -h | --help        this help
 #
 # EXAMPLES
-#   # A gen_fixings scan, then auto-build the comparison plots, all hard-capped:
+#   # A gen_fixings scan, hard-capped:
 #   ./safe_run.sh --name lam1eq1_var1000 \
-#       --then "python scripts/compare_chris_vs_2hdmc_lam1eq1.py \
-#                 --silver-csv DATA/.../scan_tb_10.csv \
-#                 --outdir scripts/out/lam1eq1_var1000/comparison" \
 #       -- python -m dihiggs.app.orchestrator --engine gen_fixings \
 #            --exec dihiggs/app/GenScanWithFixings --campaign lam1eq1_var1000 \
 #            --bronze-csv DATA/.../bronze_all.csv --calibration-n 1000 \
@@ -69,7 +61,6 @@ SWAP_MAX="2G"
 USE_CGROUP=1
 NAME=""
 LOG_DIR="${DIHIGGS_RUN_LOGS:-$HOME/dihiggs/data/_runlogs}"
-declare -a THEN_HOOKS=()
 
 usage() { sed -n '2,55p' "$0" | sed 's/^# \{0,1\}//'; }
 
@@ -84,7 +75,6 @@ while [[ $# -gt 0 ]]; do
     --swap-max)     SWAP_MAX="$2"; shift 2;;
     --name)         NAME="$2"; shift 2;;
     --log-dir)      LOG_DIR="$2"; shift 2;;
-    --then)         THEN_HOOKS+=("$2"); shift 2;;
     --no-cgroup)    USE_CGROUP=0; shift;;
     -h|--help)      usage; exit 0;;
     --)             shift; break;;
@@ -193,18 +183,6 @@ run_capped "${CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
 rc=${PIPESTATUS[0]}
 dt=$(( $(date +%s) - t0 ))
 log "main command finished rc=$rc in ${dt}s"
-
-# ---- post-success hooks (auto-graphs etc.) ----------------------------------
-if [[ "$rc" -eq 0 && ${#THEN_HOOKS[@]} -gt 0 ]]; then
-  for hook in "${THEN_HOOKS[@]}"; do
-    log "post-run hook: $hook"
-    run_capped bash -lc "$hook" 2>&1 | tee -a "$LOG_FILE"
-    hrc=${PIPESTATUS[0]}
-    log "hook rc=$hrc"
-  done
-elif [[ "$rc" -ne 0 && ${#THEN_HOOKS[@]} -gt 0 ]]; then
-  log "main command failed -> skipping ${#THEN_HOOKS[@]} post-run hook(s)"
-fi
 
 log "done rc=$rc"
 exit "$rc"

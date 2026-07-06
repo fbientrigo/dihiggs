@@ -16,7 +16,7 @@ keeping peak memory well under RAM so calibration_n=10000 actually COMPLETES.
 
 It does NOT change any C++/orchestrator code -- it is a thin loop around the
 existing `python -m dihiggs.app.orchestrator` CLI, plus a concat of the per-chunk
-outputs. Run it under ./safe_run.sh for the cgroup backstop.
+outputs.
 
 KEY CORRECTNESS POINTS
 ----------------------
@@ -44,12 +44,9 @@ USAGE
       --out-root data/lam1eq1_allchris_var10000_2026jun/chunked \
       --campaign lam1eq1_allchris_var10000_2026jun
 
-  # under the resource backstop, plotting on completion:
-  ./safe_run.sh --name var10000_chunked \
-      --then "python3 scripts/compare_chris_vs_2hdmc_lam1eq1.py \
-                --silver-csv data/lam1eq1_allchris_var10000_2026jun/chunked/silver_all.csv \
-                --outdir data/lam1eq1_allchris_var10000_2026jun/chunked/comparison" \
-      -- python3 scripts/run_gen_fixings_chunked.py ... --no-plot
+  python3 scripts/compare_chris_vs_2hdmc_lam1eq1.py \
+      --silver-csv data/lam1eq1_allchris_var10000_2026jun/chunked/silver_all.csv \
+      --outdir data/lam1eq1_allchris_var10000_2026jun/chunked/comparison
 """
 from __future__ import annotations
 
@@ -65,7 +62,6 @@ from typing import List, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BRONZE = "data/lam1eq1_allchris_var1000_2026jun/concat/bronze_all.csv"
 DEFAULT_EXEC = "dihiggs/app/GenScanWithFixings"
-DEFAULT_PLOTTER = "scripts/compare_chris_vs_2hdmc_lam1eq1.py"
 LAKE_NAME = "dihiggs_lake"
 RUN_NAME = "run01"
 
@@ -198,16 +194,6 @@ def concat_silvers(silver_paths: List[Path], dest: Path) -> int:
     return total_rows
 
 
-def maybe_plot(silver_all: Path, out_root: Path) -> None:
-    comp_dir = out_root / "comparison"
-    cmd = [sys.executable, DEFAULT_PLOTTER,
-           "--silver-csv", str(silver_all), "--outdir", str(comp_dir)]
-    log(f"plotting -> {comp_dir}")
-    rc = subprocess.run(cmd, cwd=REPO_ROOT).returncode
-    if rc != 0:
-        sys.exit(f"[chunked] ERROR: plotter exited {rc}")
-
-
 # ---------------------------------------------------------------------------
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -232,11 +218,6 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                    help="Path to the GenScanWithFixings binary.")
     p.add_argument("--work-dir", default=None,
                    help="Where chunk CSVs are written (default <out-root>/_chunks).")
-    plot = p.add_mutually_exclusive_group()
-    plot.add_argument("--plot", dest="plot", action="store_true", default=True,
-                      help="Run the comparison plotter on silver_all.csv (default).")
-    plot.add_argument("--no-plot", dest="plot", action="store_false",
-                      help="Skip plotting (e.g. when safe_run --then does it).")
     p.add_argument("--dry-run", action="store_true",
                    help="Pass --dry-run to each chunk (no C++), skip concat/plot.")
     return p.parse_args(argv)
@@ -286,11 +267,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 1
         silver_paths.append(silver)
 
-    # --- concat + optional plot ---------------------------------------------
+    # --- concat --------------------------------------------------------------
     silver_all = out_root / "silver_all.csv"
     concat_silvers(silver_paths, silver_all)
-    if args.plot:
-        maybe_plot(silver_all, out_root)
     log(f"DONE. {len(silver_paths)} chunk(s) -> {silver_all}")
     return 0
 

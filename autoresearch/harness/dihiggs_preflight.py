@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import os
-import shutil
 from collections.abc import Mapping
-from ctypes.util import find_library
 from typing import cast
 
 
@@ -34,7 +32,7 @@ def check_phys_exec(config: dict[str, object]) -> dict[str, str]:
             phys_exec = phys_exec.format(repo_root=repo_root)
         
         if not os.path.exists(phys_exec):
-            return _result("phys_exec", "fail", f"phys_exec not found at {phys_exec}")
+            return _result("phys_exec", "fail", f"PhysScanWithFixings not found at {phys_exec}")
         if not os.access(phys_exec, os.X_OK):
             return _result("phys_exec", "fail", f"phys_exec is not executable: {phys_exec}")
         return _result("phys_exec", "pass", f"phys_exec found and executable at {phys_exec}")
