@@ -9,7 +9,8 @@ import polars as pl
 import matplotlib.pyplot as plt
 from matplotlib.colors import TwoSlopeNorm
 
-HBARC_GEV_MM = 1.973269804e-13
+# shared constant (was 1.973269804e-13); see physics_conventions.py
+from physics_conventions import HBAR_C_GEV_MM as HBARC_GEV_MM
 
 CHANNELS = [
     ("br_gaga", "width_gaga", r"BR$(H\to\gamma\gamma)$", "o"),

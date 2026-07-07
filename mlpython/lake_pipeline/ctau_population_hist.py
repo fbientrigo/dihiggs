@@ -38,7 +38,8 @@ plt.rcParams.update(
     }
 )
 
-HBARC_GEV_MM = 1.973269804e-13
+# shared constant (was 1.973269804e-13); see physics_conventions.py
+from physics_conventions import HBAR_C_GEV_MM as HBARC_GEV_MM
 
 
 def _stream_collect(lf: pl.LazyFrame) -> pl.DataFrame:

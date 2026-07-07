@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import polars as pl
 
-HBAR_C_GEV_MM = 1.973269804e-13
+# shared constant (was 1.973269804e-13); see physics_conventions.py
+from physics_conventions import HBAR_C_GEV_MM
 ATOL = {"mA": 1e-8, "tan_beta": 1e-3, "lambda6": 1e-7, "lambda7": 1e-9, "sin_ba": 1e-9}
 
 STYLE_PRESETS = {

@@ -28,7 +28,11 @@ from pathlib import Path
 
 import polars as pl
 
-HBARC_GEV_MM = 1.973269804e-13
+# Shared physics constant (formerly a local copy of 1.973269804e-13). Sourced
+# from mlpython/lake_pipeline/physics_conventions.py, which reads the
+# ecosystem-wide conventions/physics_conventions.yaml. Kept as the local name
+# HBARC_GEV_MM so the rest of this script is unchanged.
+from physics_conventions import HBAR_C_GEV_MM as HBARC_GEV_MM
 
 PHYS_COLS = ["positivity_ok", "unitarity_ok", "perturbativity_ok"]
 BR_CHANNELS = {
