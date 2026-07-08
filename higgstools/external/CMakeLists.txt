@@ -25,7 +25,7 @@ set(SPDLOG_FMT_EXTERNAL ON)
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG master)
+  GIT_TAG v3.10.5)
 set(JSON_BuildTests OFF)
 set(JSON_Install OFF)
 set(JSON_ImplicitConversions OFF)
@@ -34,7 +34,7 @@ set(JSON_MultipleHeaders ON)
 FetchContent_Declare(
   eigen3
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG master)
+  GIT_TAG 3.4.0)
 set(EIGEN_BUILD_DOC OFF)
 set(EIGEN_BUILD_PKGCONFIG OFF)
 

@@ -88,12 +88,38 @@ literals, with almost nothing checking that the sides still agree.
   from the code, plus (boundary) a validator smoke against the fixture. These
   need no 2HDMC/HiggsTools build.
 
-## Not done (deliberately out of scope — finding 7 / Phase D)
+## Phase D — external-tool version pinning & provenance (finding 7)
 
-Consolidating the twice-vendored `2HDMC 1.8` / `HiggsTools v1.2` trees into git
-submodules with a single `versions.lock` is higher-effort and touches every
-build script; it is the natural next step and would also collapse the three
-identical `physics_conventions.yaml` copies into one shared file.
+The original idea — collapse the twice-vendored `2HDMC` / `HiggsTools` trees
+into one shared submodule — turned out to be **unsafe on inspection**:
+
+- **`dihiggs/2hdmc` is a patched fork, not stock v1.8.** It adds a whole
+  `set_param_phys_lam1()` API (λ1-basis input, m12² reconstruction +
+  validation) and custom `Calc*` executables that the `dihiggs_boundary` copy
+  lacks; the dihiggs λ1-scan workflow depends on them. The two copies are
+  legitimately different code and must not be merged.
+- **`dihiggs/higgstools` core is identical to boundary's**, except its
+  `external/CMakeLists.txt` floated `json` and `eigen3` on `GIT_TAG master` — a
+  reproducibility bug — where boundary pins `v3.10.5` / `3.4.0`.
+
+So Phase D shipped a **provenance + version-pinning + drift-detection** layer
+instead of a physical merge:
+
+- `external_tools.lock.yaml` in each repo — a single diffable manifest of every
+  external tool (`2HDMC 1.8`, `HiggsTools v1.2`, HB `v1.7`, HS `v1.1`), its
+  upstream URL, vendored path, and `local_patches`. The dihiggs manifest records
+  the 2HDMC λ1 fork explicitly so it is never mistaken for stock v1.8.
+- `tests/test_external_tools.py` (identical in all three repos) — the repos are
+  separate and can't see each other in CI, so cross-repo agreement is enforced
+  by **shared pinned constants**: the tool versions and the byte-identical
+  `conventions/physics_conventions.yaml` md5 (`a2fea4c8…`). Drift in any repo
+  fails that repo's CI (the boundary/hep_cross workflows from Phase C run it).
+- Fixed the floating-pin bug: `dihiggs/higgstools/external/CMakeLists.txt` now
+  pins `json v3.10.5` / `eigen3 3.4.0`, matching boundary.
+
+Still out of scope: a single *physical* shared conventions file would need a new
+shared submodule repo wired into all three — the drift-guard above achieves the
+same safety without it.
 
 ## How to verify
 
@@ -106,8 +132,11 @@ PYTHONPATH=python python -m dhb.validate --contract evaluate_point_v1 \
 # hep_cross: full suite + contract checks
 cd dihiggs_hep_cross && PYTHONPATH=src pytest -q
 
-# dihiggs: the shared-constant loader test
-cd dihiggs && pytest tests/test_physics_conventions.py -q
+# dihiggs: the shared-constant loader + external-tool drift guard
+cd dihiggs && pytest tests/test_physics_conventions.py tests/test_external_tools.py -q
+
+# external-tool versions + shared conventions md5 are pinned across all repos
+md5sum */conventions/physics_conventions.yaml   # one shared hash
 
 # no stray HBAR_C literal definitions remain in the lake pipeline
 grep -rn "= 1.973269804e-13" dihiggs/mlpython/lake_pipeline/*.py   # only the pinned fallback
