@@ -19,7 +19,8 @@ from pathlib import Path
 
 import polars as pl
 
-HBARC_GEV_MM = 1.973269804e-13
+# shared constant (was 1.973269804e-13); see physics_conventions.py
+from physics_conventions import HBAR_C_GEV_MM as HBARC_GEV_MM
 
 PHYS_COLS = ["positivity_ok", "unitarity_ok", "perturbativity_ok"]
 # BR channel name -> partial width column.

@@ -39,7 +39,11 @@ plt.rcParams.update(
     }
 )
 
-HBAR_C_GEV_MM = 1.973269804e-13
+# Shared physics constant (formerly a local copy of 1.973269804e-13). Sourced
+# from mlpython/lake_pipeline/physics_conventions.py, which reads the
+# ecosystem-wide conventions/physics_conventions.yaml, so ctau derivations here
+# match dihiggs_boundary and dihiggs_hep_cross.
+from physics_conventions import HBAR_C_GEV_MM
 
 STYLE_PRESETS = {
     "paper": {"point_size": 8.0, "point_alpha": 0.55, "guide_linewidth": 1.2, "label_fontsize": 10.0, "fig_width": 9.0, "fig_height": 10.0, "grid_alpha": 0.25},

@@ -1,0 +1,56 @@
+# External physics tools this repo depends on, pinned in one place.
+#
+# Purpose: give the three-repo ecosystem (dihiggs, dihiggs_boundary,
+# dihiggs_hep_cross) a single, diffable manifest of which upstream tool
+# versions each repo builds against, so version drift is detectable instead of
+# hidden in directory names and build scripts. The declared versions must AGREE
+# across the three manifests -- that agreement is the cross-repo "version pin".
+# tests/test_external_tools.py enforces the versions and the conventions md5.
+#
+# NOTE: the 2HDMC tree in THIS repo is a PATCHED FORK, not stock v1.8 (see
+# local_patches). It cannot be replaced by an upstream submodule without losing
+# the lambda1-scan functionality the project depends on.
+schema_version: external_tools_v1
+
+# Shared physics conventions file, byte-identical across all three repos.
+# The md5 is the cross-repo drift pin for conventions/physics_conventions.yaml.
+conventions:
+  file: conventions/physics_conventions.yaml
+  schema_version: physics_conventions_v1
+  md5: a2fea4c862d3b678334fd07a396f26ba
+
+tools:
+  2HDMC:
+    version: "1.8"
+    upstream_url: https://2hdmc.hepforge.org/
+    distribution: tarball          # not a git repo -> cannot be a git submodule
+    vendored_path: 2hdmc
+    local_patches:
+      - "THDM.{h,cpp}: set_param_phys_lam1() lambda1-basis input with m12^2 reconstruction + validation"
+      - "THDM.{h,cpp}: clear/has/get_param_phys_lam1_validation() accessors"
+      - "src/: custom executables CalcLam1Scan, CalcLam1ScanFromLake, CalcRoundTrip"
+
+  HiggsTools:
+    version: v1.2
+    upstream_url: https://gitlab.com/higgsbounds/higgstools
+    upstream_ref: v1.2
+    distribution: git
+    vendored_path: higgstools
+    local_patches:
+      - "external/CMakeLists.txt: range-v3 -Wno-deprecated-declarations workaround"
+
+  HiggsBounds_dataset:
+    version: v1.7
+    upstream_url: https://gitlab.com/higgsbounds/hbdataset
+    upstream_ref: v1.7
+    distribution: git
+    vendored_path: null            # downloaded at install time, not vendored
+    local_patches: []
+
+  HiggsSignals_dataset:
+    version: v1.1
+    upstream_url: https://gitlab.com/higgsbounds/hsdataset
+    upstream_ref: v1.1
+    distribution: git
+    vendored_path: null            # downloaded at install time, not vendored
+    local_patches: []
