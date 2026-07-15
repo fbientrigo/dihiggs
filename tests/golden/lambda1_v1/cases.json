@@ -1,0 +1,62 @@
+{
+  "schema_version": "lambda1_golden_v1",
+  "binary": "dihiggs/app/PhysLam1Scan",
+  "cli_contract": "mphi_min mphi_max N_mphi lam1_min lam1_max N_lam1 mA sin_ba tan_beta lambda6 lambda7 output.csv",
+  "note": "Inputs are CLI argument vectors, serialized as round-trip-exact decimal strings. Every case is executed single-threaded (OMP_NUM_THREADS=1).",
+  "cases": [
+    {
+      "case_id": "L01_accepted_g06",
+      "provenance": "tests/unit/test_PhysLam1Scan.cpp anchor point; audit SELECTIVE_MIGRATION_AUDIT.md section 7 case G06",
+      "characterizes": "Accepted representative lambda1-target point: construction succeeds, all three reported theory flags 1, lambda1 round-trip within THDM::EPS (no warning).",
+      "args": ["130", "130", "1", "0.1", "0.1", "1", "300", "0.999", "50", "0.1", "0"]
+    },
+    {
+      "case_id": "L02_construct_fail_mphi_below_mh",
+      "provenance": "generated: m_phi = nextafter(125.0, -inf), the compiled M_H default; mirrors boundary golden case G07",
+      "characterizes": "Deterministic construction failure (m_h > m_H). set_param_phys_lam1 returns false, prints a warning to stderr, and PhysLam1Scan DROPS the row (`continue`). Attempted point disappears from the CSV.",
+      "args": ["124.99999999999999", "124.99999999999999", "1", "0.1", "0.1", "1", "300", "0.999", "50", "0.1", "0"]
+    },
+    {
+      "case_id": "L03_construct_fail_tanbeta_zero",
+      "provenance": "generated: exercises the `tan_beta<=0` guard in THDM::set_param_phys_lam1",
+      "characterizes": "SILENT construction failure: no warning of any kind is emitted, and the row is dropped. The failure is invisible in both stdout/stderr and the CSV.",
+      "args": ["130", "130", "1", "0.1", "0.1", "1", "300", "0.999", "0", "0.1", "0"]
+    },
+    {
+      "case_id": "L04_construct_fail_sba_gt_one",
+      "provenance": "generated: exercises the `abs(sba)>1` guard in THDM::set_param_phys_lam1",
+      "characterizes": "SILENT construction failure via unphysical sin(beta-alpha)>1; row dropped, no diagnostic.",
+      "args": ["130", "130", "1", "0.1", "0.1", "1", "300", "1.5", "50", "0.1", "0"]
+    },
+    {
+      "case_id": "L05_theory_reject_large_lam1",
+      "provenance": "generated: L01 coordinates with lambda1_target = 20",
+      "characterizes": "Theoretical rejection with successful construction: the row IS written (rejections are preserved, unlike construction failures) and TRIPLE_OK_POINTS is 0. Freezes the exact flag vector.",
+      "args": ["130", "130", "1", "20", "20", "1", "300", "0.999", "50", "0.1", "0"]
+    },
+    {
+      "case_id": "L06_llp_regime_small_l6_large_tb",
+      "provenance": "generated: small-lambda6 / large-tan_beta regime named as project-relevant in GEMINI.md section 4",
+      "characterizes": "The long-lived regime. True total width is ~1.2e-17 GeV (true ctau ~16 m) but std::fixed<<setprecision(15) serializes it to 0.000000000000000, and the `w_tot > 1e-15` guard forces br_gaga to exactly 0.0 despite a true value of ~0.685. Also fires the lambda1 round-trip warning (~2.06e-09 > EPS=1e-9).",
+      "args": ["200", "200", "1", "1.0", "1.0", "1", "500", "1.0", "10000", "1e-10", "0"]
+    },
+    {
+      "case_id": "L07_campaign_best_large_tb",
+      "provenance": "GEMINI.md section 4 'Current best state': mphi=200, mA=500, tan_beta=126904, lambda6~0.0019, lambda1=1.0",
+      "characterizes": "Campaign-relevant point. Constructed and triple-OK, but the lambda1 round-trip absolute error is ~5.82e-07 -- ~580x THDM::EPS -- and the resulting warning is stderr-only: it is never recorded in the CSV and never rejects the point. total_width serializes with ~1 significant digit.",
+      "args": ["200", "200", "1", "1.0", "1.0", "1", "500", "1.0", "126904", "0.0019", "0"]
+    },
+    {
+      "case_id": "L08_row_preservation_mixed_grid",
+      "provenance": "generated: 3-point m_phi grid {120, 125, 130} straddling the compiled M_H = 125.0 boundary",
+      "characterizes": "Row cardinality under mixed outcomes: 3 attempted points produce only 2 CSV rows. Freezes the documented row-dropping behavior (audit section 4.6) as an executable fact: attempted != emitted.",
+      "args": ["120", "130", "3", "0.1", "0.1", "1", "300", "0.999", "50", "0.1", "0"]
+    },
+    {
+      "case_id": "L09_mphi_exactly_at_mh",
+      "provenance": "generated: m_phi exactly equal to the compiled M_H default (125.0)",
+      "characterizes": "The construction boundary is `m_h > m_H` (strict), so m_phi == mh constructs successfully. Pins the inclusive side of the boundary.",
+      "args": ["125.0", "125.0", "1", "0.1", "0.1", "1", "300", "0.999", "50", "0.1", "0"]
+    }
+  ]
+}
