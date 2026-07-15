@@ -1,3 +1,9 @@
 data/**/*.csv filter=lfs diff=lfs merge=lfs -text
 data/**/*.pkl filter=lfs diff=lfs merge=lfs -text
 **/*.csv filter=lfs diff=lfs merge=lfs -text
+
+# The frozen golden characterization oracle is reviewed line-by-line and must
+# stay a plain text blob: an LFS pointer would hide the frozen values from code
+# review and would make the golden suite depend on LFS being available in CI.
+# Narrow exception; every other CSV keeps using LFS.
+tests/golden/lambda1_v1/expected.csv !filter !diff !merge text

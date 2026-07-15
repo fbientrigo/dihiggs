@@ -1,0 +1,54 @@
+{
+  "binary": {
+    "built_by": "scripts/build_lambda1_characterization.sh",
+    "cxxflags": "-fopenmp -std=gnu++17 -Wall -Wextra -Wpedantic -O0 -g",
+    "link_mode": "standalone against 2HDMC only; bypasses libdihiggs.a and does not link HiggsTools (PhysLam1Scan.cpp does not use it). See the script header for why the production make target cannot build from a clean checkout.",
+    "path": "build/lambda1_char/PhysLam1Scan",
+    "sources": [
+      "dihiggs/src/PhysLam1Scan.cpp",
+      "dihiggs/src/ParamUtils.cpp"
+    ]
+  },
+  "checksums": {
+    "cases.json": "0f39bbde4e1a1fc87c31caa43b4fcc1064884c94d032b269b102dddf2fda6b4b",
+    "expected.csv": "00d831dc9e6e81c5bb9de4042d4b2ed52f9708862707d3e2570a81c0f3e90950",
+    "expected_markers.json": "ef598e894f2c86b2bd92f5e0b655a483bf9b58fb8e7e06c758fa0551899b9e4f"
+  },
+  "compiled_constants": {
+    "M_H": "125.0 (constexpr in dihiggs/src/PhysLam1Scan.cpp; NOT the paper's 125.09)",
+    "THDM::EPS": "1e-9 (constexpr in 2hdmc/src/THDM.h; stock 2HDMC uses 1e-12)",
+    "mHp": "set equal to mA (mA_fixed is passed for both)",
+    "yukawas_type": "1 (hard-coded)"
+  },
+  "counts": {
+    "cases": 9,
+    "csv_columns": 30,
+    "expected_csv_rows": 7
+  },
+  "dependency": {
+    "2hdmc": "vendored fork at 2hdmc/ (adds THDM::set_param_phys_lam1; THDM::EPS=1e-9 vs stock 1e-12)",
+    "2hdmc_src_tree_hash": "9e0b4b8e81411925239f66a5b42114f83c2b09c9",
+    "2hdmc_tree_hash": "4669175c93507ba65a4ee320d824b033fe17548a",
+    "paramutils_blob": "c1ee771e74f273a6c61fff4a26e588ddf1f04a09",
+    "physlam1scan_blob": "ef3128921dc392502faa6b205ab714e2b64f3bda",
+    "thdm_cpp_blob": "ccb3276420a671c1f2613682a89cc6697e32514b",
+    "thdm_h_blob": "9054a43f210bc01db989b5df7bec5c02c6a0abd0"
+  },
+  "generation": {
+    "command": "python3 scripts/generate_golden_lambda1.py",
+    "each_case_run_twice_byte_identical": true
+  },
+  "purpose": "Behavioral oracle for the lambda1-target construction path. Freezes CURRENT behavior; does not certify it as physically correct.",
+  "schema_version": "lambda1_golden_v1",
+  "source": {
+    "commit": "c021e0a17fb523d51ac71a940f69f7b89c1b95b2",
+    "describe": "c021e0a1",
+    "git_status_short": [],
+    "repo": "main_dihiggs",
+    "tracked_files_modified": false
+  },
+  "toolchain": {
+    "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "omp_num_threads": "1"
+  }
+}

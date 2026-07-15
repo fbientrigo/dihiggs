@@ -1,0 +1,85 @@
+{
+  "boundary_band": {
+    "124.99999999999999": {
+      "mh_125.09_paper": "CONSTRUCTION FAIL",
+      "mh_125.0_default": "CONSTRUCTION FAIL"
+    },
+    "125.0": {
+      "mh_125.09_paper": "CONSTRUCTION FAIL",
+      "mh_125.0_default": "constructed"
+    },
+    "125.05": {
+      "mh_125.09_paper": "CONSTRUCTION FAIL",
+      "mh_125.0_default": "constructed"
+    },
+    "125.09": {
+      "mh_125.09_paper": "constructed",
+      "mh_125.0_default": "constructed"
+    },
+    "125.2": {
+      "mh_125.09_paper": "constructed",
+      "mh_125.0_default": "constructed"
+    }
+  },
+  "eps": {
+    "G06_accepted": {
+      "verdict": "none (byte-identical)",
+      "warning_eps_1e-12": "silent",
+      "warning_eps_1e-9": "silent"
+    },
+    "campaign_best": {
+      "verdict": "none (byte-identical)",
+      "warning_eps_1e-12": "WARN",
+      "warning_eps_1e-9": "WARN"
+    },
+    "small_l6_large_tb": {
+      "verdict": "none (byte-identical)",
+      "warning_eps_1e-12": "WARN",
+      "warning_eps_1e-9": "WARN"
+    }
+  },
+  "points": {
+    "G06_accepted": {
+      "flags_125.0": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "flags_125.09": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "m12_rel_delta": 8.232156232482024e-07,
+      "verdict": "NUMERICAL (same decisions, different digits)"
+    },
+    "campaign_best": {
+      "flags_125.0": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "flags_125.09": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "m12_rel_delta": 3.661766990653294e-07,
+      "verdict": "NUMERICAL (same decisions, different digits)"
+    },
+    "small_l6_large_tb": {
+      "flags_125.0": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "flags_125.09": [
+        "1.000000000000000",
+        "1.000000000000000",
+        "1.000000000000000"
+      ],
+      "m12_rel_delta": 0.0,
+      "verdict": "NUMERICAL (same decisions, different digits)"
+    }
+  }
+}

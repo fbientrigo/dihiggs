@@ -44,6 +44,13 @@ graphify-out/
 *.pdf
 *.joblib
 *.model
+
+# Version the frozen golden characterization oracle for the lambda1 path
+# (narrow exceptions; other CSVs stay ignored).
+!tests/golden/lambda1_v1/expected.csv
+
+# Build products of scripts/build_lambda1_characterization.sh (compiled binary).
+build/lambda1_char/
 *.h5
 *.hdf5
 *.pth

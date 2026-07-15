@@ -1,0 +1,74 @@
+{
+  "L01_accepted_g06": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 1,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 1,
+    "triple_ok_points": 1
+  },
+  "L02_construct_fail_mphi_below_mh": {
+    "construction_warnings": 1,
+    "csv_rows_actual": 0,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 0,
+    "triple_ok_points": 0
+  },
+  "L03_construct_fail_tanbeta_zero": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 0,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 0,
+    "triple_ok_points": 0
+  },
+  "L04_construct_fail_sba_gt_one": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 0,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 0,
+    "triple_ok_points": 0
+  },
+  "L05_theory_reject_large_lam1": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 1,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 1,
+    "triple_ok_points": 0
+  },
+  "L06_llp_regime_small_l6_large_tb": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 1,
+    "roundtrip_warnings": 1,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 1,
+    "triple_ok_points": 1
+  },
+  "L07_campaign_best_large_tb": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 1,
+    "roundtrip_warnings": 1,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 1,
+    "triple_ok_points": 1
+  },
+  "L08_row_preservation_mixed_grid": {
+    "construction_warnings": 1,
+    "csv_rows_actual": 2,
+    "roundtrip_warnings": 0,
+    "total_attempts": 3,
+    "total_csv_rows_reported": 2,
+    "triple_ok_points": 2
+  },
+  "L09_mphi_exactly_at_mh": {
+    "construction_warnings": 0,
+    "csv_rows_actual": 1,
+    "roundtrip_warnings": 0,
+    "total_attempts": 1,
+    "total_csv_rows_reported": 1,
+    "triple_ok_points": 1
+  }
+}
