@@ -24,7 +24,7 @@ jobs:
       - run: make -C dihiggs app/Phys_M2BandTracker
       - run: python -m pip install pytest
       - run: >-
-          pytest -q
+          python -m pytest -q
           tests/test_golden_lambda1.py
           tests/test_dihiggs_point_v2.py
           tests/test_m2_tracker_intervals.py
