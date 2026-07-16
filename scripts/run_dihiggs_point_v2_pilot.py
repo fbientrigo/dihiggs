@@ -29,7 +29,10 @@ def main() -> None:
         raise SystemExit("build dihiggs/app/DihiggsPointV2Evaluator first")
     OUT.mkdir(parents=True, exist_ok=True)
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    env = {**os.environ, "DIHIGGS_GIT_COMMIT": "successor-worktree", "DIHIGGS_GIT_DIRTY": "yes"}
+    implementation_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
+    ).stdout.strip()
+    env = {**os.environ, "DIHIGGS_GIT_COMMIT": implementation_commit, "DIHIGGS_GIT_DIRTY": "no"}
     results = []
     output_columns = []
     for name, args in CASES.items():
@@ -59,7 +62,7 @@ def main() -> None:
     payload = {
         "report_schema": "dihiggs.point.v2.verification.v1",
         "baseline_commit": "05a6217a",
-        "successor_commit": "uncommitted-successor-worktree",
+        "successor_commit": implementation_commit,
         "producer_schema": "dihiggs.point.v2",
         "mh_convention_GeV": 125.13,
         "mh_source": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
@@ -108,7 +111,7 @@ def main() -> None:
         "# DiHiggs Point v2 verification v1", "",
         "Status: canonical core and bounded engineering pilot verified; production experimental gates are not integrated.", "",
         "- Baseline: `05a6217a` (PR #58 final head supplied by the plan)",
-        "- Successor: uncommitted successor worktree", "- Schema: `dihiggs.point.v2`",
+        f"- Verified implementation commit: `{implementation_commit}`", "- Schema: `dihiggs.point.v2`",
         "- Higgs mass: 125.13 GeV ([PDG 2026 listing](https://pdg.lbl.gov/encoder_listings/s126.pdf))",
         "- Scope: engineering validation only; no campaign-level scientific conclusion", "",
         "## Pilot results", "",

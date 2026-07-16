@@ -3,7 +3,7 @@
 Status: canonical core and bounded engineering pilot verified; production experimental gates are not integrated.
 
 - Baseline: `05a6217a` (PR #58 final head supplied by the plan)
-- Successor: uncommitted successor worktree
+- Verified implementation commit: `2b277f416caec1503becd38225a996cf0a9b42d8`
 - Schema: `dihiggs.point.v2`
 - Higgs mass: 125.13 GeV ([PDG 2026 listing](https://pdg.lbl.gov/encoder_listings/s126.pdf))
 - Scope: engineering validation only; no campaign-level scientific conclusion
@@ -12,11 +12,11 @@ Status: canonical core and bounded engineering pilot verified; production experi
 
 | Case | Rows | construction_ok | theory_ok_v1 | SHA-256 |
 |---|---:|---|---|---|
-| L01_accepted_anchor | 1 | 1 | 1.00000000000000000e+00 | `43bc772bef1b68c94460d34e61504319936e80406b537e0a8f6b81398d88a3de` |
-| L05_theory_rejected_anchor | 1 | 1 | 0.00000000000000000e+00 | `df20dd9195876436efacba4adfa95ed4cc53a90dbc372914b3abb4cd5a224f19` |
-| L06_llp_anchor | 1 | 1 | 1.00000000000000000e+00 | `9bbc77fa5f7e2e5448ac235824423c0bbd7c901f5c5bde2212b650592ccfad97` |
-| ordering_boundary | 2 | 0,1 | nan,0.00000000000000000e+00 | `0f3059e197dc9cd9a4c64cfbf20e982489ad3a4469acbee9191e11ef56b5df96` |
-| construction_failure | 1 | 0 | nan | `631129a5714a59e5a9e1c014b81ad630324f3547027ec860b5475e25f5e5b58b` |
+| L01_accepted_anchor | 1 | 1 | 1.00000000000000000e+00 | `c7a334a80459d25e85260f1f8e7699e1af7aae7b5e099aee4ba184d39eb9d44f` |
+| L05_theory_rejected_anchor | 1 | 1 | 0.00000000000000000e+00 | `978c66e162b4846635be420070ebaef377d4b4caf010253f6e8e1b187ba39f02` |
+| L06_llp_anchor | 1 | 1 | 1.00000000000000000e+00 | `a3bb0a88677602b17a081a59338b9e4b185f06acf438b255aad32f885d7d4500` |
+| ordering_boundary | 2 | 0,1 | nan,0.00000000000000000e+00 | `ddf6cbd24386b3b8fb2c188e211cacdcc1591bdd537fc5174c54d1c8b9a19343` |
+| construction_failure | 1 | 0 | nan | `212cc6a0a45b65da76fdf4a2552c10560e1e2e568c206b1adf97d7dc91de113e` |
 
 ## Readiness dispositions
 
