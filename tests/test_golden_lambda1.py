@@ -722,3 +722,12 @@ def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
     assert report["summary"]["zero_widths"] == 1
     assert report["summary"]["autoresearch_discards"] == 1
     assert report["summary"]["deterministic_replay_eligible"] == 1
+
+
+def test_autoresearch_import_guard_keeps_legacy_outside_canonical_core():
+    forbidden = ("import autoresearch", "from autoresearch")
+    for path in (REPO_ROOT / "dihiggs").rglob("*"):
+        if path.suffix not in {".py", ".cpp", ".hpp", ".h"}:
+            continue
+        text = path.read_text(errors="replace")
+        assert not any(token in text for token in forbidden), path

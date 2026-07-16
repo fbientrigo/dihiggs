@@ -1,5 +1,9 @@
 # DiHiggs Explorer
 
+> **Canonical lambda1 evaluator:** build `dihiggs/app/Lambda1EvaluatorV2` from
+> `dihiggs/src/Lambda1EvaluatorV2.cpp`. The historical `autoresearch/` tree is
+> frozen outside the canonical core; see `docs/autoresearch_frozen.md`.
+
 A machine-learning–driven toolkit to explore Di-Higgs production in a generic Two-Higgs-Doublet Model (2HDM).  
 Efficiently sample a 7-dimensional parameter space, compute Higgs pair branching ratios, filter unphysical points, and build surrogate ML models with interpretability (SHAP).
 
@@ -195,6 +199,5 @@ From the 2hdmc calculator the particle references id in the lhe outs:
 |                       | γ    |  22    |
 |                       | Z    |  23    |
 |                       | W⁺   |  24    |
-
 
 
