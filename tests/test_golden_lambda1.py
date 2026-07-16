@@ -692,3 +692,33 @@ def test_v2_legacy_successful_fields_match_golden_l01(tmp_path):
     for current, old in pairs.items():
         assert math.isclose(float(v2[current]), float(legacy[old]), rel_tol=1e-12, abs_tol=1e-14)
     assert [v2[f] for f in ("positivity_ok", "unitarity_ok", "perturbativity_ok")] == ["1"] * 3
+
+
+def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
+    legacy = tmp_path / "campaign" / "results.csv"
+    legacy.parent.mkdir()
+    header, _ = load_expected()
+    l06 = one_row("L06_llp_regime_small_l6_large_tb")
+    legacy.write_text(
+        ",".join(header[1:]) + "\n"
+        + ",".join(l06[name] for name in header[1:]) + "\n"
+    )
+    wrong = tmp_path / "wrong.csv"
+    wrong.write_text("a,b\n1,2\n")
+    script = REPO_ROOT / "scripts" / "audit_legacy_lambda1_lifetimes.py"
+    outputs = []
+    for suffix in ("a", "b"):
+        json_path = tmp_path / f"audit-{suffix}.json"
+        md_path = tmp_path / f"audit-{suffix}.md"
+        subprocess.run(
+            [os.sys.executable, str(script), str(tmp_path), "--json", str(json_path), "--markdown", str(md_path)],
+            check=True,
+        )
+        outputs.append((json_path.read_bytes(), md_path.read_bytes()))
+    assert outputs[0] == outputs[1]
+    report = json.loads(outputs[0][0])
+    assert report["summary"]["files"] == 1
+    assert report["summary"]["rows"] == 1
+    assert report["summary"]["zero_widths"] == 1
+    assert report["summary"]["autoresearch_discards"] == 1
+    assert report["summary"]["deterministic_replay_eligible"] == 1

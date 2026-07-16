@@ -1,0 +1,68 @@
+{
+  "audit_schema_version": "dihiggs.lambda1-lifetime-audit.v1",
+  "checksums": {
+    "algorithm": "sha256(path NUL file_sha256 LF), sorted by path",
+    "all_selected_files": "01efa64a38f8cc555d65b06ca348f4e1476c36e0f331379c3b2a117173bf10bb",
+    "by_campaign_classification": {
+      "diagnostic-discard": "01efa64a38f8cc555d65b06ca348f4e1476c36e0f331379c3b2a117173bf10bb"
+    }
+  },
+  "roots": [
+    "/home/fabi/dihiggs/runs"
+  ],
+  "selection": {
+    "exact_header": [
+      "m_phi",
+      "mA",
+      "alpha",
+      "beta",
+      "lambda6",
+      "lambda7",
+      "m12",
+      "sin_ba",
+      "tan_beta",
+      "positivity_ok",
+      "unitarity_ok",
+      "perturbativity_ok",
+      "width_bb",
+      "width_tautau",
+      "width_WW",
+      "width_ZZ",
+      "width_gaga",
+      "width_Zga",
+      "width_gg",
+      "width_hh",
+      "total_width",
+      "br_gaga",
+      "lam1",
+      "computed_lam1",
+      "lam2",
+      "computed_lam2",
+      "lam3",
+      "lam4",
+      "lam5"
+    ],
+    "excluded_path_terms": [
+      "recomputed",
+      "backup",
+      "recovered",
+      "artifact",
+      "v2"
+    ],
+    "historical_mh_gev": 125.0
+  },
+  "summary": {
+    "apparent_maximum_ctau_mm": 5.982536133455252e-08,
+    "autoresearch_discards": 0,
+    "campaign_classification_rows": {
+      "diagnostic-discard": 2020
+    },
+    "deterministic_replay_eligible": 2020,
+    "files": 2020,
+    "minimum_positive_width_gev": 3.298383428e-06,
+    "ranking_boundary_rows": 20,
+    "recoverable": 2020,
+    "rows": 2020,
+    "zero_widths": 0
+  }
+}
