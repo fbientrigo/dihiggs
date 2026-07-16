@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
     double step_mphi = get_arg(args, "mphi-step", 1.0);
     
     double mA = get_arg(args, "ma", 500.0);
+    double mh = get_arg(args, "mh", 125.13);
+    double mHp = get_arg(args, "mhp", mA);
     double sin_ba = get_arg(args, "sin-ba", 1.0);
     double tan_beta = get_arg(args, "tan-beta", 50.0);
     double lambda6 = get_arg(args, "lam6", 0.001);
@@ -136,7 +138,7 @@ int main(int argc, char* argv[]) {
     double m_phi = mphi_min;
 
     while (m_phi <= mphi_max) {
-        BatchParams params = {m_phi, m_phi, mA, mA, sin_ba, tan_beta, lambda6, lambda7};
+        BatchParams params = {mh, m_phi, mA, mHp, sin_ba, tan_beta, lambda6, lambda7};
         
         PredictedBounds bounds;
         if (!has_prior) {
@@ -173,16 +175,12 @@ int main(int argc, char* argv[]) {
                 continue;
             } else if (fb_res.success) {
                 intervals = fb_res.intervals;
-                for (const auto& iv : intervals) {
-                    // Quick evaluate center to store in points for completeness
-                    // Omitted for brevity, but the interval is found
-                }
             } else {
                 break;
             }
         }
         
-        ValidInterval best_iv = intervals[0];
+        ValidInterval best_iv = select_interval_nearest(intervals, bounds.expected_center);
         
         // Bisection Refinement
         double tol = get_arg(args, "edge-tol", 0.1);

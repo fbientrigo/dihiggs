@@ -64,14 +64,17 @@ Each engine implements the `EngineAdapter` protocol:
 - Second triplet (positions 4–6): **lambda_1** (dimensionless)
 - `fixed.lambda1` must be **None** (lambda1 is the scan axis)
 
-### M2Engine (Phys_M2BoundaryScan)
+### M2Engine (DihiggsPointV2Evaluator)
 
 ```
-./Phys_M2BoundaryScan  mphi_min mphi_max N_mphi  M2_min M2_max N_M2  mA sin_ba tan_beta lambda6 lambda7  output.csv
+./DihiggsPointV2Evaluator --campaign-id ID --run-id ID --mh 125.13 \
+  --mH-min MIN --mH-max MAX --n-mH N --mA MASS --mHp MASS --yukawa-type 1 \
+  --sin-ba SBA --tan-beta TB --M2-min MIN --M2-max MAX --n-M2 N \
+  --lambda6 L6 --lambda7 L7 --output output.csv
 ```
 
-- Second triplet (positions 4–6): **M^2 = m12_sq** (units: **GeV^2**)
-- `fixed.lambda1` must be **set** (lambda1 is a fixed constant here)
+- M² is defined as `m12_sq/(sin(beta)*cos(beta))` in **GeV²**.
+- lambda1 is reconstructed output only.
 
 ### GenFixingsEngine (GenScanWithFixings, "Stage 2" calibration)
 
@@ -79,6 +82,10 @@ Each engine implements the `EngineAdapter` protocol:
 ./GenScanWithFixings --bronze-csv=<shard.csv> --output-csv=<validated.csv> \
     [--calibration-n=50] [--calibration-frac=0.10] [--rng-seed=0]
 ```
+
+`Phys_M2BandTracker` remains an experimental, non-canonical boundary helper.
+Its branch selection and refinement are validated only within the bounded pilot
+domains recorded in `docs/verification/dihiggs_point_v2_verification_v1.*`.
 
 - `scan_axis` = `ScanAxis.GEN_FIXINGS`: there is **no generated (m_phi, axis)
   grid**. The `ScanGrid` passed to `build_command` is a required-but-unused
@@ -105,8 +112,8 @@ Each engine implements the `EngineAdapter` protocol:
 | Quantity | Symbol | Units | Engine |
 |----------|--------|-------|--------|
 | Quartic coupling | lambda_1 | dimensionless | Lambda1Engine (scan axis) |
-| Soft-breaking parameter | M^2 = m12_sq | GeV^2 | M2Engine (scan axis) |
-| Fixed coupling | lambda_1 | dimensionless | M2Engine (fixed constant) |
+| Soft-breaking parameter | M² = m12_sq/(sin(beta)cos(beta)) | GeV² | M2Engine (scan axis) |
+| Diagnostic coupling | lambda_1 | dimensionless | M2Engine (reconstructed output) |
 
 **Historical ambiguity**: Some CSV files produced by `Phys_M2BoundaryScan` use
 the column name `m12` while actually storing **GeV^2** values (`m12_sq`).  The

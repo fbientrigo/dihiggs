@@ -1,43 +1,45 @@
 #pragma once
 
 #include "THDM.h"
+#include <limits>
 
 struct PointResult {
-    double m_phi;
-    double M2_input;
-    double m12_sq_input;
+    double m_phi = std::numeric_limits<double>::quiet_NaN();
+    double M2_input = std::numeric_limits<double>::quiet_NaN();
+    double m12_sq_input = std::numeric_limits<double>::quiet_NaN();
+    bool construction_ok = false;
 
-    double m12_sq_out;
-    double lam1_out;
-    double lam2_out;
-    double lam3_out;
-    double lam4_out;
-    double lam5_out;
-    double lam6_out;
-    double lam7_out;
+    double m12_sq_out = std::numeric_limits<double>::quiet_NaN();
+    double lam1_out = std::numeric_limits<double>::quiet_NaN();
+    double lam2_out = std::numeric_limits<double>::quiet_NaN();
+    double lam3_out = std::numeric_limits<double>::quiet_NaN();
+    double lam4_out = std::numeric_limits<double>::quiet_NaN();
+    double lam5_out = std::numeric_limits<double>::quiet_NaN();
+    double lam6_out = std::numeric_limits<double>::quiet_NaN();
+    double lam7_out = std::numeric_limits<double>::quiet_NaN();
 
-    bool positivity_ok;
-    bool unitarity_ok;
-    bool perturbativity_ok;
-    bool stability_ok;
-    bool theory_ok;
-    bool triple_ok;
+    bool positivity_ok = false;
+    bool unitarity_ok = false;
+    bool perturbativity_ok = false;
+    bool stability_ok = false;
+    bool theory_ok = false;
+    bool triple_ok = false;
 
-    double width_bb;
-    double width_tautau;
-    double width_WW;
-    double width_ZZ;
-    double width_gaga;
-    double width_Zga;
-    double width_gg;
-    double width_hh;
-    double total_width;
-    double br_gaga;
+    double width_bb = std::numeric_limits<double>::quiet_NaN();
+    double width_tautau = std::numeric_limits<double>::quiet_NaN();
+    double width_WW = std::numeric_limits<double>::quiet_NaN();
+    double width_ZZ = std::numeric_limits<double>::quiet_NaN();
+    double width_gaga = std::numeric_limits<double>::quiet_NaN();
+    double width_Zga = std::numeric_limits<double>::quiet_NaN();
+    double width_gg = std::numeric_limits<double>::quiet_NaN();
+    double width_hh = std::numeric_limits<double>::quiet_NaN();
+    double total_width = std::numeric_limits<double>::quiet_NaN();
+    double br_gaga = std::numeric_limits<double>::quiet_NaN();
 };
 
 PointResult evaluate_m2_point(
     THDM& model,
-    double m_phi,
+    double mh,
     double mH,
     double mA,
     double mHp,

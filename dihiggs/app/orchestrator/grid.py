@@ -16,7 +16,7 @@ Semantics note
 depends on which engine is selected:
 
     engine=lambda1  →  axis is lambda_1       (dimensionless, range ~[0, 12])
-    engine=m2       →  axis is M^2 = m12_sq   (units: GeV^2, range ~[0, 500000])
+    engine=m2       →  axis is M^2 = m12_sq/(sin(beta)cos(beta)) (GeV^2)
 
 The ``ScanGrid`` itself stores no unit information; the EngineAdapter's
 ``axis_metadata()`` method is the authoritative unit source.  Never infer
@@ -48,7 +48,7 @@ class ScanGrid:
     axis_min, axis_max:
         Second axis scan range.  Units depend on the engine:
         - lambda1 engine: dimensionless (lambda_1)
-        - M2 engine: GeV^2 (M^2 = m12_sq)
+        - M2 engine: GeV^2 (M^2 = m12_sq/(sin(beta)cos(beta)))
     n_axis:
         Number of second-axis grid points.
     """
@@ -101,6 +101,12 @@ def grid_signature(engine_name: str, grid: "ScanGrid", fixed: "FixedParams") -> 
     # Include lambda1 only when it is a fixed constant (M2 engine)
     if fixed.lambda1 is not None:
         payload["lambda1_fixed"] = fixed.lambda1
+    if fixed.mh is not None:
+        payload["mh"] = fixed.mh
+    if fixed.mHp is not None:
+        payload["mHp"] = fixed.mHp
+    if fixed.yukawa_type is not None:
+        payload["yukawa_type"] = fixed.yukawa_type
 
     # gen_fixings: fold in bronze shard identity + calibration config so
     # distinct shards/configs don't collide on the dedup key.

@@ -5,7 +5,7 @@
 
 PointResult evaluate_m2_point(
     THDM& model, 
-    double m_phi, 
+    double mh,
     double mH_input, 
     double mA, 
     double mHp,
@@ -16,7 +16,7 @@ PointResult evaluate_m2_point(
     double M2_input
 ) {
     PointResult res;
-    res.m_phi = m_phi;
+    res.m_phi = mH_input;
     res.M2_input = M2_input;
     
     // High-precision trigonometric reconstruction to avoid loss at extreme tan_beta
@@ -27,11 +27,10 @@ PointResult evaluate_m2_point(
     // Explicit conversion M2 -> m12^2
     res.m12_sq_input = M2_input * sin_beta * cos_beta;
     
-    double mh_val = (m_phi > 125.0) ? 125.0 : m_phi;
-    double mH_val = (m_phi > 125.0) ? m_phi : 125.0;
-    
-    model.set_param_phys(mh_val, mH_val, mA, mHp, sin_ba, lambda6, lambda7, res.m12_sq_input, tan_beta);
     model.set_yukawas_type(1);
+    res.construction_ok = model.set_param_phys(
+        mh, mH_input, mA, mHp, sin_ba, lambda6, lambda7, res.m12_sq_input, tan_beta);
+    if (!res.construction_ok) return res;
     
     // Extract parameters
     double lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g;
@@ -67,18 +66,9 @@ PointResult evaluate_m2_point(
         res.width_gg = decays.get_gamma_hgg(2);
         res.width_hh = decays.get_gamma_hhh(2, 1, 1);
         res.total_width = decays.get_gammatot_h(2);
-        res.br_gaga = (res.total_width > 1e-15) ? (res.width_gaga / res.total_width) : 0.0;
-    } else {
-        res.width_bb = 0;
-        res.width_tautau = 0;
-        res.width_WW = 0;
-        res.width_ZZ = 0;
-        res.width_gaga = 0;
-        res.width_Zga = 0;
-        res.width_gg = 0;
-        res.width_hh = 0;
-        res.total_width = 0;
-        res.br_gaga = 0;
+        if (std::isfinite(res.total_width) && res.total_width > 0.0) {
+            res.br_gaga = res.width_gaga / res.total_width;
+        }
     }
     
     return res;

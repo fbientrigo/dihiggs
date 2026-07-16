@@ -20,8 +20,15 @@ jobs:
       - run: make -C 2hdmc
       - run: bash scripts/build_lambda1_characterization.sh
       - run: make -C dihiggs app/Lambda1EvaluatorV2
+      - run: make -C dihiggs app/DihiggsPointV2Evaluator
+      - run: make -C dihiggs app/Phys_M2BandTracker
       - run: python -m pip install pytest
-      - run: pytest -q tests/test_golden_lambda1.py
+      - run: >-
+          pytest -q
+          tests/test_golden_lambda1.py
+          tests/test_dihiggs_point_v2.py
+          tests/test_m2_tracker_intervals.py
+          tests/test_orchestrator
         env:
           DIHIGGS_REQUIRE_LAMBDA1_BINARY: "1"
 

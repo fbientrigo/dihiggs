@@ -12,7 +12,7 @@ Axis semantics contract
 The distinction between lambda1, M2, m12, and m12_sq is critical:
 
   ScanAxis.LAMBDA1  — axis is lambda_1 (dimensionless quartic coupling).
-  ScanAxis.M2       — axis is M^2 = m12^2 (units: GeV^2).
+  ScanAxis.M2       — axis is M^2 = m12^2/(sin(beta)cos(beta)) (GeV^2).
                       Historical CSVs sometimes call this column "m12"
                       while storing GeV^2 values (i.e. m12_sq).
                       Never infer units from column names alone; always
@@ -41,7 +41,7 @@ class ScanAxis(Enum):
     LAMBDA1:
         Axis is lambda_1 (dimensionless).  Used by PhysScanWithFixings.
     M2:
-        Axis is M^2 = m12_sq (units: GeV^2).  Used by Phys_M2BoundaryScan.
+        Axis is M^2 = m12_sq/(sin(beta)cos(beta)), in GeV^2.
         Note: some historical CSV column names say "m12" but store GeV^2.
     """
 

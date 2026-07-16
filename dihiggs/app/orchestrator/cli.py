@@ -259,6 +259,12 @@ def build_parser() -> argparse.ArgumentParser:
     # Fixed physics parameters
     p.add_argument("--mA", type=float, default=_DEFAULT_MA,
                    help="Fixed mA (CP-odd Higgs mass, also mHp) in GeV.")
+    p.add_argument("--mh", type=float, default=125.13,
+                   help="[m2] Explicit h1 mass in GeV (PDG 2026 convention).")
+    p.add_argument("--mHp", type=float, default=None,
+                   help="[m2] Explicit charged-Higgs mass in GeV; defaults to mA.")
+    p.add_argument("--yukawa-type", type=int, default=1,
+                   help="[m2] 2HDMC Yukawa type.")
     p.add_argument("--sin-ba", type=float, default=_DEFAULT_SIN_BA,
                    help="Fixed sin(b-a).")
     p.add_argument("--lambda6", type=float, default=_DEFAULT_L6,
@@ -509,6 +515,9 @@ def main(argv: list[str] | None = None) -> int:
         calibration_n=args.calibration_n if args.engine == "gen_fixings" else None,
         calibration_frac=args.calibration_frac if args.engine == "gen_fixings" else None,
         rng_seed=args.rng_seed if args.engine == "gen_fixings" else None,
+        mh=args.mh if args.engine == "m2" else None,
+        mHp=(args.mA if args.mHp is None else args.mHp) if args.engine == "m2" else None,
+        yukawa_type=args.yukawa_type if args.engine == "m2" else None,
     )
 
     # ---- resolve OMP threads (safe-by-default CPU headroom) ------------------

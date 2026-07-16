@@ -1,4 +1,7 @@
 #include "M2IntervalDetector.hpp"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 
 std::vector<ValidInterval> detect_intervals(const std::vector<PointResult>& results) {
     std::vector<ValidInterval> intervals;
@@ -53,4 +56,11 @@ std::vector<ValidInterval> detect_intervals(const std::vector<PointResult>& resu
     }
 
     return intervals;
+}
+
+ValidInterval select_interval_nearest(const std::vector<ValidInterval>& intervals, double predicted_center) {
+    if (intervals.empty()) throw std::invalid_argument("cannot select from empty intervals");
+    return *std::min_element(intervals.begin(), intervals.end(), [&](const ValidInterval& a, const ValidInterval& b) {
+        return std::abs(a.M2_center - predicted_center) < std::abs(b.M2_center - predicted_center);
+    });
 }
