@@ -731,3 +731,13 @@ def test_autoresearch_import_guard_keeps_legacy_outside_canonical_core():
             continue
         text = path.read_text(errors="replace")
         assert not any(token in text for token in forbidden), path
+
+
+def test_v2_crosswalk_matches_executable_headers_exactly(tmp_path):
+    crosswalk = json.loads(
+        (REPO_ROOT / "docs" / "migration" / "field_crosswalk_v0.1.json").read_text()
+    )
+    data, _ = run_v2(tmp_path, [v2_line("contract")])
+    assert next(csv.reader(data.decode().splitlines())) == crosswalk["output_fields"]
+    assert V2_HEADER.split(",") == crosswalk["input_header"]
+    assert len(crosswalk["raw_float64_pairs"]) == 9
