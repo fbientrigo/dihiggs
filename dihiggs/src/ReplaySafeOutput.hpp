@@ -1,12 +1,13 @@
 #pragma once
 
 #include <iosfwd>
+#include <limits>
 #include <string>
 #include <vector>
 
 namespace replay_safe_output {
 
-constexpr int kDoublePrecisionDigits = 17;
+constexpr int kDoublePrecisionDigits = std::numeric_limits<double>::max_digits10;
 
 struct Metadata {
     double m12_2_used = 0.0;

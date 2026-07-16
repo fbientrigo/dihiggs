@@ -38,6 +38,7 @@ LDFLAGS_2HDMC := -L$(LIB_DIR) -ldihiggs \
 MAIN_SRCS   := $(wildcard $(SRC_DIR)/PhysParamScan.cpp $(SRC_DIR)/Oracle.cpp \
                $(SRC_DIR)/HBHS_testing.cpp $(SRC_DIR)/PostProcessHBHS.cpp \
                $(SRC_DIR)/PhysScanWithFixings.cpp $(SRC_DIR)/PhysLam1Scan.cpp \
+			   $(SRC_DIR)/Lambda1EvaluatorV2.cpp \
 			   $(SRC_DIR)/ColabRecomputeValidation.cpp \
                $(SRC_DIR)/Phys_M2BandTracker.cpp \
                $(SRC_DIR)/GenScanWithFixings.cpp)
@@ -86,6 +87,13 @@ $(BIN_DIR)/PhysLam1Scan: $(OBJ_DIR)/PhysLam1Scan.o $(TARGET_LIB)
 	@echo "[LD] Linking executable $@ (2HDMC only)"
 	@mkdir -p $(BIN_DIR)
 	@$(CXX) -fopenmp $< -o $@ $(LDFLAGS_2HDMC)
+
+$(BIN_DIR)/Lambda1EvaluatorV2: $(OBJ_DIR)/Lambda1EvaluatorV2.o $(OBJ_DIR)/ReplaySafeOutput.o
+	@echo "[LD] Linking executable $@ (2HDMC only)"
+	@mkdir -p $(BIN_DIR)
+	@$(CXX) -fopenmp $^ -o $@ \
+	    -L$(THDMC_LIB) -l2HDMC \
+	    -lgsl -lgslcblas -lm
 
 # REGLA CRÍTICA: Compilación de .cpp a .o
 # Se elimina la dependencia de pipe '|' y se añade 'mkdir -p' interno

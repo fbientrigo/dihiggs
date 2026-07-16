@@ -18,7 +18,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y libgsl-dev
       - run: make -C 2hdmc
-      - run: make -C dihiggs app/PhysLam1Scan
+      - run: bash scripts/build_lambda1_characterization.sh
+      - run: make -C dihiggs app/Lambda1EvaluatorV2
+      - run: python -m pip install pytest
+      - run: pytest -q tests/test_golden_lambda1.py
+        env:
+          DIHIGGS_REQUIRE_LAMBDA1_BINARY: "1"
 
   guards:
     runs-on: ubuntu-latest

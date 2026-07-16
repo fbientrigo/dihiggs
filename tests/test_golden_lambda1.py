@@ -21,6 +21,7 @@ DIHIGGS_REQUIRE_LAMBDA1_BINARY=1 (CI sets this).
 from __future__ import annotations
 
 import json
+import csv
 import math
 import os
 import subprocess
@@ -38,6 +39,9 @@ MANIFEST_PATH = GOLDEN_DIR / "manifest.json"
 
 BINARY = Path(
     os.environ.get("LAMBDA1_BINARY", REPO_ROOT / "build" / "lambda1_char" / "PhysLam1Scan")
+)
+V2_BINARY = Path(
+    os.environ.get("LAMBDA1_V2_BINARY", REPO_ROOT / "dihiggs" / "app" / "Lambda1EvaluatorV2")
 )
 REQUIRE_BINARY = os.environ.get("DIHIGGS_REQUIRE_LAMBDA1_BINARY") == "1"
 
@@ -551,3 +555,140 @@ def test_row_length_guard_detects_truncated_and_overlong_rows():
     assert len(good) == len(header)
     assert len(truncated) != len(header)
     assert len(overlong) != len(header)
+
+
+# ---------------------------------------------------------------------------
+# Canonical v2 evaluator
+# ---------------------------------------------------------------------------
+
+V2_HEADER = (
+    "point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,"
+    "tan_beta,lambda1_target,lambda6_input,lambda7_input"
+)
+
+
+def run_v2(tmp_path: Path, lines: list[str], suffix: str = "") -> tuple[bytes, list[dict[str, str]]]:
+    if not V2_BINARY.exists():
+        pytest.skip(f"Lambda1EvaluatorV2 not built at {V2_BINARY}")
+    source = tmp_path / f"v2{suffix}.input.csv"
+    output = tmp_path / f"v2{suffix}.output.csv"
+    source.write_text(V2_HEADER + "\n" + "\n".join(lines) + "\n")
+    env = dict(os.environ, DIHIGGS_GIT_COMMIT="test-commit", DIHIGGS_GIT_DIRTY="0")
+    proc = subprocess.run(
+        [str(V2_BINARY), str(source), str(output)], capture_output=True, text=True,
+        cwd=REPO_ROOT, env=env,
+    )
+    assert proc.returncode == 0, proc.stderr
+    data = output.read_bytes()
+    return data, list(csv.DictReader(data.decode().splitlines()))
+
+
+def v2_line(
+    point_id: str, mh: str = "125.0", mH: str = "130", mA: str = "300",
+    mHp: str = "300", sin_ba: str = "0.999", tan_beta: str = "50",
+    lambda1: str = "0.1", lambda6: str = "0.1", lambda7: str = "0",
+) -> str:
+    return ",".join((point_id, mh, mH, mA, mHp, sin_ba, tan_beta, lambda1, lambda6, lambda7))
+
+
+def test_v2_preserves_every_physical_row_and_deterministic_ids(tmp_path):
+    lines = [
+        v2_line("accepted"),
+        v2_line("rejected", lambda1="20"),
+        v2_line("construction", mH="124.99999999999999"),
+        ",not-a-number",
+        "",
+    ]
+    first, rows = run_v2(tmp_path, lines, "a")
+    second, repeated = run_v2(tmp_path, lines, "b")
+    assert first == second
+    assert len(rows) == len(lines)
+    assert [r["construction_ok"] for r in rows] == ["1", "1", "0", "0", "0"]
+    assert rows[0]["rejection_stage"] == "accepted"
+    assert rows[1]["rejection_stage"] != "accepted"
+    assert rows[2]["rejection_reason"] == "mh_gt_mH"
+    assert rows[3]["rejection_reason"] == "wrong_field_count"
+    assert rows[3]["point_id"].startswith("lambda1_")
+    assert rows[3]["point_id"] == repeated[3]["point_id"]
+    assert rows[4]["point_id"] == repeated[4]["point_id"]
+
+
+def test_v2_raw_lexemes_and_float64_round_trip(tmp_path):
+    lines = [
+        v2_line("adjacent-a", lambda7="1.0000000000000000"),
+        v2_line("adjacent-b", lambda7="1.0000000000000002"),
+        v2_line("same-a", lambda7="1.00000000000000000"),
+        v2_line("same-b", lambda7="1.00000000000000000001"),
+    ]
+    _, rows = run_v2(tmp_path, lines)
+    assert [r["lambda7_input_raw"] for r in rows] == [line.rsplit(",", 1)[1] for line in lines]
+    parsed = [float(r["lambda7_input"]) for r in rows]
+    assert parsed[0] != parsed[1]
+    assert parsed[2] == parsed[3]
+    assert float(rows[0]["lambda7_input"]).hex() == float(lines[0].rsplit(",", 1)[1]).hex()
+    assert float(rows[1]["lambda7_input"]).hex() == float(lines[1].rsplit(",", 1)[1]).hex()
+
+
+def test_v2_explicit_mh_boundary_and_residual_warning_do_not_reject(tmp_path):
+    lines = [
+        v2_line("mh125", mh="125.0", mH="125.0"),
+        v2_line("mh12509-fail", mh="125.09", mH="125.0"),
+        v2_line("residual", mH="200", mA="500", mHp="500", sin_ba="1.0",
+                tan_beta="126904", lambda1="1.0", lambda6="0.0019"),
+    ]
+    _, rows = run_v2(tmp_path, lines)
+    assert rows[0]["construction_ok"] == "1"
+    assert rows[1]["construction_ok"] == "0"
+    assert rows[2]["lambda1_residual_warning"] == "1"
+    assert rows[2]["theory_ok"] == "1"
+    assert rows[2]["rejection_stage"] == "accepted"
+
+
+def test_v2_l06_recovers_width_branching_ratio_and_lifetime(tmp_path):
+    line = v2_line(
+        "L06", mH="200", mA="500", mHp="500", sin_ba="1.0",
+        tan_beta="10000", lambda1="1.0", lambda6="1e-10",
+    )
+    _, rows = run_v2(tmp_path, [line])
+    row = rows[0]
+    width = float(row["total_width_gev"])
+    assert math.isclose(width, 1.214398311035274e-17, rel_tol=2e-12)
+    assert row["width_ok"] == "1"
+    assert float(row["br_gammagamma"]) > 0.68
+    assert math.isclose(float(row["ctau_mm"]), 16249.0, rel_tol=2e-3)
+    assert float(format(width, ".17e")) == width
+
+
+def test_v2_malformed_values_have_exact_nan_and_flag_mask(tmp_path):
+    _, rows = run_v2(tmp_path, [v2_line("bad", mh="inf")])
+    row = rows[0]
+    assert row["rejection_reason"] == "invalid_mh_gev"
+    assert row["mh_input_gev_raw"] == "inf"
+    assert math.isnan(float(row["mh_input_gev"]))
+    for flag in (
+        "construction_ok", "positivity_ok", "unitarity_ok", "perturbativity_ok",
+        "stability_ok", "triple_ok", "theory_ok", "width_ok",
+    ):
+        assert row[flag] == "0"
+    for field in ("lambda1_reconstructed", "total_width_gev", "ctau_mm"):
+        assert math.isnan(float(row[field])) and not math.isinf(float(row[field]))
+
+
+def test_v2_legacy_successful_fields_match_golden_l01(tmp_path):
+    _, rows = run_v2(tmp_path, [
+        v2_line("L01", mH="130", mA="300", mHp="300", sin_ba="0.999",
+                tan_beta="50", lambda1="0.1", lambda6="0.1"),
+    ])
+    v2 = rows[0]
+    legacy = one_row("L01_accepted_g06")
+    pairs = {
+        "m12_sq_reconstructed_gev2": "m12",
+        "lambda1_reconstructed": "computed_lam1",
+        "lambda2_reconstructed": "computed_lam2",
+        "lambda3_reconstructed": "lam3",
+        "lambda4_reconstructed": "lam4",
+        "lambda5_reconstructed": "lam5",
+    }
+    for current, old in pairs.items():
+        assert math.isclose(float(v2[current]), float(legacy[old]), rel_tol=1e-12, abs_tol=1e-14)
+    assert [v2[f] for f in ("positivity_ok", "unitarity_ok", "perturbativity_ok")] == ["1"] * 3
