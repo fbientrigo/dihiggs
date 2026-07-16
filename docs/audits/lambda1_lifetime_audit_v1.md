@@ -21,11 +21,12 @@ Audited roots: /home/fabi/dihiggs/runs.
 
 | Classification | Rows |
 |---|---:|
-| diagnostic-discard | 2020 |
+| autoresearch-supported | 20 |
+| diagnostic-discard | 2000 |
 
 ## Interpretation
 
 A serialized zero cannot recover a width from the CSV alone. Replay is eligible only
 when all legacy lambda1 coordinates are finite and the historical `mh` provenance is
 known. Re-run only zero-width or positive-width ranking-boundary rows; never a complete grid.
-Checksums and per-file classifications are in the JSON manifest.
+Aggregate source checksums and campaign classifications are in the JSON manifest.

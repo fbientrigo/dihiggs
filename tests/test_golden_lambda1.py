@@ -695,7 +695,7 @@ def test_v2_legacy_successful_fields_match_golden_l01(tmp_path):
 
 
 def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
-    legacy = tmp_path / "campaign" / "results.csv"
+    legacy = tmp_path / "supported-campaign" / "results.csv"
     legacy.parent.mkdir()
     header, _ = load_expected()
     l06 = one_row("L06_llp_regime_small_l6_large_tb")
@@ -705,6 +705,9 @@ def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
     )
     wrong = tmp_path / "wrong.csv"
     wrong.write_text("a,b\n1,2\n")
+    excluded = tmp_path / "recomputed-copy" / "results.csv"
+    excluded.parent.mkdir()
+    excluded.write_text(legacy.read_text())
     script = REPO_ROOT / "scripts" / "audit_legacy_lambda1_lifetimes.py"
     outputs = []
     for suffix in ("a", "b"):
@@ -722,6 +725,9 @@ def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
     assert report["summary"]["zero_widths"] == 1
     assert report["summary"]["autoresearch_discards"] == 1
     assert report["summary"]["deterministic_replay_eligible"] == 1
+    assert report["summary"]["campaign_classification_rows"] == {
+        "autoresearch-supported": 1
+    }
 
 
 def test_autoresearch_import_guard_keeps_legacy_outside_canonical_core():

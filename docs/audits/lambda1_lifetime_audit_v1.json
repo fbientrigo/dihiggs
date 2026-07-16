@@ -4,7 +4,8 @@
     "algorithm": "sha256(path NUL file_sha256 LF), sorted by path",
     "all_selected_files": "01efa64a38f8cc555d65b06ca348f4e1476c36e0f331379c3b2a117173bf10bb",
     "by_campaign_classification": {
-      "diagnostic-discard": "01efa64a38f8cc555d65b06ca348f4e1476c36e0f331379c3b2a117173bf10bb"
+      "autoresearch-supported": "ea2e288b40a8884baae99fa27ab63b671072363244cfe3390b44484b6b8220bf",
+      "diagnostic-discard": "b524a5516c39a3a19d550a3007be813876325c32bc4fed0523feca3fe7d01c74"
     }
   },
   "roots": [
@@ -55,7 +56,8 @@
     "apparent_maximum_ctau_mm": 5.982536133455252e-08,
     "autoresearch_discards": 0,
     "campaign_classification_rows": {
-      "diagnostic-discard": 2020
+      "autoresearch-supported": 20,
+      "diagnostic-discard": 2000
     },
     "deterministic_replay_eligible": 2020,
     "files": 2020,

@@ -24,10 +24,10 @@ EXCLUDED = ("recomputed", "backup", "recovered", "artifact", "v2")
 
 def classification(path: Path) -> str:
     text = str(path).lower()
-    if "debug" in text or "smoke" in text:
-        return "diagnostic-discard"
     if "supported" in text:
         return "autoresearch-supported"
+    if "debug" in text or "smoke" in text:
+        return "diagnostic-discard"
     return "legacy-unclassified"
 
 
@@ -43,7 +43,7 @@ def candidates(roots: list[Path]) -> list[Path]:
     for root in roots:
         paths = [root] if root.is_file() else root.rglob("*.csv")
         for path in paths:
-            if any(part.lower() in EXCLUDED for part in path.parts):
+            if any(term in part.lower() for part in path.parts for term in EXCLUDED):
                 continue
             try:
                 with path.open(newline="") as stream:
@@ -158,7 +158,7 @@ def markdown(report: dict) -> str:
         "A serialized zero cannot recover a width from the CSV alone. Replay is eligible only",
         "when all legacy lambda1 coordinates are finite and the historical `mh` provenance is",
         "known. Re-run only zero-width or positive-width ranking-boundary rows; never a complete grid.",
-        "Checksums and per-file classifications are in the JSON manifest.",
+        "Aggregate source checksums and campaign classifications are in the JSON manifest.",
         "",
     ]
     return "\n".join(lines)
