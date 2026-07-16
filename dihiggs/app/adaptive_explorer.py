@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from collections.abc import Iterable
 from pathlib import Path
 
-from types import ModuleType
 from typing import Protocol, TypeAlias, cast
 
 import time
@@ -57,74 +56,12 @@ def _load_data_lake_defaults(default_data_lake_dir: str = DEFAULT_DATA_LAKE_DIR)
 DEFAULT_CERNBOX_OUTDIR, DEFAULT_LAKE_DIRNAME = _load_data_lake_defaults()
 
 
-def _load_module(name: str, path: Path) -> ModuleType:
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location(name, str(path))
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Failed to load module: {name} from {path}")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_APP_DIR = Path(__file__).resolve().parent
-_ARTIFACTS = _load_module("adaptive_artifacts", _APP_DIR / "adaptive_artifacts.py")
-_CHECKPOINT = _load_module("adaptive_checkpoint", _APP_DIR / "adaptive_checkpoint.py")
-_POLICY = _load_module("adaptive_policy", _APP_DIR / "adaptive_policy.py")
-
-
-class _Artifacts(Protocol):
-    def parse_task_summary_jsonl(self, path: str | Path) -> list[dict[str, object]]: ...
-
-    def summarize_task_summary(self, records: object) -> tuple[int, int]: ...
-
-    def successes_trials_from_task_record(self, record: dict[str, object]) -> tuple[int, int]: ...
-
-    def parse_run_dir_from_orchestrator_output(self, text: str) -> Path | None: ...
-
-    def read_omp_num_threads_from_manifest(self, run_dir: Path) -> int | None: ...
-
-
-class _Checkpoint(Protocol):
-    def write_adaptive_state(self, checkpoint_dir: str | Path, state: object) -> Path: ...
-
-    def write_proposals_csv(self, checkpoint_dir: str | Path, proposals: object) -> Path: ...
-
-    def write_commands_sh(self, checkpoint_dir: str | Path, commands: object) -> Path: ...
-
-    def load_replay_commands(self, checkpoint_dir: str | Path) -> list[str]: ...
-
-
-class _Policy(Protocol):
-    def make_lam1_bins(self, lam1_min: float, lam1_max: float, n_bins: int) -> list[dict[str, object]]: ...
-
-    def allocate_budget(
-        self,
-        bins: object,
-        successes_by_bin: dict[str, int],
-        trials_by_bin: dict[str, int],
-        total_budget: int,
-        floor_points: int,
-        alpha: float = 1.0,
-        beta: float = 1.0,
-    ) -> dict[str, int]: ...
-
-    def allocate_budget_per_tanbeta(
-        self,
-        bins: object,
-        successes_by_tb_by_bin: dict[str, dict[str, int]],
-        trials_by_tb_by_bin: dict[str, dict[str, int]],
-        total_budget_per_tb: int,
-        floor_points: int,
-        alpha: float = 1.0,
-        beta: float = 1.0,
-    ) -> dict[str, dict[str, int]]: ...
-
-
-adaptive_artifacts = cast(_Artifacts, cast(object, _ARTIFACTS))
-adaptive_checkpoint = cast(_Checkpoint, cast(object, _CHECKPOINT))
-adaptive_policy = cast(_Policy, cast(object, _POLICY))
+if __package__:
+    from . import adaptive_artifacts, adaptive_checkpoint, adaptive_policy
+else:
+    import adaptive_artifacts
+    import adaptive_checkpoint
+    import adaptive_policy
 
 
 def _as_int(x: object) -> int:

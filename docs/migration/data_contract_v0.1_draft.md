@@ -30,72 +30,8 @@ and computed doubles use scientific notation with
 reconstructs the same `double`. Digits beyond Float64 remain provenance only,
 because 2HDMC consumes `double`.
 
-The output header contains exactly these 64 fields, in order:
-
-1. `schema_version`
-2. `evaluator_commit`
-3. `evaluator_dirty`
-4. `evaluator_api`
-5. `point_id`
-6. `mh_input_gev_raw`
-7. `mh_input_gev`
-8. `mH_input_gev_raw`
-9. `mH_input_gev`
-10. `mA_input_gev_raw`
-11. `mA_input_gev`
-12. `mHp_input_gev_raw`
-13. `mHp_input_gev`
-14. `sin_beta_minus_alpha_input_raw`
-15. `sin_beta_minus_alpha_input`
-16. `tan_beta_input_raw`
-17. `tan_beta_input`
-18. `lambda1_target_raw`
-19. `lambda1_target`
-20. `lambda6_input_raw`
-21. `lambda6_input`
-22. `lambda7_input_raw`
-23. `lambda7_input`
-24. `construction_ok`
-25. `rejection_stage`
-26. `rejection_reason`
-27. `lambda1_reconstructed`
-28. `lambda2_reconstructed`
-29. `lambda3_reconstructed`
-30. `lambda4_reconstructed`
-31. `lambda5_reconstructed`
-32. `lambda6_reconstructed`
-33. `lambda7_reconstructed`
-34. `lambda1_abs_residual`
-35. `lambda1_residual_warning`
-36. `m12_sq_reconstructed_gev2`
-37. `tan_beta_reconstructed`
-38. `positivity_ok`
-39. `unitarity_ok`
-40. `perturbativity_ok`
-41. `stability_ok`
-42. `triple_ok`
-43. `theory_ok`
-44. `width_bb_gev`
-45. `width_cc_gev`
-46. `width_tautau_gev`
-47. `width_WW_gev`
-48. `width_ZZ_gev`
-49. `width_gammagamma_gev`
-50. `width_Zgamma_gev`
-51. `width_gg_gev`
-52. `width_hh_gev`
-53. `total_width_gev`
-54. `br_bb`
-55. `br_cc`
-56. `br_tautau`
-57. `br_WW`
-58. `br_ZZ`
-59. `br_gammagamma`
-60. `br_Zgamma`
-61. `br_gg`
-62. `br_hh`
-63. `width_ok`
-64. `ctau_mm`
+The exact ordered 64-field output header is the `output_fields` array in the
+machine-readable crosswalk; a test compares it directly with evaluator output.
 
 `schema_version` is `dihiggs.lambda1.v2`. Commit and dirty provenance come from
 `DIHIGGS_GIT_COMMIT` and `DIHIGGS_GIT_DIRTY`, falling back to `unknown`.

@@ -61,28 +61,23 @@ def audit(roots: list[Path]) -> dict:
     classes = Counter()
     checksums = {"all": hashlib.sha256()}
     for path in paths:
-        counts = Counter()
-        widths: list[float] = []
+        kind = classification(path)
         with path.open(newline="") as stream:
             for row in csv.DictReader(stream):
-                counts["rows"] += 1
+                totals["rows"] += 1
+                classes[kind] += 1
                 replayable = eligible(row)
-                counts["recoverable"] += replayable
-                counts["deterministic_replay_eligible"] += replayable
+                totals["recoverable"] += replayable
                 try:
                     width = float(row["total_width"])
                 except ValueError:
-                    counts["invalid_widths"] += 1
+                    totals["invalid_widths"] += 1
                     continue
                 if width == 0.0:
-                    counts["zero_widths"] += 1
-                    counts["autoresearch_discards"] += 1
+                    totals["zero_widths"] += 1
+                    totals["autoresearch_discards"] += 1
                 elif math.isfinite(width) and width > 0.0:
-                    widths.append(width)
-        positive_widths.extend(widths)
-        totals.update(counts)
-        kind = classification(path)
-        classes[kind] += counts["rows"]
+                    positive_widths.append(width)
         checksums.setdefault(kind, hashlib.sha256())
         digest_record = f"{path.resolve()}\0{hashlib.sha256(path.read_bytes()).hexdigest()}\n".encode()
         checksums["all"].update(digest_record)
@@ -103,7 +98,7 @@ def audit(roots: list[Path]) -> dict:
             "minimum_positive_width_gev": minimum,
             "apparent_maximum_ctau_mm": HBARC_GEV_MM / minimum if minimum else None,
             "recoverable": totals["recoverable"],
-            "deterministic_replay_eligible": totals["deterministic_replay_eligible"],
+            "deterministic_replay_eligible": totals["recoverable"],
             "autoresearch_discards": totals["autoresearch_discards"],
             "ranking_boundary_rows": positive_widths.count(minimum) if minimum else 0,
             "campaign_classification_rows": dict(sorted(classes.items())),

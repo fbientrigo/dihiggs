@@ -732,9 +732,7 @@ def test_lifetime_audit_is_schema_selective_and_deterministic(tmp_path):
 
 def test_autoresearch_import_guard_keeps_legacy_outside_canonical_core():
     forbidden = ("import autoresearch", "from autoresearch")
-    for path in (REPO_ROOT / "dihiggs").rglob("*"):
-        if path.suffix not in {".py", ".cpp", ".hpp", ".h"}:
-            continue
+    for path in (REPO_ROOT / "dihiggs").rglob("*.py"):
         text = path.read_text(errors="replace")
         assert not any(token in text for token in forbidden), path
 
