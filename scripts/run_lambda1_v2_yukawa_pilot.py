@@ -29,8 +29,9 @@ def main() -> None:
         raise SystemExit("build dihiggs/app/Lambda1EvaluatorV2 first")
     OUT.mkdir(parents=True, exist_ok=True)
     INPUT.write_text(HEADER + "\n" + "\n".join(ROWS) + "\n", encoding="utf-8")
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
-                            text=True, capture_output=True).stdout.strip()
+    commit = os.environ.get("DIHIGGS_IMPLEMENTATION_COMMIT") or subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
+        text=True, capture_output=True).stdout.strip()
     env = {**os.environ, "DIHIGGS_GIT_COMMIT": commit, "DIHIGHS_GIT_DIRTY": "no",
            "DIHIGGS_GIT_DIRTY": "no"}
     subprocess.run([str(BINARY), str(INPUT), str(OUTPUT)], cwd=ROOT, env=env, check=True)

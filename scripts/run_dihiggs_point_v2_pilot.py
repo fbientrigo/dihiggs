@@ -29,7 +29,7 @@ def main() -> None:
         raise SystemExit("build dihiggs/app/DihiggsPointV2Evaluator first")
     OUT.mkdir(parents=True, exist_ok=True)
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    implementation_commit = subprocess.run(
+    implementation_commit = os.environ.get("DIHIGGS_IMPLEMENTATION_COMMIT") or subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, text=True, capture_output=True
     ).stdout.strip()
     env = {**os.environ, "DIHIGGS_GIT_COMMIT": implementation_commit, "DIHIGGS_GIT_DIRTY": "no"}
