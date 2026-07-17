@@ -130,7 +130,7 @@ def main() -> None:
     lines = [
         "# DiHiggs Point v2 verification v1", "",
         "Status: canonical core and bounded engineering pilot verified; production experimental gates are not integrated.", "",
-        "- Baseline: `05a6217a` (PR #58 final head supplied by the plan)",
+        "- Baseline: `cbb5079c8ecc012395a525ccd1dd54f8481d5be9` (PR #58 final head)",
         f"- Verified implementation commit: `{implementation_commit}`", "- Schema: `dihiggs.point.v2`",
         "- Higgs mass: 125.13 GeV ([PDG 2026 listing](https://pdg.lbl.gov/encoder_listings/s126.pdf))",
         "- Scope: engineering validation only; no campaign-level scientific conclusion", "",
