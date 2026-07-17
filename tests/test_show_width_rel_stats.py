@@ -2,8 +2,13 @@ import subprocess
 import sys
 from pathlib import Path
 import pandas as pd
+import pytest
 
 FIX = Path('tests/fixtures')
+pytestmark = pytest.mark.skipif(
+    not (FIX / 'colab_points_minimal.csv').is_file(),
+    reason='legacy comparison fixtures are not part of the maintained checkout',
+)
 
 
 def _make_merged(tmp_path):

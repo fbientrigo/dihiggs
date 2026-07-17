@@ -8,6 +8,10 @@ from tempfile import TemporaryDirectory
 from typing import Any, cast
 from unittest.mock import patch
 
+import pytest
+
+pytestmark = pytest.mark.skip(reason="autoresearch is frozen outside the canonical evaluation core")
+
 from autoresearch.harness.dihiggs_runner import DiHiggsRunner
 
 

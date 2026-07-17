@@ -7,7 +7,14 @@ from pathlib import Path
 import sys
 from typing import cast
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+pytest.importorskip(
+    "scripts.recompute_readiness",
+    reason="recompute-readiness is a frozen/quarantine component absent from this checkout",
+)
 
 from scripts.recompute_readiness import (
     APPROVED_SCHEMA_WHITELIST,

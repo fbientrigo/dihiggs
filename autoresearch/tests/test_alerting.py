@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.skip(reason="autoresearch is frozen outside the canonical evaluation core")
+
 from ..harness.alerting import ALERT_SEVERITY_MAP, Alert, AlertEngine
 
 

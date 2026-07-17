@@ -1,4 +1,6 @@
-import polars as pl
+import pytest
+
+pl = pytest.importorskip("polars", reason="lake-pipeline null audit is optional")
 
 pq = "/home/fabi/cern_db/dihiggs_consolidated/dihiggs_lake.parquet"
 lf = pl.scan_parquet(pq)

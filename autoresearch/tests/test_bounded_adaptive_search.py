@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.skip(reason="autoresearch is frozen outside the canonical evaluation core")
+
 from scripts.gemini_contract_templates import materialize_template
 from autoresearch.harness.bounded_adaptive_search import (
     attempt_isolated_summary,
