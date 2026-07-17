@@ -1,0 +1,85 @@
+# Canonical evaluator contract v2
+
+Status: authoritative for the maintained 2HDMC evaluation core.
+
+## Scope and provenance
+
+The repository commit recorded in each output row and orchestration manifest is
+the authoritative code version for that result. This contract was frozen from
+the operational v2 core beginning at commit
+`9bc300299208dab1ce0b9f7e7510c3b92b8979f4`; later commits supersede that
+baseline only when the output provenance says so.
+
+The evaluators use the repository's patched 2HDMC checkout under `2hdmc/`.
+The 2HDMC source provenance is the repository commit of that checkout (the
+baseline is `05a6217a949ff947abec2c43cac04f6ba340be8b`); builds link
+`2hdmc/lib/lib2HDMC.a`. Output metadata records the evaluator commit and dirty
+state. Units are GeV for masses, GeV² for `M²`, `m12_sq`, and widths in GeV,
+and millimetres for `ctau_mm`.
+
+Acceptance is layered. Construction is the exact 2HDMC parameter-set return
+value. Theory flags report positivity, unitarity, perturbativity, stability,
+and the theory-only compatibility flag. `TRIPLE_OK`/`triple_ok_legacy` is
+theory-only; `theory_ok_v1` currently equals the three theory predicates. The
+M² producer leaves experimental fields unevaluated.
+
+## Canonical lambda1 producer
+
+| Field | Contract |
+|---|---|
+| Executable | `dihiggs/app/Lambda1EvaluatorV2` |
+| Source | `dihiggs/src/Lambda1EvaluatorV2.cpp` |
+| Schema | `dihiggs.lambda1.v2` |
+| Coordinate | explicit `lambda1_target` |
+| API | `THDM::set_param_phys_lam1` |
+
+The input CSV header is exact and fixed:
+
+```text
+point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,tan_beta,lambda1_target,lambda6_input,lambda7_input
+```
+
+Inputs are persisted as Float64 values with round-trip-safe formatting, while
+the raw input lexeme is retained in the output. There is one output row per
+attempted input row, including malformed, construction-failing,
+theory-rejected, and accepted rows. Rows contain reconstructed quartics and
+`m12_sq`, theory flags, partial widths, branching ratios, `width_ok`, and
+`ctau_mm`.
+
+## Canonical M² producer
+
+| Field | Contract |
+|---|---|
+| Executable | `dihiggs/app/DihiggsPointV2Evaluator` |
+| Source | `dihiggs/src/DihiggsPointV2Evaluator.cpp` |
+| Schema | `dihiggs.point.v2` |
+| Coordinates | rectangular `(mH, M²)` |
+| API | `THDM::set_param_phys` |
+
+The physical convention is
+
+```text
+M² = m12_sq / (sin(beta) * cos(beta))
+m12_sq = M² * sin(beta) * cos(beta)
+```
+
+`lambda1` is reconstructed output, never a fixed input. The default
+`mh = 125.13 GeV` is explicit in the CLI metadata and manifest provenance;
+`mHp` and Yukawa type are explicit named inputs. Every attempted grid point
+gets a row, including construction failures. Experimental fields remain
+unevaluated.
+
+## Experimental M² tracker
+
+`Phys_M2BandTracker` is a boundary-search helper, not a canonical rectangular
+point producer. It is validated only inside bounded pilot domains. Its
+intervals and points are non-canonical boundary artifacts and are not final
+scientific boundary evidence. It makes no fixed-input-lambda1 claim.
+
+## Legacy compatibility
+
+`PhysScanWithFixings` is the legacy fixed-precision lambda1 path. Its
+historical output loses lifetime and branching-ratio information and it is
+retained for replay/compatibility only. `PhysScanWithFixings` is not permitted
+for new LLP lifetime production. New work must use the v2 producers above.
+
