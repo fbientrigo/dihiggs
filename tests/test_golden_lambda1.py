@@ -652,10 +652,13 @@ def test_v2_l06_recovers_width_branching_ratio_and_lifetime(tmp_path):
     _, rows = run_v2(tmp_path, [line])
     row = rows[0]
     width = float(row["total_width_gev"])
-    assert math.isclose(width, 1.214398311035274e-17, rel_tol=2e-12)
+    assert math.isclose(width, 5.808012256617509e-11, rel_tol=2e-12)
     assert row["width_ok"] == "1"
-    assert float(row["br_gammagamma"]) > 0.68
-    assert math.isclose(float(row["ctau_mm"]), 16249.0, rel_tol=2e-3)
+    assert math.isclose(float(row["width_bb_gev"]), 3.923090771222959e-11, rel_tol=2e-12)
+    assert math.isclose(float(row["width_tautau_gev"]), 4.142212895982961e-12, rel_tol=2e-12)
+    assert float(row["br_gammagamma"]) < 0.001
+    assert math.isclose(float(row["ctau_mm"]), 3.397492498521094e-3, rel_tol=2e-3)
+    assert float(row["yukawa_type_installed"]) == 1.0
     assert float(format(width, ".17e")) == width
 
 

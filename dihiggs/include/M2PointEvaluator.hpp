@@ -8,6 +8,7 @@ struct PointResult {
     double M2_input = std::numeric_limits<double>::quiet_NaN();
     double m12_sq_input = std::numeric_limits<double>::quiet_NaN();
     bool construction_ok = false;
+    double yukawa_type_installed = std::numeric_limits<double>::quiet_NaN();
 
     double m12_sq_out = std::numeric_limits<double>::quiet_NaN();
     double lam1_out = std::numeric_limits<double>::quiet_NaN();

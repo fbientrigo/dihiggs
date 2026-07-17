@@ -30,7 +30,7 @@ and computed doubles use scientific notation with
 reconstructs the same `double`. Digits beyond Float64 remain provenance only,
 because 2HDMC consumes `double`.
 
-The exact ordered 64-field output header is the `output_fields` array in the
+The exact ordered output header is the `output_fields` array in the
 machine-readable crosswalk; a test compares it directly with evaluator output.
 
 `schema_version` is `dihiggs.lambda1.v2`. Commit and dirty provenance come from
@@ -45,7 +45,11 @@ machine-readable crosswalk; a test compares it directly with evaluator output.
   row, although the current dependency aliases it to the positivity mechanism.
 - `lambda1_abs_residual` and `lambda1_residual_warning` record 2HDMC validation;
   a warning does not reject the point.
-- All nine partial widths and `total_width_gev` refer to H2 (2HDMC scalar 2).
+- The nine reported widths are selected H2 (2HDMC scalar 2) partial widths, not
+  an exhaustive decay listing. `width_unaccounted_gev` is the tested closure
+  diagnostic: total width minus the finite sum of those selected channels.
+- `yukawa_type_installed` records the verified post-construction 2HDMC type;
+  unavailable rows carry `nan`.
 - `width_ok` means the total width is finite and strictly positive.
 - When `width_ok=1`, every BR is its partial width divided by that same total;
   there is no legacy `1e-15` guard. `ctau_mm = 1.973269804e-13 / total_width_gev`.

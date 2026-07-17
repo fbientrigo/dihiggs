@@ -263,7 +263,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="[m2] Explicit h1 mass in GeV (PDG 2026 convention).")
     p.add_argument("--mHp", type=float, default=None,
                    help="[m2] Explicit charged-Higgs mass in GeV; defaults to mA.")
-    p.add_argument("--yukawa-type", type=int, default=1,
+    p.add_argument("--yukawa-type", type=int, choices=(1, 2, 3, 4), default=1,
                    help="[m2] 2HDMC Yukawa type.")
     p.add_argument("--sin-ba", type=float, default=_DEFAULT_SIN_BA,
                    help="Fixed sin(b-a).")

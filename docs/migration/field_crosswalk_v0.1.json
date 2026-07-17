@@ -14,7 +14,7 @@
     "sin_beta_minus_alpha_input_raw", "sin_beta_minus_alpha_input",
     "tan_beta_input_raw", "tan_beta_input", "lambda1_target_raw", "lambda1_target",
     "lambda6_input_raw", "lambda6_input", "lambda7_input_raw", "lambda7_input",
-    "construction_ok", "rejection_stage", "rejection_reason",
+    "construction_ok", "yukawa_type_installed", "rejection_stage", "rejection_reason",
     "lambda1_reconstructed", "lambda2_reconstructed", "lambda3_reconstructed",
     "lambda4_reconstructed", "lambda5_reconstructed", "lambda6_reconstructed",
     "lambda7_reconstructed", "lambda1_abs_residual", "lambda1_residual_warning",
@@ -22,7 +22,7 @@
     "unitarity_ok", "perturbativity_ok", "stability_ok", "triple_ok", "theory_ok",
     "width_bb_gev", "width_cc_gev", "width_tautau_gev", "width_WW_gev",
     "width_ZZ_gev", "width_gammagamma_gev", "width_Zgamma_gev", "width_gg_gev",
-    "width_hh_gev", "total_width_gev", "br_bb", "br_cc", "br_tautau", "br_WW",
+    "width_hh_gev", "total_width_gev", "width_unaccounted_gev", "br_bb", "br_cc", "br_tautau", "br_WW",
     "br_ZZ", "br_gammagamma", "br_Zgamma", "br_gg", "br_hh", "width_ok", "ctau_mm"
   ],
   "raw_float64_pairs": {

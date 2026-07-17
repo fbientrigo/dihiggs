@@ -1,6 +1,7 @@
 #include "M2PointEvaluator.hpp"
 #include "Constraints.h"
 #include "DecayTable.h"
+#include "YukawaType.hpp"
 #include <cmath>
 
 PointResult evaluate_m2_point(
@@ -27,10 +28,11 @@ PointResult evaluate_m2_point(
     // Explicit conversion M2 -> m12^2
     res.m12_sq_input = M2_input * sin_beta * cos_beta;
     
-    model.set_yukawas_type(1);
     res.construction_ok = model.set_param_phys(
         mh, mH_input, mA, mHp, sin_ba, lambda6, lambda7, res.m12_sq_input, tan_beta);
     if (!res.construction_ok) return res;
+    dihiggs::install_yukawa_type(model, 1);
+    res.yukawa_type_installed = model.get_yukawas_type();
     
     // Extract parameters
     double lam1_g, lam2_g, lam3_g, lam4_g, lam5_g, lam6_g, lam7_g, m12_2_g, tanb_g;

@@ -35,6 +35,8 @@ class M2Engine:
         mh = 125.13 if fixed.mh is None else fixed.mh
         mHp = fixed.mA if fixed.mHp is None else fixed.mHp
         yukawa_type = 1 if fixed.yukawa_type is None else fixed.yukawa_type
+        if yukawa_type not in (1, 2, 3, 4):
+            raise ValueError("yukawa_type must be one of 1, 2, 3, 4")
         return [
             str(executable),
             "--campaign-id", self.campaign_id,

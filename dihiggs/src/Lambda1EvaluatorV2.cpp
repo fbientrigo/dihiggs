@@ -2,6 +2,7 @@
 #include "DecayTable.h"
 #include "ReplaySafeOutput.hpp"
 #include "THDM.h"
+#include "YukawaType.hpp"
 
 #include <array>
 #include <cmath>
@@ -54,6 +55,8 @@ struct Result {
     std::array<double, 9> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     std::array<double, 9> branching_ratios{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     double total_width_gev = nan();
+    double width_unaccounted_gev = nan();
+    double yukawa_type_installed = nan();
     int width_ok = 0;
     double ctau_mm = nan();
 };
@@ -140,13 +143,14 @@ Result evaluate(const Input& input) {
     THDM model;
     SM sm;
     model.set_SM(sm);
-    model.set_yukawas_type(1);
     if (!model.set_param_phys_lam1(
             input.value[kMh], input.value[kMH], input.value[kMA], input.value[kMHp],
             input.value[kSinBa], input.value[kLambda1], input.value[kLambda6],
             input.value[kLambda7], input.value[kTanBeta])) return result;
 
     result.construction_ok = 1;
+    dihiggs::install_yukawa_type(model, 1);
+    result.yukawa_type_installed = model.get_yukawas_type();
     if (model.has_param_phys_lam1_validation()) {
         double ignored_input = nan();
         bool warning = false;
@@ -194,6 +198,13 @@ Result evaluate(const Input& input) {
     }};
     result.total_width_gev = decays.get_gammatot_h(2);
     result.width_ok = std::isfinite(result.total_width_gev) && result.total_width_gev > 0.0;
+    bool selected_widths_finite = std::isfinite(result.total_width_gev);
+    double selected_width_sum = 0.0;
+    for (double width : result.widths) {
+        selected_widths_finite = selected_widths_finite && std::isfinite(width);
+        selected_width_sum += width;
+    }
+    if (selected_widths_finite) result.width_unaccounted_gev = result.total_width_gev - selected_width_sum;
     if (result.width_ok) {
         for (std::size_t i = 0; i < result.widths.size(); ++i) {
             result.branching_ratios[i] = result.widths[i] / result.total_width_gev;
@@ -210,13 +221,13 @@ void write_header(std::ostream& out) {
         << "sin_beta_minus_alpha_input_raw,sin_beta_minus_alpha_input,"
         << "tan_beta_input_raw,tan_beta_input,lambda1_target_raw,lambda1_target,"
         << "lambda6_input_raw,lambda6_input,lambda7_input_raw,lambda7_input,"
-        << "construction_ok,rejection_stage,rejection_reason,"
+        << "construction_ok,yukawa_type_installed,rejection_stage,rejection_reason,"
         << "lambda1_reconstructed,lambda2_reconstructed,lambda3_reconstructed,"
         << "lambda4_reconstructed,lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,"
         << "lambda1_abs_residual,lambda1_residual_warning,m12_sq_reconstructed_gev2,tan_beta_reconstructed,"
         << "positivity_ok,unitarity_ok,perturbativity_ok,stability_ok,triple_ok,theory_ok,"
         << "width_bb_gev,width_cc_gev,width_tautau_gev,width_WW_gev,width_ZZ_gev,"
-        << "width_gammagamma_gev,width_Zgamma_gev,width_gg_gev,width_hh_gev,total_width_gev,"
+        << "width_gammagamma_gev,width_Zgamma_gev,width_gg_gev,width_hh_gev,total_width_gev,width_unaccounted_gev,"
         << "br_bb,br_cc,br_tautau,br_WW,br_ZZ,br_gammagamma,br_Zgamma,br_gg,br_hh,"
         << "width_ok,ctau_mm\n";
 }
@@ -224,14 +235,14 @@ void write_header(std::ostream& out) {
 void write_row(std::ostream& out, const Result& r, const std::string& commit, const std::string& dirty) {
     out << kSchemaVersion << ',' << commit << ',' << dirty << ',' << kEvaluatorApi << ',' << r.input.point_id;
     for (std::size_t i = 0; i < kNumericInputs; ++i) out << ',' << r.input.raw[i] << ',' << r.input.value[i];
-    out << ',' << r.construction_ok << ',' << r.rejection_stage << ',' << r.rejection_reason;
+    out << ',' << r.construction_ok << ',' << r.yukawa_type_installed << ',' << r.rejection_stage << ',' << r.rejection_reason;
     for (const double value : r.lambda_reconstructed) out << ',' << value;
     out << ',' << r.lambda1_abs_residual << ',' << r.lambda1_residual_warning
         << ',' << r.m12_sq_reconstructed_gev2 << ',' << r.tan_beta_reconstructed
         << ',' << r.positivity_ok << ',' << r.unitarity_ok << ',' << r.perturbativity_ok
         << ',' << r.stability_ok << ',' << r.triple_ok << ',' << r.theory_ok;
     for (const double value : r.widths) out << ',' << value;
-    out << ',' << r.total_width_gev;
+    out << ',' << r.total_width_gev << ',' << r.width_unaccounted_gev;
     for (const double value : r.branching_ratios) out << ',' << value;
     out << ',' << r.width_ok << ',' << r.ctau_mm << '\n';
 }
@@ -261,6 +272,7 @@ int run(const std::string& input_path, const std::string& output_path) {
         try {
             result = evaluate(parse_input(fields));
         } catch (const std::exception& error) {
+            if (std::string(error.what()) == "yukawa_type_installation_mismatch") throw;
             result.rejection_reason = error.what();
         }
         write_row(output, result, commit, dirty);

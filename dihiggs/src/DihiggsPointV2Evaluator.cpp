@@ -2,6 +2,7 @@
 #include "DecayTable.h"
 #include "ReplaySafeOutput.hpp"
 #include "THDM.h"
+#include "YukawaType.hpp"
 
 #include <array>
 #include <cmath>
@@ -36,6 +37,7 @@ struct Config {
 struct Result {
     double mh, mH, mA, mHp, sin_ba, tan_beta, beta, M2, m12_sq, lambda6, lambda7;
     int yukawa_type;
+    double yukawa_type_installed = nan();
     int construction_ok = 0;
     double numerical_ok = nan();
     std::string rejection_stage = "construction";
@@ -49,7 +51,7 @@ struct Result {
     double experimental_evaluated = 0.0, experimental_ok = nan();
     std::array<double, 9> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     std::array<double, 9> brs{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
-    double total_width = nan(), width_ok = nan(), ctau_mm = nan();
+    double total_width = nan(), width_unaccounted = nan(), width_ok = nan(), ctau_mm = nan();
 };
 
 double parse_double(const std::string& value, const std::string& name) {
@@ -64,6 +66,16 @@ int parse_int(const std::string& value, const std::string& name) {
     const long parsed = std::stol(value, &used);
     if (used != value.size() || parsed < 1 || parsed > std::numeric_limits<int>::max()) {
         throw std::runtime_error("invalid_" + name);
+    }
+    return static_cast<int>(parsed);
+}
+
+int parse_yukawa_type(const std::string& value) {
+    std::size_t used = 0;
+    const long parsed = std::stol(value, &used);
+    if (used != value.size() || parsed < std::numeric_limits<int>::min() ||
+        parsed > std::numeric_limits<int>::max()) {
+        throw std::runtime_error("invalid_yukawa_type");
     }
     return static_cast<int>(parsed);
 }
@@ -91,12 +103,13 @@ Config parse_args(int argc, char** argv) {
         parse_double(args.at("tan-beta"), "tan-beta"), parse_double(args.at("M2-min"), "M2-min"),
         parse_double(args.at("M2-max"), "M2-max"), parse_double(args.at("lambda6"), "lambda6"),
         parse_double(args.at("lambda7"), "lambda7"), parse_int(args.at("n-mH"), "n-mH"),
-        parse_int(args.at("n-M2"), "n-M2"), parse_int(args.at("yukawa-type"), "yukawa-type")
+        parse_int(args.at("n-M2"), "n-M2"), parse_yukawa_type(args.at("yukawa-type"))
     };
     if (c.campaign_id.empty() || c.run_id.empty() || c.output.empty()) throw std::runtime_error("empty_identifier_or_output");
     if (c.campaign_id.find(',') != std::string::npos || c.run_id.find(',') != std::string::npos) throw std::runtime_error("comma_in_identifier");
     if (c.mH_min > c.mH_max || c.M2_min > c.M2_max) throw std::runtime_error("descending_grid");
     if (c.tan_beta <= 0.0 || std::abs(c.sin_ba) > 1.0) throw std::runtime_error("invalid_physics_input");
+    if (!dihiggs::supported_yukawa_type(c.yukawa_type)) throw std::runtime_error("unsupported_yukawa_type");
     return c;
 }
 
@@ -141,13 +154,14 @@ Result evaluate(const Config& c, double mH, double M2) {
     THDM model;
     SM sm;
     model.set_SM(sm);
-    model.set_yukawas_type(c.yukawa_type);
     r.construction_ok = model.set_param_phys(
         r.mh, r.mH, r.mA, r.mHp, r.sin_ba, r.lambda6, r.lambda7, r.m12_sq, r.tan_beta) ? 1 : 0;
     if (!r.construction_ok) {
         if (r.mh > r.mH) r.rejection_reason = "mh_gt_mH";
         return r;
     }
+    dihiggs::install_yukawa_type(model, c.yukawa_type);
+    r.yukawa_type_installed = model.get_yukawas_type();
 
     model.get_param_gen(r.lambda[0], r.lambda[1], r.lambda[2], r.lambda[3], r.lambda[4],
                         r.lambda[5], r.lambda[6], r.m12_sq_reconstructed, r.tan_beta_reconstructed);
@@ -180,6 +194,13 @@ Result evaluate(const Config& c, double mH, double M2) {
                  decays.get_gamma_hZga(2), decays.get_gamma_hgg(2), decays.get_gamma_hhh(2, 1, 1)}};
     r.total_width = decays.get_gammatot_h(2);
     r.width_ok = std::isfinite(r.total_width) && r.total_width > 0.0 ? 1.0 : 0.0;
+    bool selected_widths_finite = std::isfinite(r.total_width);
+    double selected_width_sum = 0.0;
+    for (double width : r.widths) {
+        selected_widths_finite = selected_widths_finite && std::isfinite(width);
+        selected_width_sum += width;
+    }
+    if (selected_widths_finite) r.width_unaccounted = r.total_width - selected_width_sum;
     if (r.width_ok) {
         for (std::size_t i = 0; i < r.widths.size(); ++i) r.brs[i] = r.widths[i] / r.total_width;
         r.ctau_mm = kHbarCGeVmm / r.total_width;
@@ -189,7 +210,7 @@ Result evaluate(const Config& c, double mH, double M2) {
 
 void header(std::ostream& out) {
     out << "schema_version,producer,producer_commit,producer_dirty,evaluator_api,campaign_id,run_id,point_id,"
-        << "yukawa_type,mh_input_GeV,mH_input_GeV,mA_input_GeV,mHp_input_GeV,sin_beta_minus_alpha_input,"
+        << "yukawa_type,yukawa_type_installed,mh_input_GeV,mH_input_GeV,mA_input_GeV,mHp_input_GeV,sin_beta_minus_alpha_input,"
         << "tan_beta_input,beta_input_rad,M2_input_GeV2,m12_sq_input_GeV2,lambda6_input,lambda7_input,"
         << "lambda1_reconstructed,lambda2_reconstructed,lambda3_reconstructed,lambda4_reconstructed,"
         << "lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,tan_beta_reconstructed,"
@@ -197,13 +218,13 @@ void header(std::ostream& out) {
         << "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
         << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,"
         << "width_bb_GeV,width_cc_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,"
-        << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,"
+        << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,"
         << "br_gammagamma,br_Zgamma,br_gg,br_hh,width_ok,ctau_mm\n";
 }
 
 void row(std::ostream& out, const Config& c, const Result& r, const std::string& commit, const std::string& dirty) {
     out << kSchema << ',' << kProducer << ',' << commit << ',' << dirty << ',' << kApi << ','
-        << c.campaign_id << ',' << c.run_id << ',' << point_id(r) << ',' << r.yukawa_type << ','
+        << c.campaign_id << ',' << c.run_id << ',' << point_id(r) << ',' << r.yukawa_type << ',' << r.yukawa_type_installed << ','
         << r.mh << ',' << r.mH << ',' << r.mA << ',' << r.mHp << ',' << r.sin_ba << ',' << r.tan_beta << ','
         << r.beta << ',' << r.M2 << ',' << r.m12_sq << ',' << r.lambda6 << ',' << r.lambda7;
     for (double value : r.lambda) out << ',' << value;
@@ -213,7 +234,7 @@ void row(std::ostream& out, const Config& c, const Result& r, const std::string&
         << ',' << kStabilityAlias << ',' << r.triple_ok << ',' << r.theory_ok << ',' << r.experimental_evaluated
         << ',' << r.experimental_ok;
     for (double value : r.widths) out << ',' << value;
-    out << ',' << r.total_width;
+    out << ',' << r.total_width << ',' << r.width_unaccounted;
     for (double value : r.brs) out << ',' << value;
     out << ',' << r.width_ok << ',' << r.ctau_mm << '\n';
 }

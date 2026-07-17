@@ -52,16 +52,17 @@ def main() -> None:
             "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
             "row_count": len(rows),
             "rows": [{key: row[key] for key in (
-                "point_id", "mh_input_GeV", "mH_input_GeV", "M2_input_GeV2",
+                "point_id", "yukawa_type", "yukawa_type_installed", "mh_input_GeV", "mH_input_GeV", "M2_input_GeV2",
                 "construction_ok", "numerical_ok", "rejection_stage", "rejection_reason",
-                "theory_ok_v1", "total_width_GeV", "br_gammagamma", "ctau_mm",
+                "theory_ok_v1", "width_bb_GeV", "width_tautau_GeV", "total_width_GeV",
+                "width_unaccounted_GeV", "br_gammagamma", "ctau_mm",
             )} for row in rows],
             "stdout": completed.stdout.splitlines(),
         })
 
     payload = {
         "report_schema": "dihiggs.point.v2.verification.v1",
-        "baseline_commit": "05a6217a",
+        "baseline_commit": "cbb5079c8ecc012395a525ccd1dd54f8481d5be9",
         "successor_commit": implementation_commit,
         "producer_schema": "dihiggs.point.v2",
         "mh_convention_GeV": 125.13,
@@ -87,6 +88,9 @@ def main() -> None:
             "theory_ok_v1": "triple_ok_legacy",
             "stability_reported_ok": "recorded separately; patched dependency aliases positivity",
             "experimental_ok": "unevaluated nan",
+            "yukawa_type_installed": "post-construction get_yukawas_type() equals requested type",
+            "selected_widths": "nine H2 partial widths; not an exhaustive decay listing",
+            "width_unaccounted_GeV": "total width minus finite sum of selected widths",
         },
         "dispositions": {
             "D01-D04": "verified by focused executable tests",
@@ -103,6 +107,22 @@ def main() -> None:
             "tests/test_recompute_readiness.py: missing scripts.recompute_readiness",
             "tests/test_run_quarantine.py: missing scripts.run_quarantine",
         ],
+        "before_after": {
+            "L01": {
+                "total_width_GeV": {"before": 3.29976630039622283e-06, "after": 5.44093329247643563e-06},
+                "width_bb_GeV": {"before": 0.0, "after": 1.68923454963338956e-06},
+                "width_tautau_GeV": {"before": 0.0, "after": 1.64557991401996309e-07},
+                "br_gammagamma": {"before": 0.007206, "after": 0.004370727357176285},
+                "ctau_mm": {"before": 5.980e-08, "after": 3.62671199576841017e-08},
+            },
+            "L06": {
+                "total_width_GeV": {"before": 1.10178135764866426e-17, "after": 5.80801813354687673e-11},
+                "width_bb_GeV": {"before": 0.0, "after": 3.92309076675650660e-11},
+                "width_tautau_GeV": {"before": 0.0, "after": 4.14221289016167297e-12},
+                "br_gammagamma": {"before": 0.6851279518, "after": 4.96465589482382474e-04},
+                "ctau_mm": {"before": 1.790981296e04, "after": 3.39749249852109442e-03},
+            },
+        },
         "pilot": results,
     }
     REPORT.with_suffix(".json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -123,6 +143,13 @@ def main() -> None:
                      f"{','.join(row['theory_ok_v1'] for row in result['rows'])} | `{result['output_sha256']}` |")
     lines += ["", "## Readiness dispositions", ""] + [f"- {key}: {value}" for key, value in payload["dispositions"].items()]
     lines += ["", "## Deferred", "", ", ".join(payload["deferred"]) + ".", "",
+              "## Yukawa correction before/after", "",
+              "The reported widths are selected channels; `width_unaccounted_GeV` records closure against the total.", "",
+              "| Anchor | Quantity | Before (zero-Yukawa replay) | After (verified Type I) |", "|---|---|---:|---:|"]
+    for anchor in ("L01", "L06"):
+        for quantity, values in payload["before_after"][anchor].items():
+            lines.append(f"| {anchor} | {quantity} | {values['before']:.17e} | {values['after']:.17e} |")
+    lines += ["",
               "## Pre-existing full-suite collection failures", ""]
     lines += [f"- {failure}" for failure in payload["preexisting_full_suite_collection_failures"]]
     lines += ["",
