@@ -91,3 +91,6 @@ def test_tracker_local_dense_fallback_recovers_pilot_band(tmp_path):
     ], check=True, env={**os.environ, "OMP_NUM_THREADS": "1"}, capture_output=True, text=True)
     assert "Local Dense Scan succeeded" in completed.stdout
     assert len((tmp_path / "intervals.csv").read_text().splitlines()) == 2
+    with (tmp_path / "points.csv").open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert any(row["construction_ok"] == "1" and float(row["yukawa_type_installed"]) == 1.0 for row in rows)

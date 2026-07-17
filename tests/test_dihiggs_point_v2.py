@@ -107,6 +107,15 @@ def test_ordering_boundary_emits_success_and_failure_with_nan_masks(tmp_path):
     assert rows[0]["rejection_reason"] == "mh_gt_mH"
     for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "total_width_GeV", "width_ok"):
         assert rows[0][field] == "nan"
+    assert rows[0]["yukawa_type_installed"] == "nan"
+
+
+def test_construction_failure_preserves_row_without_decay_evaluation(tmp_path):
+    _, (row,), _ = run_point(tmp_path, "construction-failure", mA=-1.0)
+    assert row["construction_ok"] == "0"
+    assert row["yukawa_type_installed"] == "nan"
+    for field in ("width_bb_GeV", "width_tautau_GeV", "total_width_GeV", "width_unaccounted_GeV", "ctau_mm"):
+        assert row[field] == "nan"
 
 
 @pytest.mark.parametrize(

@@ -677,6 +677,15 @@ def test_v2_malformed_values_have_exact_nan_and_flag_mask(tmp_path):
         assert math.isnan(float(row[field])) and not math.isinf(float(row[field]))
 
 
+def test_v2_construction_failure_preserves_row_without_decays(tmp_path):
+    _, rows = run_v2(tmp_path, [v2_line("construction", mA="-1")])
+    row = rows[0]
+    assert row["construction_ok"] == "0"
+    assert math.isnan(float(row["yukawa_type_installed"]))
+    for field in ("width_bb_gev", "width_tautau_gev", "total_width_gev", "width_unaccounted_gev", "ctau_mm"):
+        assert math.isnan(float(row[field]))
+
+
 def test_v2_legacy_successful_fields_match_golden_l01(tmp_path):
     _, rows = run_v2(tmp_path, [
         v2_line("L01", mH="130", mA="300", mHp="300", sin_ba="0.999",
