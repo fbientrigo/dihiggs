@@ -270,9 +270,12 @@ int run(const std::string& input_path, const std::string& output_path) {
         Result result;
         result.input = partial_input(fields, line);
         try {
-            result = evaluate(parse_input(fields));
+            const Input parsed = parse_input(fields);
+            result = evaluate(parsed);
         } catch (const std::exception& error) {
             if (std::string(error.what()) == "yukawa_type_installation_mismatch") throw;
+            // Keep the row identity and raw lexemes for malformed input too.
+            // The producer is row-preserving by contract.
             result.rejection_reason = error.what();
         }
         write_row(output, result, commit, dirty);

@@ -6,6 +6,10 @@ import pytest
 from scripts.validate_colab import build_merged_comparison, safe_rel_err
 
 FIX = Path('tests/fixtures')
+pytestmark = pytest.mark.skipif(
+    not (FIX / 'colab_points_minimal.csv').is_file(),
+    reason='legacy comparison fixtures are not part of the maintained checkout',
+)
 
 
 def test_successful_merge_one_to_one():

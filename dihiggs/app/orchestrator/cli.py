@@ -1,12 +1,12 @@
 """
-cli.py — Backward-compatible CLI entrypoint for the modular scan orchestrator.
+cli.py — CLI entrypoint for canonical and compatibility scan paths.
 
 Invocation examples
 -------------------
 
-Lambda1 scan (fully backward-compatible with legacy orchestrate_scans.py):
+Canonical lambda1 v2 scan (row-preserving):
     python -m dihiggs.app.orchestrator \\
-        --exec ./PhysScanWithFixings \\
+        --engine lambda1_legacy --exec ./PhysScanWithFixings \\
         --campaign scan_999 \\
         --sin-ba 0.995 --lambda6 0.10 --lambda7 0.00 --mA 300 \\
         --tanbeta 10000,15000,20000 \\
@@ -15,10 +15,9 @@ Lambda1 scan (fully backward-compatible with legacy orchestrate_scans.py):
 M2 boundary scan (new):
     python -m dihiggs.app.orchestrator \\
         --engine m2 \\
-        --exec ./Phys_M2BoundaryScan \\
+        --exec ./dihiggs/app/DihiggsPointV2Evaluator \\
         --campaign m2_scan_001 \\
         --sin-ba 1.0 --lambda6 0.001 --lambda7 0.0 --mA 500 \\
-        --lambda1 1.0 \\
         --tanbeta 50.0 \\
         --axis-min 0 --axis-max 500000 --n-axis 50
 
@@ -41,6 +40,13 @@ from dihiggs.app.orchestrator.engines.lambda1 import Lambda1Engine
 from dihiggs.app.orchestrator.engines.m2 import M2Engine
 from dihiggs.app.orchestrator.grid import ScanGrid
 from dihiggs.app.orchestrator.io_utils import parse_csv_floats
+from dihiggs.app.orchestrator.lambda1_v2 import (
+    Lambda1Fixed,
+    SCHEMA_VERSION,
+    cartesian_rows,
+    grid_values,
+    run_lambda1_v2,
+)
 from dihiggs.app.orchestrator.models import FixedParams
 from dihiggs.app.orchestrator.runner import ScanRunner
 
@@ -137,8 +143,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m dihiggs.app.orchestrator",
         description=(
-            "Modular 2HDM scan orchestrator supporting PhysScanWithFixings "
-            "(lambda1 axis) and Phys_M2BoundaryScan (M2 axis)."
+            "Executable 2HDMC orchestrator: lambda1_v2 and m2 are canonical; "
+            "lambda1_legacy and m2_tracker are compatibility/experimental paths."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -147,12 +153,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--engine",
         type=str,
-        default="lambda1",
-        choices=["lambda1", "m2", "m2_tracker", "gen_fixings"],
+        default="lambda1_v2",
+        choices=["lambda1_v2", "lambda1_legacy", "lambda1", "m2", "m2_tracker", "gen_fixings"],
         help=(
-            "Physics engine: 'lambda1' → PhysScanWithFixings (second axis = lambda_1); "
-            "'m2' → Phys_M2BoundaryScan (second axis = M^2); "
-            "'m2_tracker' → Phys_M2BandTracker (second axis = M^2 tracked dynamically); "
+            "Canonical 'lambda1_v2' → Lambda1EvaluatorV2 (explicit lambda1_target); "
+            "legacy 'lambda1_legacy'/'lambda1' → PhysScanWithFixings; "
+            "canonical 'm2' → DihiggsPointV2Evaluator (reconstructed lambda1); "
+            "experimental 'm2_tracker' → bounded-pilot Phys_M2BandTracker; "
             "'gen_fixings' → GenScanWithFixings (Stage 2: calibrates/validates a "
             "chris/CalcLambda1ScanFixings bronze shard against 2HDMC). "
         ),
@@ -165,9 +172,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help=(
-            "Path to the compiled C++ binary. "
-            "Defaults to './PhysScanWithFixings' for lambda1, "
-            "'./Phys_M2BoundaryScan' for m2."
+            "Path to the compiled C++ binary. Defaults to the selected executable "
+            "under dihiggs/app for canonical v2 paths."
         ),
     )
 
@@ -276,18 +282,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help=(
-            "Fixed lambda_1. "
-            "For --engine lambda1 this must be omitted (lambda1 is the scan axis)."
+            "Legacy fixed lambda_1 compatibility option. Rejected for canonical "
+            "m2 because lambda1 is reconstructed output, not an input."
         ),
     )
 
     # m_phi grid (shared by both engines)
-    p.add_argument("--mphi-min", type=float, default=_DEFAULT_MPHI_MIN,
-                   help="m_phi scan min (GeV).")
-    p.add_argument("--mphi-max", type=float, default=_DEFAULT_MPHI_MAX,
-                   help="m_phi scan max (GeV).")
-    p.add_argument("--n-mphi", type=int, default=_DEFAULT_N_MPHI,
-                   help="m_phi grid points.")
+    p.add_argument("--mH-min", "--mphi-min", dest="mphi_min", type=float,
+                   default=_DEFAULT_MPHI_MIN, help="mH scan minimum (GeV).")
+    p.add_argument("--mH-max", "--mphi-max", dest="mphi_max", type=float,
+                   default=_DEFAULT_MPHI_MAX, help="mH scan maximum (GeV).")
+    p.add_argument("--n-mH", "--n-mphi", dest="n_mphi", type=int,
+                   default=_DEFAULT_N_MPHI, help="Number of mH grid points.")
 
     # Generic second axis (engine interprets the semantics)
     p.add_argument(
@@ -378,8 +384,59 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
+    if args.engine == "lambda1_v2":
+        if args.lambda1 is not None:
+            print(
+                "[ERROR] --lambda1 is not accepted by lambda1_v2; "
+                "lambda1_target is the grid axis.", file=sys.stderr,
+            )
+            return 2
+        executable = (
+            Path(args.exec_path).expanduser().resolve()
+            if args.exec_path else Path("dihiggs/app/Lambda1EvaluatorV2").resolve()
+        )
+        if not args.dry_run and not executable.exists():
+            print(f"[ERROR] Executable not found: {executable}", file=sys.stderr)
+            return 2
+        axis_min = args.axis_min if args.axis_min is not None else (
+            args.lam1_min if args.lam1_min is not None else _DEFAULT_LAM1_MIN
+        )
+        axis_max = args.axis_max if args.axis_max is not None else (
+            args.lam1_max if args.lam1_max is not None else _DEFAULT_LAM1_MAX
+        )
+        n_axis = args.n_axis if args.n_axis is not None else (
+            args.n_lam1 if args.n_lam1 is not None else _DEFAULT_N_LAM1
+        )
+        fixed = Lambda1Fixed(
+            args.mh, args.mA, args.mA if args.mHp is None else args.mHp,
+            args.sin_ba, args.lambda6, args.lambda7,
+        )
+        rows = cartesian_rows(
+            fixed=fixed,
+            mH_values=grid_values(args.mphi_min, args.mphi_max, args.n_mphi),
+            lambda1_values=grid_values(axis_min, axis_max, n_axis),
+            tan_beta_values=parse_csv_floats(args.tanbeta),
+        )
+        try:
+            manifest = run_lambda1_v2(
+                executable=executable,
+                rows=rows,
+                outdir=Path(args.outdir).expanduser().resolve() / args.lake_name,
+                campaign=args.campaign,
+                run_name=args.run_name or "run",
+                repo_root=Path.cwd(),
+                dry_run=args.dry_run,
+                force=args.force,
+                timeout_s=args.timeout,
+            )
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"[ERROR] {error}", file=sys.stderr)
+            return 2
+        print(f"[lambda1_v2] {manifest['status']} rows={len(rows)} schema={SCHEMA_VERSION}")
+        return 0
+
     # ---- select engine -------------------------------------------------------
-    if args.engine == "lambda1":
+    if args.engine in ("lambda1", "lambda1_legacy"):
         engine = Lambda1Engine()
     elif args.engine == "m2":
         engine = M2Engine()
@@ -397,9 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.exec_path:
         exec_path = Path(args.exec_path).expanduser().resolve()
     else:
-        exec_path = (
-            Path(".") / engine.executable_basename
-        ).resolve()
+        exec_path = (Path("dihiggs/app") / engine.executable_basename).resolve()
 
     if not args.dry_run and not exec_path.exists():
         print(f"[ERROR] Executable not found: {exec_path}", file=sys.stderr)
@@ -420,7 +475,7 @@ def main(argv: list[str] | None = None) -> int:
     lambda7_val = args.lambda7
     tanbeta_override = None
 
-    if args.engine == "lambda1":
+    if args.engine in ("lambda1", "lambda1_legacy"):
         axis_min = axis_min if axis_min is not None else (
             args.lam1_min if args.lam1_min is not None else _DEFAULT_LAM1_MIN
         )
@@ -433,7 +488,7 @@ def main(argv: list[str] | None = None) -> int:
         # lambda1 must NOT be in fixed for this engine
         if args.lambda1 is not None:
             print(
-                "[ERROR] --lambda1 is not allowed for --engine lambda1 "
+                f"[ERROR] --lambda1 is not allowed for --engine {args.engine} "
                 "(lambda1 is the scan axis). Omit --lambda1.",
                 file=sys.stderr,
             )
@@ -477,14 +532,19 @@ def main(argv: list[str] | None = None) -> int:
             f"for this engine)."
         )
 
-    else:  # m2
+    else:  # m2 or experimental m2_tracker
         axis_min = axis_min if axis_min is not None else _DEFAULT_M2_MIN
         axis_max = axis_max if axis_max is not None else _DEFAULT_M2_MAX
         n_axis = n_axis if n_axis is not None else _DEFAULT_N_M2
         if args.lambda1 is not None:
-            fixed_lambda1 = args.lambda1
-        else:
-            fixed_lambda1 = None
+            label = "m2_tracker" if args.engine == "m2_tracker" else "m2"
+            print(
+                f"[ERROR] --lambda1 is rejected for --engine {label}: "
+                "lambda1 is reconstructed output, not a fixed input.",
+                file=sys.stderr,
+            )
+            return 2
+        fixed_lambda1 = None
 
     # ---- build grid and fixed ------------------------------------------------
     grid = ScanGrid(
@@ -515,8 +575,8 @@ def main(argv: list[str] | None = None) -> int:
         calibration_n=args.calibration_n if args.engine == "gen_fixings" else None,
         calibration_frac=args.calibration_frac if args.engine == "gen_fixings" else None,
         rng_seed=args.rng_seed if args.engine == "gen_fixings" else None,
-        mh=args.mh if args.engine == "m2" else None,
-        mHp=(args.mA if args.mHp is None else args.mHp) if args.engine == "m2" else None,
+        mh=args.mh if args.engine in ("m2", "m2_tracker") else None,
+        mHp=(args.mA if args.mHp is None else args.mHp) if args.engine in ("m2", "m2_tracker") else None,
         yukawa_type=args.yukawa_type if args.engine == "m2" else None,
     )
 
