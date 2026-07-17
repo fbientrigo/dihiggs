@@ -7,7 +7,8 @@ not edit or authorize edits to `/home/fabi/atlas_dihiggs/paper`.
 
 - Branch: `agent/dihiggs-operational-v3-20260717`
 - Initial commit: `9bc300299208dab1ce0b9f7e7510c3b92b8979f4`
-- Final commit: `FINAL_SHA_TO_FILL_AFTER_COMMIT`
+- Final implementation commit: `5835006`; the close-out documentation commit
+  is the final repository HEAD reported in the delivery record.
 - PR context: draft PR from this branch targeting
   `fix/lifetime-integrity-core-v2`, descended from PR #58 with PR #59 merged.
 - Dirty state: clean after the final commit; generated binaries and pilot

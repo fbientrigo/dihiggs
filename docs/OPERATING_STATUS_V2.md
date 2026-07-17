@@ -1,6 +1,7 @@
 # Operating status v2
 
-Authoritative commit: to be filled with the final operational-v3 commit.
+Authoritative implementation commit: `5835006` (the close-out documentation
+commit follows; the final repository HEAD is reported in the handoff).
 Initial branch commit: `9bc300299208dab1ce0b9f7e7510c3b92b8979f4`.
 This status is an engineering readiness record, not a physics-result claim.
 
