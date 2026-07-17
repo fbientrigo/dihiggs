@@ -4,7 +4,7 @@
 #include <vector>
 
 struct BatchParams {
-    double m_phi;
+    double mh;
     double mH;
     double mA;
     double mHp;

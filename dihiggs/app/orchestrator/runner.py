@@ -131,6 +131,8 @@ class ScanRunner:
         """
         # ---- resolve run name and directories --------------------------------
         run_name = self.run_name or default_run_name()
+        if hasattr(self.engine, "set_provenance"):
+            self.engine.set_provenance(self.campaign, run_name)
         # Build a temporary fixed with the first tb for run_dir naming;
         # the fixed_dir name uses only non-tb fixed params (mA, sin_ba,
         # lambda6, lambda7), so any tb value is fine here.
@@ -145,6 +147,9 @@ class ScanRunner:
             calibration_n=self.fixed_base.calibration_n,
             calibration_frac=self.fixed_base.calibration_frac,
             rng_seed=self.fixed_base.rng_seed,
+            mh=self.fixed_base.mh,
+            mHp=self.fixed_base.mHp,
+            yukawa_type=self.fixed_base.yukawa_type,
         )
         run_dir = build_run_dir(
             outdir=self.outdir,
@@ -233,6 +238,9 @@ class ScanRunner:
                 calibration_n=self.fixed_base.calibration_n,
                 calibration_frac=self.fixed_base.calibration_frac,
                 rng_seed=self.fixed_base.rng_seed,
+                mh=self.fixed_base.mh,
+                mHp=self.fixed_base.mHp,
+                yukawa_type=self.fixed_base.yukawa_type,
             )
             sig = grid_signature(self.engine.engine_name, self.grid, task_fixed)
 

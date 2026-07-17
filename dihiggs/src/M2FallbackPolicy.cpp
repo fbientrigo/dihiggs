@@ -22,7 +22,7 @@ FallbackResult execute_fallback_policy(
     dense_bounds.search_low -= config.fallback_dense_pad;
     dense_bounds.search_high += config.fallback_dense_pad;
     
-    std::cout << "[Fallback] Triggering Local Dense Scan at m_phi=" << params.m_phi << std::endl;
+    std::cout << "[Fallback] Triggering Local Dense Scan at mH=" << params.mH << std::endl;
     auto dense_grid = generate_search_grid(dense_bounds, config.fallback_dense_count);
     auto dense_results = evaluate_m2_batch(params, dense_grid);
     auto dense_intervals = detect_intervals(dense_results);
@@ -51,7 +51,7 @@ FallbackResult execute_fallback_policy(
 
     // 3. Fallback Full Mass-Slice Grid
     if (config.fallback_full_enable) {
-        std::cout << "[Fallback] Triggering Full Mass-Slice Grid at m_phi=" << params.m_phi << std::endl;
+        std::cout << "[Fallback] Triggering Full Mass-Slice Grid at mH=" << params.mH << std::endl;
         PredictedBounds full_bounds;
         full_bounds.search_low = config.full_scan_min;
         full_bounds.search_high = config.full_scan_max;

@@ -18,3 +18,4 @@ struct ValidInterval {
 };
 
 std::vector<ValidInterval> detect_intervals(const std::vector<PointResult>& results);
+ValidInterval select_interval_nearest(const std::vector<ValidInterval>& intervals, double predicted_center);
