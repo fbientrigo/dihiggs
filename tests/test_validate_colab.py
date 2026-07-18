@@ -1,7 +1,14 @@
-import numpy as np
-import pandas as pd
 from pathlib import Path
 import pytest
+
+np = pytest.importorskip(
+    "numpy",
+    reason="historical comparison test requires numpy; not part of canonical v2 core",
+)
+pd = pytest.importorskip(
+    "pandas",
+    reason="historical comparison test requires pandas; not part of canonical v2 core",
+)
 
 from scripts.validate_colab import build_merged_comparison, safe_rel_err
 

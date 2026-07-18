@@ -1,7 +1,15 @@
-import numpy as np
-import pandas as pd
 import sys
 from pathlib import Path
+import pytest
+
+np = pytest.importorskip(
+    "numpy",
+    reason="historical comparison test requires numpy; not part of canonical v2 core",
+)
+pd = pytest.importorskip(
+    "pandas",
+    reason="historical comparison test requires pandas; not part of canonical v2 core",
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.validate_colab import safe_rel_err, safe_fraction, summarize_comparison

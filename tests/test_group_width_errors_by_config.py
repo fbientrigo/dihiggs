@@ -1,6 +1,10 @@
-import pandas as pd
 from pathlib import Path
 import pytest
+
+pd = pytest.importorskip(
+    "pandas",
+    reason="historical comparison test requires pandas; not part of canonical v2 core",
+)
 
 from scripts.validate_colab import build_merged_comparison
 from scripts.group_width_errors_by_config import build_grouped_report

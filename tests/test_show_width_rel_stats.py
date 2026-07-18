@@ -1,8 +1,12 @@
 import subprocess
 import sys
 from pathlib import Path
-import pandas as pd
 import pytest
+
+pd = pytest.importorskip(
+    "pandas",
+    reason="historical comparison test requires pandas; not part of canonical v2 core",
+)
 
 FIX = Path('tests/fixtures')
 pytestmark = pytest.mark.skipif(
