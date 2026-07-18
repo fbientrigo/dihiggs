@@ -48,7 +48,7 @@ bool get_arg_b(const map<string, string>& args, const string& key, bool def) {
 
 // Write the header for points.csv
 void write_points_header(ofstream& out) {
-    out << "m_phi,M2_input,m12_sq_input,m12_sq_out,lam1_out,lam2_out,lam3_out,lam4_out,lam5_out,lam6_out,lam7_out,positivity_ok,unitarity_ok,perturbativity_ok,stability_ok,theory_ok,triple_ok\n";
+    out << "m_phi,M2_input,m12_sq_input,m12_sq_out,lam1_out,lam2_out,lam3_out,lam4_out,lam5_out,lam6_out,lam7_out,positivity_ok,unitarity_ok,perturbativity_ok,stability_ok,theory_ok,triple_ok,construction_ok,yukawa_type_installed\n";
 }
 
 // Write a batch of points to points.csv
@@ -58,7 +58,7 @@ void write_points_batch(ofstream& out, const vector<PointResult>& results) {
             << r.m_phi << "," << r.M2_input << "," << r.m12_sq_input << "," << r.m12_sq_out << ","
             << r.lam1_out << "," << r.lam2_out << "," << r.lam3_out << "," << r.lam4_out << "," << r.lam5_out << "," << r.lam6_out << "," << r.lam7_out << ","
             << r.positivity_ok << "," << r.unitarity_ok << "," << r.perturbativity_ok << "," << r.stability_ok << ","
-            << r.theory_ok << "," << r.triple_ok << "\n";
+            << r.theory_ok << "," << r.triple_ok << "," << r.construction_ok << "," << r.yukawa_type_installed << "\n";
     }
 }
 
@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
     double step_mphi = get_arg(args, "mphi-step", 1.0);
     
     double mA = get_arg(args, "ma", 500.0);
+    double mh = get_arg(args, "mh", 125.13);
+    double mHp = get_arg(args, "mhp", mA);
     double sin_ba = get_arg(args, "sin-ba", 1.0);
     double tan_beta = get_arg(args, "tan-beta", 50.0);
     double lambda6 = get_arg(args, "lam6", 0.001);
@@ -136,7 +138,7 @@ int main(int argc, char* argv[]) {
     double m_phi = mphi_min;
 
     while (m_phi <= mphi_max) {
-        BatchParams params = {m_phi, m_phi, mA, mA, sin_ba, tan_beta, lambda6, lambda7};
+        BatchParams params = {mh, m_phi, mA, mHp, sin_ba, tan_beta, lambda6, lambda7};
         
         PredictedBounds bounds;
         if (!has_prior) {
@@ -173,16 +175,12 @@ int main(int argc, char* argv[]) {
                 continue;
             } else if (fb_res.success) {
                 intervals = fb_res.intervals;
-                for (const auto& iv : intervals) {
-                    // Quick evaluate center to store in points for completeness
-                    // Omitted for brevity, but the interval is found
-                }
             } else {
                 break;
             }
         }
         
-        ValidInterval best_iv = intervals[0];
+        ValidInterval best_iv = select_interval_nearest(intervals, bounds.expected_center);
         
         // Bisection Refinement
         double tol = get_arg(args, "edge-tol", 0.1);

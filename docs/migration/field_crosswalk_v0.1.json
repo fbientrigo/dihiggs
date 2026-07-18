@@ -1,662 +1,76 @@
 {
-  "schema_version": "dihiggs_field_crosswalk_v0.1",
-  "status": "DRAFT - not yet authoritative. Derived from executable evidence, not prose.",
-  "generated_for": "SELECTIVE_MIGRATION_AUDIT.md; migration PR 3 (core skeleton/schema)",
-  "canonical_conventions_source": "conventions/physics_conventions.yaml (schema_version physics_conventions_v1), which already fixes hbar_c_gev_mm=1.973269804e-13, c_mm_per_ns=299.792458 and the h1/h2/h3/hc scalar naming with PDG ids and mass columns. This crosswalk extends that file's naming to the full point record; it does not contradict it.",
-  "evidence_base": {
-    "boundary_producer": {
-      "oracle": "boundary tests/golden/evaluate_point_v1/expected.csv @ boundary main ae9bb132",
-      "expected_csv_sha256": "513cc9defe61fd2fea09b68b11ba6d246bc6e4303ff0f5bfe6e196f7f93c21cc",
-      "source": "boundary/src/evaluate_point.cpp",
-      "branch": "test/freeze-evaluate-point-v1"
-    },
-    "main_producer": {
-      "oracle": "main_dihiggs tests/golden/lambda1_v1/expected.csv @ origin/main c021e0a1",
-      "source": "dihiggs/src/PhysLam1Scan.cpp (schema shared with PhysScanWithFixings.cpp)",
-      "branch": "test/characterize-lambda1-v1"
-    },
-    "consumers_inspected": [
-      "autoresearch/harness/bounded_adaptive_search.py (canonicalize_physical_row, ctau derivation)",
-      "autoresearch/harness/dihiggs_validators.py (compute_triple_ok, derive_br_bb)",
-      "mlpython/lake_pipeline/consolidate_lake.py (SCHEMA_OVERRIDES float32)",
-      "dihiggs/app/orchestrator/engines/lambda1.py (expected_csv_columns - DECLARED BUT NEVER EXECUTED)",
-      "hep_cross/contracts/model_point_to_llp_recast_v1.yaml",
-      "llp_recast (phase 0; consumes via hep_cross contract only)"
-    ]
-  },
-  "classification_legend": {
-    "SAME": "name and semantics already agree across producers",
-    "RENAME": "same physical quantity, different names; mechanical mapping",
-    "UNIT_CONVERSION": "same quantity, different unit; requires an explicit factor",
-    "SEMANTIC_DRIFT": "same or similar name, DIFFERENT meaning; the dangerous class",
-    "PRODUCER_ONLY": "emitted but no current consumer",
-    "CONSUMER_ONLY": "required by a consumer but not emitted by any producer",
-    "LEGACY": "historical form kept only behind a versioned adapter",
-    "UNRESOLVED": "requires a human scientific decision before it can be canonicalized"
-  },
-  "global_policies": {
-    "float_type": "IEEE Float64 is the canonical persisted scientific type.",
-    "float_serialization": "17 significant digits (round-trip safe). NEITHER producer currently satisfies this: main uses std::fixed<<setprecision(15) (absolute 15 decimals), which is the root cause of the ctau ceiling below.",
-    "booleans": "0/1 integer flags with exact documented semantics; never floats. main currently emits flags as 1.000000000000000 (float).",
-    "nan_policy": "NaN only where the value was not computed. A failed construction must yield a preserved row with NaN numerics, never a dropped row and never a stale value.",
-    "row_cardinality": "exactly one output record per syntactically valid attempted input point.",
-    "units": "explicit in the name wherever ambiguity is plausible; no silent metre/mm conversion.",
-    "identifiers": "stable point_id required on every record."
-  },
-  "fields": [
-    {
-      "canonical_name": "point_id",
-      "physical_meaning": "stable identifier of an attempted model point",
-      "unit": "none",
-      "dtype": "string",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "non-empty, unique within a run",
-      "producers": {
-        "boundary_evaluate_point": {"name": "point_id", "classification": "SAME"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY", "note": "PhysLam1Scan emits NO point identifier at all. Rows are identified only by position and coordinate values, so a dropped construction failure is unrecoverable and rows cannot be joined back to inputs."}
-      },
-      "consumers": ["hep_cross (required)", "llp_recast", "dihiggs_analysis"],
-      "aliases": [],
-      "migration": "UNRESOLVED",
-      "provenance": "boundary golden expected.csv col 1; main golden expected.csv has no equivalent",
-      "note": "Blocking for any join between main-produced campaign data and consumers."
-    },
-    {
-      "canonical_name": "schema_version",
-      "physical_meaning": "version of the record schema",
-      "unit": "none",
-      "dtype": "string",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "semver-ish token",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "CONSUMER_ONLY", "note": "contract version lives in contracts/*.yaml, not in the row"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY"}
-      },
-      "consumers": ["all"],
-      "aliases": [],
-      "migration": "CONSUMER_ONLY",
-      "provenance": "audit section 6.1"
-    },
-    {
-      "canonical_name": "mh_GeV",
-      "physical_meaning": "SM-like CP-even scalar mass (h1, PDG 25)",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "> 0",
-      "precision": "compile-time constant; must be recorded per run",
-      "producers": {
-        "boundary_evaluate_point": {"name": "mh", "value": "125.09 (kMh)", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": null, "value": "125.0 (constexpr M_H, NOT emitted as a column)", "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": ["paper (requires 125.09)"],
-      "aliases": ["mh"],
-      "migration": "UNRESOLVED",
-      "provenance": "boundary src/evaluate_point.cpp kMh; main dihiggs/src/PhysLam1Scan.cpp:38",
-      "note": "THE headline divergence. The two producers disagree (125.0 vs 125.09) and main does not even record its value in the output. Executable finding (main_dihiggs scripts/lambda1_mh_eps_sensitivity.py): the difference is SEMANTIC inside m_phi in [125.0, 125.09) -- the m_h > m_H guard turns constructed points into dropped construction failures -- and numerical elsewhere (m12_sq moves ~8e-7 relative). Requires human scientific decision; paper/PROJECT_STATUS.md requires 125.09."
-    },
-    {
-      "canonical_name": "mH_GeV",
-      "physical_meaning": "heavy CP-even scalar mass (h2, PDG 35) - the LLP candidate",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "> 0; must satisfy mH >= mh or construction fails",
-      "producers": {
-        "boundary_evaluate_point": {"name": "mH", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": "m_phi", "classification": "RENAME"}
-      },
-      "consumers": [
-        "autoresearch: _first_finite(row, ('mphi','m_phi','mH')) -- already accepts all three",
-        "hep_cross: requires generic m_scalar_GeV; its alias list is ['mS_GeV'] and does NOT include mH or m_phi"
-      ],
-      "aliases": ["mH", "m_phi", "mphi", "mS_GeV"],
-      "migration": "RENAME",
-      "provenance": "boundary expected.csv col 3; main expected.csv col m_phi; conventions/physics_conventions.yaml pins h2 mass_column=mH",
-      "note": "conventions/physics_conventions.yaml already makes mH canonical for h2. Never use an unqualified m_phi or m_scalar inside core data; export m_scalar_GeV only at the hep_cross adapter boundary."
-    },
-    {
-      "canonical_name": "mA_GeV",
-      "physical_meaning": "CP-odd scalar mass (h3, PDG 36)",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "> 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": "mA", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "mA", "classification": "SAME"}
-      },
-      "consumers": ["autoresearch ('mA')"],
-      "aliases": ["mA"],
-      "migration": "SAME",
-      "provenance": "both goldens"
-    },
-    {
-      "canonical_name": "mHp_GeV",
-      "physical_meaning": "charged scalar mass (hc, PDG 37)",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "> 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": "mHp", "classification": "RENAME", "note": "emitted as its own column; set equal to mA by the boundary model contract"},
-        "main_lambda1_scan": {"name": null, "classification": "SEMANTIC_DRIFT", "note": "NOT emitted. PhysLam1Scan passes mA_fixed for BOTH the mA and mHp arguments of set_param_phys_lam1, so mHp == mA implicitly and invisibly."}
-      },
-      "consumers": [],
-      "aliases": ["mHp"],
-      "migration": "SEMANTIC_DRIFT",
-      "provenance": "main dihiggs/src/PhysLam1Scan.cpp:122 (mA_fixed passed twice)",
-      "note": "A consumer cannot tell from main's CSV that mHp was constrained to mA. Core must emit it explicitly."
-    },
-    {
-      "canonical_name": "tan_beta",
-      "physical_meaning": "ratio of the two Higgs doublet VEVs",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "> 0 (tan_beta <= 0 fails construction)",
-      "producers": {
-        "boundary_evaluate_point": {"name": "tan_beta", "classification": "SAME", "note": "also emits tan_beta_derived (reconstructed) separately"},
-        "main_lambda1_scan": {"name": "tan_beta", "classification": "SAME"}
-      },
-      "consumers": ["autoresearch ('tan_beta')", "mlpython (cast to Float32)"],
-      "aliases": ["tan_beta"],
-      "migration": "SAME",
-      "provenance": "both goldens"
-    },
-    {
-      "canonical_name": "sin_beta_minus_alpha",
-      "physical_meaning": "sin(beta - alpha); 1 = exact alignment",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "|sin_ba| <= 1 (else construction fails, silently)",
-      "producers": {
-        "boundary_evaluate_point": {"name": "sin_ba", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": "sin_ba", "classification": "RENAME"}
-      },
-      "consumers": [],
-      "aliases": ["sin_ba"],
-      "migration": "RENAME",
-      "provenance": "both goldens; boundary docs/model_contract.md fixes sin_beta_minus_alpha=1.0 for v0"
-    },
-    {
-      "canonical_name": "alpha",
-      "physical_meaning": "CP-even mixing angle",
-      "unit": "rad",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "PRODUCER_ONLY", "note": "not emitted; boundary emits beta only"},
-        "main_lambda1_scan": {"name": "alpha", "classification": "PRODUCER_ONLY", "note": "computed for reporting as beta - asin(sin_ba)"}
-      },
-      "consumers": [],
-      "aliases": ["alpha"],
-      "migration": "PRODUCER_ONLY"
-    },
-    {
-      "canonical_name": "beta",
-      "physical_meaning": "atan(tan_beta)",
-      "unit": "rad",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite",
-      "valid_domain": "(0, pi/2)",
-      "producers": {
-        "boundary_evaluate_point": {"name": "beta", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "beta", "classification": "SAME"}
-      },
-      "consumers": [],
-      "aliases": ["beta"],
-      "migration": "SAME"
-    },
-    {
-      "canonical_name": "lambda1_target",
-      "physical_meaning": "REQUESTED lambda1 for the lambda1-target construction mode",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "PRODUCER_ONLY", "note": "boundary has no lambda1-target mode; it only reconstructs lambda1 from M"},
-        "main_lambda1_scan": {"name": "lam1", "classification": "RENAME"}
-      },
-      "consumers": ["autoresearch: _first_finite(row, ('lambda1','lam1'))"],
-      "aliases": ["lam1", "lambda1"],
-      "migration": "RENAME",
-      "provenance": "main golden L01: lam1=0.1",
-      "note": "MUST NOT be conflated with lambda1_reconstructed. Requires construction_mode=lambda1_target."
-    },
-    {
-      "canonical_name": "lambda1_reconstructed",
-      "physical_meaning": "lambda1 as recovered from the constructed model via get_param_gen",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite when construction succeeded, else NaN",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": "lambda1", "classification": "SEMANTIC_DRIFT"},
-        "main_lambda1_scan": {"name": "computed_lam1", "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": ["autoresearch alias list ('lambda1','lam1') -- AMBIGUOUS, see note"],
-      "aliases": ["lambda1", "computed_lam1"],
-      "migration": "SEMANTIC_DRIFT",
-      "provenance": "boundary expected.csv col 23 'lambda1'; main golden col 'computed_lam1'",
-      "note": "DANGEROUS COLLISION: boundary's column literally named 'lambda1' is the RECONSTRUCTED value, while main's 'lam1'/'lambda1' is the REQUESTED TARGET. autoresearch's alias list ('lambda1','lam1') therefore resolves to the target in main data and to the reconstructed value in boundary data. Any naive merge silently mixes the two."
-    },
-    {
-      "canonical_name": "lambda1_abs_residual",
-      "physical_meaning": "|lambda1_target - lambda1_reconstructed|",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite when construction_mode=lambda1_target",
-      "valid_domain": ">= 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "PRODUCER_ONLY"},
-        "main_lambda1_scan": {"name": null, "classification": "UNRESOLVED", "note": "COMPUTED BUT DISCARDED. THDM::set_param_phys_lam1 stores lam1_validation_{input,recomputed,abs_error,warning} and warns on stderr when abs_error > THDM::EPS (1e-9), but PhysLam1Scan never reads those fields into the CSV. Recoverable only post-hoc as |lam1 - computed_lam1|."}
-      },
-      "consumers": [],
-      "aliases": [],
-      "migration": "UNRESOLVED",
-      "provenance": "main golden L07 (GEMINI.md 'current best' point): residual 5.82e-07, ~580x EPS, still emitted with all flags set and counted triple-OK",
-      "note": "Open decision: should a large round-trip residual reject a point? Today it does not, and the warning is stderr-only."
-    },
-    {
-      "canonical_name": "lambda2..lambda5",
-      "physical_meaning": "generic-basis quartic couplings, reconstructed",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite when constructed, else NaN",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": "lambda2, lambda3, lambda4, lambda5", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "lam2/computed_lam2, lam3, lam4, lam5", "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": [],
-      "aliases": ["lam2", "lam3", "lam4", "lam5", "computed_lam2"],
-      "migration": "SEMANTIC_DRIFT",
-      "provenance": "main golden: lam2 == computed_lam2 on every row",
-      "note": "main writes lam2_g into BOTH the 'lam2' and 'computed_lam2' columns ('no separate l2 calculation'), so the target/computed pairing is asymmetric: lam1 is a real target, lam2 is not. A consumer reading 'lam2' as a requested input is wrong."
-    },
-    {
-      "canonical_name": "lambda6_input / lambda7_input",
-      "physical_meaning": "requested Z2-violating quartic couplings",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": "lambda6_input, lambda7_input", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "lambda6, lambda7", "classification": "RENAME"}
-      },
-      "consumers": ["autoresearch ('lambda6')", "mlpython (lambda6 -> Float32)"],
-      "aliases": ["lambda6", "lambda7"],
-      "migration": "RENAME",
-      "note": "boundary additionally emits lambda6_derived/lambda7_derived and its golden proves they equal the inputs EXACTLY (pass-through). main emits only one copy, so the pass-through is unverifiable in main data."
-    },
-    {
-      "canonical_name": "M_GeV",
-      "physical_meaning": "boundary's input mass-scale coordinate; M2 = M*M",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite",
-      "valid_domain": ">= 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": "M", "classification": "PRODUCER_ONLY"},
-        "main_lambda1_scan": {"name": null, "classification": "PRODUCER_ONLY"}
-      },
-      "consumers": [],
-      "aliases": ["M"],
-      "migration": "PRODUCER_ONLY",
-      "note": "The paper coordinate question (audit blocker 1): boundary samples in M, main samples in lambda1_target. The frozen paper dataset must choose and document one sampling measure."
-    },
-    {
-      "canonical_name": "M2_GeV2",
-      "physical_meaning": "M squared; M2 = m12_sq / (sin(beta) cos(beta))",
-      "unit": "GeV^2",
-      "dtype": "float64",
-      "required": false,
-      "finite_policy": "finite",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": "M2 (input), M2_recomputed (reconstructed), relative_M2_reconstruction_error", "classification": "SAME"},
-        "main_lambda1_scan": {"name": null, "classification": "PRODUCER_ONLY"}
-      },
-      "consumers": [],
-      "aliases": ["M2"],
-      "migration": "SAME",
-      "note": "boundary separates input/recomputed/residual explicitly and its golden asserts the identity. main's M2PointEvaluator uses M2 as a scan coordinate and ignores the set_param_phys return value (audit 4.4/5)."
-    },
-    {
-      "canonical_name": "m12_sq_GeV2",
-      "physical_meaning": "the soft Z2-breaking parameter m12, SQUARED",
-      "unit": "GeV^2",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite when constructed, else NaN",
-      "valid_domain": "real",
-      "producers": {
-        "boundary_evaluate_point": {"name": "m12_sq_input / m12_sq_derived", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "m12", "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": [],
-      "aliases": ["m12", "m12_2", "m12_sq_input", "m12_sq_derived"],
-      "migration": "SEMANTIC_DRIFT",
-      "provenance": "main golden L01: column 'm12' = 334.2999... which is m12^2 in GeV^2, not a mass in GeV (verified: PhysLam1Scan writes m12_2_g into the 'm12' position)",
-      "note": "HIGH RISK. main's column named 'm12' holds m12 SQUARED. Any consumer treating it as a mass is wrong by a square. Replay metadata calls the same value 'm12_2'; docs/scan_harness_architecture_v2.md contains both a correct and an incorrect shorthand. Only unit-qualified names are allowed in core; 'm12' is LEGACY-adapter-only."
-    },
-    {
-      "canonical_name": "construction_mode",
-      "physical_meaning": "which input coordinate family was supplied",
-      "unit": "none",
-      "dtype": "enum{physical_M, physical_M2, lambda1_target}",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "the enum",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "CONSUMER_ONLY", "note": "implicitly physical_M"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY", "note": "implicitly lambda1_target"}
-      },
-      "consumers": ["core schema"],
-      "aliases": [],
-      "migration": "CONSUMER_ONLY",
-      "note": "Neither producer records it; it is currently inferable only from which binary was run."
-    },
-    {
-      "canonical_name": "construction_ok",
-      "physical_meaning": "the 2HDMC parameter-setting call succeeded",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "set_param_phys_ok", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": null, "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": [],
-      "aliases": ["set_param_phys_ok"],
-      "migration": "SEMANTIC_DRIFT",
-      "provenance": "main golden L02/L03/L04: 3 construction-failure cases -> 0 CSV rows; L08: 3 attempted -> 2 rows",
-      "note": "main cannot express construction_ok=0 because it DROPS the row ('if (!pset) continue;'). Worse, only the m_h>m_H guard warns: tan_beta<=0 and |sin_ba|>1 fail completely silently. Boundary's row-preserving behavior is canonical (audit 4.6)."
-    },
-    {
-      "canonical_name": "positivity_ok",
-      "physical_meaning": "2HDMC Constraints::check_positivity()",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "positivity_ok", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "positivity_ok", "classification": "SAME", "note": "emitted as a float (1.000000000000000)"}
-      },
-      "consumers": ["autoresearch compute_triple_ok", "mlpython (cast to Float32)"],
-      "aliases": ["positivity_ok"],
-      "migration": "UNRESOLVED",
-      "note": "NOT INDEPENDENT OF STABILITY. In BOTH repositories' 2HDMC (boundary stock AND main's fork), Constraints::check_positivity() and check_stability() both `return model.check_stability();`. So positivity_ok == stability_ok identically, and 'positivity' is really a stability result. Recorded as implementation behavior, not canonical scientific truth. Audit blocker 5: a human must decide whether these are intended synonyms or whether a genuinely distinct positivity check is required."
-    },
-    {
-      "canonical_name": "unitarity_ok",
-      "physical_meaning": "2HDMC Constraints::check_unitarity()",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "unitarity_ok", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "unitarity_ok", "classification": "SAME"}
-      },
-      "consumers": ["autoresearch compute_triple_ok"],
-      "aliases": ["unitarity_ok"],
-      "migration": "SAME",
-      "note": "Coverage gap in BOTH oracles: no golden point isolates a unitarity-only failure (boundary G02 also fails perturbativity). Known and non-blocking; no synthetic point was fabricated to fill it."
-    },
-    {
-      "canonical_name": "perturbativity_ok",
-      "physical_meaning": "2HDMC Constraints::check_perturbativity()",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "perturbativity_ok", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "perturbativity_ok", "classification": "SAME"}
-      },
-      "consumers": ["autoresearch compute_triple_ok"],
-      "aliases": ["perturbativity_ok"],
-      "migration": "SAME",
-      "provenance": "boundary golden G04 (lhs_000278) isolates perturbativity-only failure"
-    },
-    {
-      "canonical_name": "stability_ok",
-      "physical_meaning": "vacuum stability",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "stability_ok", "classification": "UNRESOLVED"},
-        "main_lambda1_scan": {"name": null, "classification": "SEMANTIC_DRIFT", "note": "NEVER EVALUATED. PhysLam1Scan does not call check_stability at all."}
-      },
-      "consumers": ["paper (requires stability mandatory)"],
-      "aliases": ["stability_ok"],
-      "migration": "UNRESOLVED",
-      "note": "Two independent problems: (1) main never computes it; (2) where it IS computed (boundary), it is an alias of positivity (see positivity_ok). Do not define independent stability semantics without executable support and scientific intent."
-    },
-    {
-      "canonical_name": "triple_ok",
-      "physical_meaning": "positivity_ok && unitarity_ok && perturbativity_ok",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "triple_ok", "classification": "SAME"},
-        "main_lambda1_scan": {"name": null, "classification": "SEMANTIC_DRIFT", "note": "NOT A COLUMN. Survives only as the stdout marker 'TRIPLE_OK_POINTS <int>'; per-row triple_ok must be recomputed by the consumer."}
-      },
-      "consumers": ["autoresearch dihiggs_validators.compute_triple_ok (recomputes from the three flags)", "GEMINI.md mandates triple_ok-only rows for physics claims"],
-      "aliases": ["triple_ok"],
-      "migration": "SEMANTIC_DRIFT",
-      "note": "Definition agrees across producers (exactly the three historical columns), but main does not emit it per row. Critically, triple_ok is NOT paper-valid: it omits stability and width validity. No downstream filter may treat it as a synonym for paper-valid merely because the current stock dependency makes the stability term redundant."
-    },
-    {
-      "canonical_name": "theory_ok",
-      "physical_meaning": "versioned acceptance expression",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": "theory_ok", "definition": "set_param_phys_ok && triple_ok && stability_ok && width_ok", "classification": "UNRESOLVED"},
-        "main_lambda1_scan": {"name": null, "definition": "n/a (not emitted; M2PointEvaluator defines theory_ok = pos && uni && pert and aliases triple_ok=theory_ok)", "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": ["paper acceptance"],
-      "aliases": ["theory_ok"],
-      "migration": "UNRESOLVED",
-      "note": "The two repositories mean DIFFERENT predicates by theory_ok. boundary's is stability- and width-aware; main's M2 evaluator makes it a synonym for triple_ok. Must be published as a versioned expression with its schema version."
-    },
-    {
-      "canonical_name": "width_ok",
-      "physical_meaning": "total width is finite and > 0",
-      "unit": "none",
-      "dtype": "bool",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "{0,1}",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "SEMANTIC_DRIFT", "note": "not a column, but folded into theory_ok (an invalid total width forces theory_ok=false)"},
-        "main_lambda1_scan": {"name": null, "classification": "SEMANTIC_DRIFT"}
-      },
-      "consumers": [],
-      "aliases": [],
-      "migration": "UNRESOLVED",
-      "note": "See total_width_H2_GeV: main's serialization makes width_ok UNCOMPUTABLE for long-lived points, because a true 1.2e-17 GeV width serializes to exactly 0."
-    },
-    {
-      "canonical_name": "width_<channel>_H2_GeV",
-      "physical_meaning": "partial widths of the heavy CP-even scalar",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite and >= 0 when constructed, else NaN",
-      "valid_domain": ">= 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": "width_bb_H2, width_tautau_H2, width_WW_H2, width_ZZ_H2, width_gammagamma_H2, width_Zgamma_H2, width_gg_H2, width_hh_H2", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": "width_bb, width_tautau, width_WW, width_ZZ, width_gaga, width_Zga, width_gg, width_hh", "classification": "RENAME"}
-      },
-      "consumers": ["autoresearch ('width_bb')", "hep_cross BR_* (derived)"],
-      "aliases": ["width_gaga -> width_gammagamma_H2", "width_Zga -> width_Zgamma_H2"],
-      "migration": "RENAME",
-      "note": "Mechanical rename, but see the serialization defect: main writes widths with std::fixed<<setprecision(15), so any width below 5e-16 GeV becomes exactly 0.000000000000000. The rename is safe; the VALUES are not."
-    },
-    {
-      "canonical_name": "total_width_H2_GeV",
-      "physical_meaning": "total width of the heavy CP-even scalar; the denominator of ctau",
-      "unit": "GeV",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite and > 0 for a valid point",
-      "valid_domain": "> 0",
-      "precision": "float64 with 17-digit round-trip serialization REQUIRED",
-      "producers": {
-        "boundary_evaluate_point": {"name": "total_width_H2", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": "total_width", "classification": "UNRESOLVED"}
-      },
-      "consumers": [
-        "autoresearch: ctau_m = HBARC_GEV_M / total_width behind a `v > 0.0` filter",
-        "mlpython/lake_pipeline: SCHEMA_OVERRIDES casts total_width to Float32",
-        "hep_cross: required as total_width_GeV (alias total_width_H2)"
-      ],
-      "aliases": ["total_width", "total_width_H2", "total_width_GeV"],
-      "migration": "UNRESOLVED",
-      "provenance": "main golden L06: true width 1.214398311035274e-17 GeV serializes to 0.000000000000000; L07: true 8.0060403201904501e-15 serializes to 0.000000000000008 (ONE significant digit)",
-      "note": "MOST SEVERE FINDING. main's fixed/15 serialization destroys the width exactly in the long-lived regime. Because autoresearch filters on `> 0.0`, a point whose true ctau is 16 m is silently DROPPED from the ctau metric. Consequences: max observable ctau_m ~= 0.197 m; any true ctau_m > ~0.395 m is invisible; ctau is quantized to hbarc/(k*1e-15). Fixing this WILL change historical campaign results, so it needs an explicit recorded decision (not a silent repair)."
-    },
-    {
-      "canonical_name": "br_<channel>_H2",
-      "physical_meaning": "branching ratios of the heavy CP-even scalar",
-      "unit": "dimensionless",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite in [0,1]",
-      "valid_domain": "[0, 1]; sum <= 1",
-      "producers": {
-        "boundary_evaluate_point": {"name": "br_gammagamma_H2", "classification": "RENAME"},
-        "main_lambda1_scan": {"name": "br_gaga", "classification": "UNRESOLVED"}
-      },
-      "consumers": ["autoresearch ('br_gaga'; derives br_bb = width_bb/total_width)", "mlpython (br_gaga -> Float32)", "hep_cross BR_bb/BR_WW/BR_ZZ/BR_gg/BR_tautau with sum<=1 invariant"],
-      "aliases": ["br_gaga", "br_gammagamma_H2"],
-      "migration": "UNRESOLVED",
-      "provenance": "main golden L06: true br_gaga 0.68512795134260707, EMITTED AS 0",
-      "note": "main computes br_gaga = (w_tot > 1e-15) ? w_gaga/w_tot : 0.0. The guard threshold 1e-15 GeV corresponds to ctau = hbarc/w ~ 0.197 m, so br_gaga is forced to exactly 0 for ANY scalar with ctau above ~20 cm -- precisely the displaced-vertex regime llp_recast exists to study. Note 0 is indistinguishable from a genuine zero BR."
-    },
-    {
-      "canonical_name": "ctau_mm_H2",
-      "physical_meaning": "proper decay length of the heavy CP-even scalar",
-      "unit": "mm",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite and > 0 for a valid long-lived point",
-      "valid_domain": "> 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": "ctau_mm_H2", "definition": "1.973269804e-13 GeV*mm / total_width_H2", "classification": "SAME"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY", "note": "NO lifetime column is emitted at all"}
-      },
-      "consumers": [
-        "hep_cross: requires ctau_mm with invariant ctau_mm == 1.973269804e-13 / total_width_GeV (rel_tol 1e-4)",
-        "autoresearch: derives ctau_m (METRES) = 1.973269804e-16 / total_width",
-        "dihiggs/app/orchestrator/engines/lambda1.py: DECLARES ctau_m in expected_csv_columns -- but the binary emits no such column and the declaration is never executed"
-      ],
-      "aliases": ["ctau_mm", "ctau_m (metres!)", "ctau", "c_tau", "decay_length", "lifetime"],
-      "migration": "UNIT_CONVERSION",
-      "provenance": "conventions/physics_conventions.yaml pins hbar_c_gev_mm=1.973269804e-13 and c_mm_per_ns=299.792458",
-      "note": "UNIT HAZARD: boundary/hep_cross use MILLIMETRES (hbarc=1.973269804e-13 GeV*mm) while autoresearch uses METRES (HBARC_GEV_M=1.973269804e-16). The same concept differs by 1000x and autoresearch's alias list accepts unitless names ('ctau','lifetime'). Canonical is ctau_mm_H2 derived from ONE shared constant; ctau_m and tau_ns are explicit conversion outputs, never unitless aliases."
-    },
-    {
-      "canonical_name": "rejection_stage / rejection_reason",
-      "physical_meaning": "why a point was not accepted, and at which stage",
-      "unit": "none",
-      "dtype": "string",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "documented enum + free text",
-      "producers": {
-        "boundary_evaluate_point": {"name": "rejection_stage, rejection_reason", "classification": "SAME"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY"}
-      },
-      "consumers": ["dihiggs_analysis (R1 selection flow)"],
-      "aliases": [],
-      "migration": "CONSUMER_ONLY",
-      "note": "main has no rejection channel whatsoever: construction failures vanish and theory rejections are distinguishable only by reading the flags. Rejection precedence exists only in boundary."
-    },
-    {
-      "canonical_name": "provenance_*",
-      "physical_meaning": "commit, dirty state, compiler, dependency hashes, seeds, schema versions",
-      "unit": "none",
-      "dtype": "mixed",
-      "required": true,
-      "finite_policy": "n/a",
-      "valid_domain": "n/a",
-      "producers": {
-        "boundary_evaluate_point": {"name": "run manifest (sidecar)", "classification": "SAME"},
-        "main_lambda1_scan": {"name": "ReplaySafeOutput.{hpp,cpp} (records m12 used/reconstructed, API path, Yukawa state, commit/dirty)", "classification": "SAME", "note": "NOT used by PhysLam1Scan, which writes via ParamUtils::write_csv_row"}
-      },
-      "consumers": ["paper (every table/figure must link to dataset + manifest)"],
-      "aliases": [],
-      "migration": "SAME",
-      "note": "Complementary strengths (audit): main records construction path/dirty state; boundary preserves rows and writes atomically. Both golden suites now carry manifests with toolchain + dependency blob hashes."
-    },
-    {
-      "canonical_name": "sigma_production_fb",
-      "physical_meaning": "production cross section",
-      "unit": "fb",
-      "dtype": "float64",
-      "required": true,
-      "finite_policy": "finite > 0",
-      "valid_domain": "> 0",
-      "producers": {
-        "boundary_evaluate_point": {"name": null, "classification": "CONSUMER_ONLY"},
-        "main_lambda1_scan": {"name": null, "classification": "CONSUMER_ONLY"}
-      },
-      "consumers": ["hep_cross (required)", "llp_recast"],
-      "aliases": [],
-      "migration": "CONSUMER_ONLY",
-      "note": "Supplied by MadGraph production. Core must NEVER infer it from widths (audit 4.11 / hep_cross contract explicitly forbids conflating production with decay quantities)."
-    }
+  "schema_version": "dihiggs.lambda1.v2",
+  "executable": "dihiggs/app/Lambda1EvaluatorV2",
+  "source": "dihiggs/src/Lambda1EvaluatorV2.cpp",
+  "input_header": [
+    "point_id", "mh_gev", "mH_gev", "mA_gev", "mHp_gev",
+    "sin_beta_minus_alpha", "tan_beta", "lambda1_target",
+    "lambda6_input", "lambda7_input"
   ],
-  "counts": {
-    "fields_documented": 34,
-    "SAME": 7,
-    "RENAME": 5,
-    "UNIT_CONVERSION": 1,
-    "SEMANTIC_DRIFT": 6,
-    "PRODUCER_ONLY": 2,
-    "CONSUMER_ONLY": 4,
-    "UNRESOLVED": 9,
-    "note": "Counts are over the top-level `migration` key, which is authoritative for each field entry. A field may additionally carry a different per-producer classification (e.g. total_width_H2_GeV is RENAME for boundary but UNRESOLVED overall); those per-producer values are not counted here. Verified mechanically against this file rather than hand-tallied.",
-    "some_entries_cover_a_family": "width_<channel>_H2_GeV, br_<channel>_H2, lambda2..lambda5, lambda6_input/lambda7_input and provenance_* each cover a family of columns, so the emitted column count is larger than 34."
-  }
+  "output_fields": [
+    "schema_version", "evaluator_commit", "evaluator_dirty", "evaluator_api", "point_id",
+    "mh_input_gev_raw", "mh_input_gev", "mH_input_gev_raw", "mH_input_gev",
+    "mA_input_gev_raw", "mA_input_gev", "mHp_input_gev_raw", "mHp_input_gev",
+    "sin_beta_minus_alpha_input_raw", "sin_beta_minus_alpha_input",
+    "tan_beta_input_raw", "tan_beta_input", "lambda1_target_raw", "lambda1_target",
+    "lambda6_input_raw", "lambda6_input", "lambda7_input_raw", "lambda7_input",
+    "construction_ok", "yukawa_type_installed", "rejection_stage", "rejection_reason",
+    "lambda1_reconstructed", "lambda2_reconstructed", "lambda3_reconstructed",
+    "lambda4_reconstructed", "lambda5_reconstructed", "lambda6_reconstructed",
+    "lambda7_reconstructed", "lambda1_abs_residual", "lambda1_residual_warning",
+    "m12_sq_reconstructed_gev2", "tan_beta_reconstructed", "positivity_ok",
+    "unitarity_ok", "perturbativity_ok", "stability_ok", "triple_ok", "theory_ok",
+    "width_bb_gev", "width_cc_gev", "width_tautau_gev", "width_WW_gev",
+    "width_ZZ_gev", "width_gammagamma_gev", "width_Zgamma_gev", "width_gg_gev",
+    "width_hh_gev", "total_width_gev", "width_unaccounted_gev", "br_bb", "br_cc", "br_tautau", "br_WW",
+    "br_ZZ", "br_gammagamma", "br_Zgamma", "br_gg", "br_hh", "width_ok", "ctau_mm"
+  ],
+  "raw_float64_pairs": {
+    "mh_gev": ["mh_input_gev_raw", "mh_input_gev"],
+    "mH_gev": ["mH_input_gev_raw", "mH_input_gev"],
+    "mA_gev": ["mA_input_gev_raw", "mA_input_gev"],
+    "mHp_gev": ["mHp_input_gev_raw", "mHp_input_gev"],
+    "sin_beta_minus_alpha": ["sin_beta_minus_alpha_input_raw", "sin_beta_minus_alpha_input"],
+    "tan_beta": ["tan_beta_input_raw", "tan_beta_input"],
+    "lambda1_target": ["lambda1_target_raw", "lambda1_target"],
+    "lambda6_input": ["lambda6_input_raw", "lambda6_input"],
+    "lambda7_input": ["lambda7_input_raw", "lambda7_input"]
+  },
+  "legacy_crosswalk": {
+    "m_phi": "mH_input_gev",
+    "mA": "mA_input_gev",
+    "sin_ba": "sin_beta_minus_alpha_input",
+    "tan_beta": "tan_beta_input",
+    "lam1": "lambda1_target",
+    "computed_lam1": "lambda1_reconstructed",
+    "computed_lam2": "lambda2_reconstructed",
+    "lam3": "lambda3_reconstructed",
+    "lam4": "lambda4_reconstructed",
+    "lam5": "lambda5_reconstructed",
+    "lambda6": "lambda6_input",
+    "lambda7": "lambda7_input",
+    "m12": "m12_sq_reconstructed_gev2",
+    "width_bb": "width_bb_gev",
+    "width_tautau": "width_tautau_gev",
+    "width_WW": "width_WW_gev",
+    "width_ZZ": "width_ZZ_gev",
+    "width_gaga": "width_gammagamma_gev",
+    "width_Zga": "width_Zgamma_gev",
+    "width_gg": "width_gg_gev",
+    "width_hh": "width_hh_gev",
+    "total_width": "total_width_gev",
+    "br_gaga": "br_gammagamma"
+  },
+  "mechanically_resolved": [
+    "row_cardinality", "point_id", "explicit_mh", "explicit_mHp",
+    "raw_input_provenance", "float64_round_trip", "lambda1_target_vs_reconstructed",
+    "m12_squared_naming", "total_width_precision", "legacy_br_guard",
+    "width_validity", "ctau_units", "residual_visibility", "evaluator_provenance"
+  ],
+  "scientific_questions_unchanged": [
+    "independent positivity and stability semantics",
+    "paper acceptance predicate",
+    "paper sampling coordinate and measure",
+    "paper mh value"
+  ]
 }

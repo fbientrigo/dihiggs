@@ -13,6 +13,9 @@ updated AFTER the loop completes with final task statistics.
 from __future__ import annotations
 
 import sys
+import csv
+import hashlib
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -104,6 +107,20 @@ def write_initial_manifest(
         "tanbeta_list": tanbeta_list,
         "summary": {},  # filled by update_manifest_summary()
     }
+    if engine_name == "m2":
+        manifest.update({
+            "point_schema_version": "dihiggs.point.v2",
+            "mass_convention": {
+                "mh_GeV": 125.13 if fixed.mh is None else fixed.mh,
+                "source": "PDG 2026 Higgs listing",
+                "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
+            },
+            "twohdmc_provenance": {
+                "api": "THDM::set_param_phys",
+                "repository_commit": git.get("commit", "unknown"),
+            },
+            "acceptance_definitions": axis_metadata["acceptance"],
+        })
     safe_write_json(manifest_path, manifest)
     return manifest
 
@@ -132,7 +149,17 @@ def update_manifest_summary(
         "tasks_skipped": tasks_skipped,
         "tasks_failed": tasks_failed,
         "total_attempts_parsed": total_attempts,
+        "completion_status": "complete" if tasks_failed == 0 else "failed",
     }
+    if manifest["engine_name"] == "m2":
+        outputs = []
+        for meta_path in sorted(Path(manifest["paths"]["run_dir"]).rglob("scan_meta.json")):
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if meta.get("event") == "done":
+                outputs.append({key: meta[key] for key in (
+                    "output_csv", "output_sha256", "output_row_count", "output_columns", "command"
+                )})
+        manifest["outputs"] = outputs
     safe_write_json(manifest_path, manifest)
 
 
@@ -203,5 +230,15 @@ def write_scan_meta(
         payload["stderr_path"] = str(stderr_path)
     if exception is not None:
         payload["exception"] = exception
+    if event == "done" and output_csv.is_file():
+        digest = hashlib.sha256()
+        with output_csv.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        payload["output_sha256"] = digest.hexdigest()
+        with output_csv.open(newline="", encoding="utf-8") as handle:
+            rows = csv.reader(handle)
+            payload["output_columns"] = next(rows, [])
+            payload["output_row_count"] = sum(1 for _ in rows)
 
     safe_write_json(meta_path, payload)

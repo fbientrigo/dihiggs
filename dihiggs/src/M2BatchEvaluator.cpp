@@ -25,7 +25,7 @@ std::vector<PointResult> evaluate_m2_batch(
         for (size_t i = 0; i < m2_candidates.size(); ++i) {
             results[i] = evaluate_m2_point(
                 local_model,
-                params.m_phi,
+                params.mh,
                 params.mH,
                 params.mA,
                 params.mHp,

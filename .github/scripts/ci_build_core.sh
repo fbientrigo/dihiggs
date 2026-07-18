@@ -53,6 +53,10 @@ if [ ! -f "app/PhysLam1Scan" ]; then
     echo -e "${RED}❌ PhysLam1Scan binary not built${NC}"
     exit 1
 fi
+if [ ! -f "app/Lambda1EvaluatorV2" ] || [ ! -f "app/DihiggsPointV2Evaluator" ]; then
+    echo -e "${RED}❌ canonical v2 evaluators not built${NC}"
+    exit 1
+fi
 echo -e "${GREEN}✅ PhysLam1Scan built successfully${NC}"
 
 cd ..

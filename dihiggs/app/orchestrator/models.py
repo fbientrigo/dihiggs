@@ -72,7 +72,8 @@ class FixedParams:
     --------------
     Do NOT conflate lambda1, M2, m12, and m12_sq:
     - lambda1  is dimensionless.
-    - M2 / m12_sq has units of GeV^2.
+    - M2 and m12_sq both have units of GeV^2, but are not identical:
+      M2 = m12_sq / (sin(beta) * cos(beta)).
     - Historical CSVs may name a column ``m12`` while storing GeV^2 values.
     The engine adapter is the authoritative source of axis semantics.
     """
@@ -83,6 +84,9 @@ class FixedParams:
     lambda6: float
     lambda7: float
     lambda1: Optional[float] = None  # None for lambda1-engine tasks
+    mh: Optional[float] = None
+    mHp: Optional[float] = None
+    yukawa_type: Optional[int] = None
     bronze_shard_csv: Optional[str] = None  # gen_fixings-only
     calibration_n: Optional[int] = None  # gen_fixings-only
     calibration_frac: Optional[float] = None  # gen_fixings-only
@@ -99,6 +103,12 @@ class FixedParams:
         }
         if self.lambda1 is not None:
             d["lambda1"] = self.lambda1
+        if self.mh is not None:
+            d["mh"] = self.mh
+        if self.mHp is not None:
+            d["mHp"] = self.mHp
+        if self.yukawa_type is not None:
+            d["yukawa_type"] = self.yukawa_type
         if self.bronze_shard_csv is not None:
             d["bronze_shard_csv"] = self.bronze_shard_csv
         if self.calibration_n is not None:

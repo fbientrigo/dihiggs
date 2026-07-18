@@ -1,200 +1,120 @@
-# DiHiggs Explorer
+# 2HDMC / DiHiggs evaluation core
 
-A machine-learning–driven toolkit to explore Di-Higgs production in a generic Two-Higgs-Doublet Model (2HDM).  
-Efficiently sample a 7-dimensional parameter space, compute Higgs pair branching ratios, filter unphysical points, and build surrogate ML models with interpretability (SHAP).
+This repository is an executable 2HDMC evaluation and scan core for a generic
+2HDM. It produces row-preserving theory evaluations, reconstructed quartics,
+decay widths, branching ratios, and ctau_mm for bounded engineering pilots.
+It is not a maintained ML or campaign-results repository.
 
----
+## Canonical evaluators
 
-## Table of Contents
+- dihiggs/app/Lambda1EvaluatorV2 from dihiggs/src/Lambda1EvaluatorV2.cpp:
+  explicit (mH, lambda1_target) inputs, schema dihiggs.lambda1.v2, and
+  THDM::set_param_phys_lam1.
+- dihiggs/app/DihiggsPointV2Evaluator from
+  dihiggs/src/DihiggsPointV2Evaluator.cpp: rectangular (mH, M2) inputs,
+  schema dihiggs.point.v2, and THDM::set_param_phys.
+- dihiggs/app/Phys_M2BandTracker: experimental bounded-pilot boundary helper;
+  its intervals are not canonical point-production evidence.
 
-- [Features](#features)  
-- [Requirements & Installation](#requirements--installation)  
-- [Usage](#usage)  
-- [Project Structure](#project-structure)  
+The frozen contract is docs/contracts/canonical_evaluators_v2.md.
 
----
+## Canonical schemas
 
-## Features
+dihiggs.lambda1.v2 preserves one row for every attempted input, including
+malformed, construction-failing, theory-rejected, and accepted rows. It stores
+raw input lexemes, exact Float64 values, reconstructed quartics and m12_sq,
+theory flags, selected widths, branching ratios, width_ok, and ctau_mm.
 
-- **Parameter Sampling**  
-  - Latin Hypercube Sampling (LHS), grid or random sampling  
-- **Physics Simulation**  
-  - Compute Di-Higgs branching ratios (e.g. \(hh \to b\bar b \gamma\gamma\))  
-  - Apply theoretical constraints (positivity, unitarity, perturbativity)  
-- **Data Cleaning & Analysis**  
-  - Identify and filter `NaN` / unphysical points  
-  - Exploratory plots: scatter, heatmaps, 3D projections  
-- **Machine Learning Models**  
-  - Regression (Random Forest, Gaussian Process, Neural Net) for BR prediction  
-  - Classification of viable vs. invalid parameter points  
-- **Model Interpretability**  
-  - SHAP explanations to quantify parameter importance  
-- **Active Learning & Optimization**  
-  - Bayesian optimization or NSGA-II to propose new sampling points  
+dihiggs.point.v2 preserves every rectangular grid point. It records
+M2 = m12_sq / (sin(beta) * cos(beta)) and
+m12_sq = M2 * sin(beta) * cos(beta). lambda1 is reconstructed output.
+Experimental fields are deliberately unevaluated.
 
----
+## Theory acceptance semantics
 
-## Requirements & Installation
+construction_ok is the exact 2HDMC parameter-construction result.
+positivity, unitarity, and perturbativity are theory predicates;
+TRIPLE_OK/triple_ok_legacy is theory-only. theory_ok_v1 currently equals
+those three predicates. No experimental acceptance is inferred from these
+flags.
 
-### Prerequisites
+## Build prerequisites
 
-- **Operating System**: Linux (Debian/Ubuntu), macOS, or Windows (WSL recommended)  
-- **Python**: ≥ 3.8  
+Linux or WSL, a C++17 compiler, GNU Make, GSL, and the repository's patched
+2HDMC checkout under 2hdmc/ are required. HiggsTools is not needed for the
+three v2 2HDMC-only executables.
 
-- **GSL (GNU Scientific Library)**  
-  - **Debian/Ubuntu**:  
-    ```bash
-    dpkg -l | grep libgsl-dev
-    ```
-    If not installed:
-    ```bash
-    sudo apt-get update
-    sudo apt-get install libgsl-dev
-    ```
-    Verify header:
-    ```bash
-    ls /usr/include/gsl/gsl_matrix.h
-    ```
-  - **macOS (Homebrew)**:
-    ```bash
-    brew install gsl
-    ```
-  - **Windows**: use WSL and follow the Debian/Ubuntu instructions above.
+## Build commands
 
-### Python Dependencies
+    make -C 2hdmc -j2
+    make -C dihiggs clean
+    make -C dihiggs -j2
 
-All required packages are listed in `requirements.txt`:
+The v2 binaries are written under dihiggs/app/.
 
-- `numpy`, `pandas`, `scipy`  
-- `matplotlib`, `seaborn`  
-- `scikit-learn`, `xgboost`  
-- `shap`  
-- `pyDOE`  
-- `jupyterlab`  
+## Lambda1 v2 smoke test
 
-### Installation Steps
+    tmp=$(mktemp -d)
+    printf '%s\n' 'point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,tan_beta,lambda1_target,lambda6_input,lambda7_input' 'p0,125.13,130,300,300,0.995,50,1.0,0.1,0.0' > "$tmp/input.csv"
+    dihiggs/app/Lambda1EvaluatorV2 "$tmp/input.csv" "$tmp/output.csv"
 
-1. **Run the installer**
+## M2 v2 smoke test
 
-```bash
-chmod +x install.sh
-./install.sh
-```
+    dihiggs/app/DihiggsPointV2Evaluator --campaign-id smoke --run-id m2 --mh 125.13 --mH-min 130 --mH-max 130 --n-mH 1 --mA 300 --mHp 300 --yukawa-type 1 --sin-ba 0.995 --tan-beta 50 --M2-min 15000 --M2-max 15000 --n-M2 1 --lambda6 0.1 --lambda7 0 --output /tmp/dihiggs-point-v2.csv
 
-The script creates a local Python virtual environment, installs the Python dependencies, rebuilds `2hdmc`, builds and installs `higgstools`, downloads the HiggsBounds/HiggsSignals datasets, and compiles the main project.
+## Orchestrator examples
 
-It also creates a local `project_config.json` (if missing) with a machine-specific `data_lake_dir`. This file is gitignored so each PC can keep its own path.
+Canonical lambda1 v2 orchestration generates one exact input CSV and validates
+the output schema and row count:
 
-To set a custom data lake path at install time:
+    python -m dihiggs.app.orchestrator --engine lambda1_v2 --campaign lambda1_pilot --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 0 --axis-max 12 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
 
-```bash
-DATA_LAKE_DIR=/your/local/lake/path ./install.sh
-```
+Canonical M2 orchestration uses named flags and reconstructs lambda1:
 
-If the process fails at any step, fix the issue and run `./install.sh` again. The installer keeps checkpoints in `.install-state/` and resumes from the last completed step.
+    python -m dihiggs.app.orchestrator --engine m2 --exec ./dihiggs/app/DihiggsPointV2Evaluator --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 15000 --axis-max 18000 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --yukawa-type 1 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
 
-2. **Activate the prepared environment**
+m2_tracker is explicitly experimental and bounded-pilot only.
+lambda1_legacy (or the compatibility alias lambda1) invokes
+PhysScanWithFixings; it is replay-only and not an LLP production path.
 
-After a successful installation, source the helper script generated by the installer:
+## Output interpretation and lifetime units
 
-```bash
-source .install-state/activate.sh
-```
+Masses and widths use GeV; M2 and m12_sq use GeV2. ctau_mm is the proper
+decay length in millimetres, derived from hbar*c = 1.973269804e-13 GeV mm
+when width_ok is true. M2 must not be read as m12_sq.
 
-This exports `HB_DATASET`, `HS_DATASET`, and activates the local virtual environment.
+## Tracker experimental status
 
-3. **Optional manual dataset refresh**
+Phys_M2BandTracker searches for intervals in bounded pilot domains. Its
+interval output is a boundary-search artifact, not final global boundary
+evidence, and it does not provide a fixed-input-lambda1 evaluation.
 
-If you only want to refresh the datasets later, you can still use:
+## Legacy and frozen components
 
-```bash
-./get_datasets.sh
-```
+PhysScanWithFixings, the autoresearch/ tree, ML notebooks, historical
+campaigns, and quarantine/replay scripts remain available only where their
+historical or compatibility role is explicit. Autoresearch is frozen and no
+canonical code imports it.
 
-## Usage
+## Tests
 
-## Data Lake Path Configuration
+    python -m pytest -q
 
-The data lake path is configured from the root file `project_config.json`:
+Focused C++ and orchestrator tests are documented in
+docs/OPERATING_STATUS_V2.md. Optional, frozen, legacy, and quarantine tests
+skip explicitly when their components are absent.
 
-```json
-{
-  "data_lake_dir": "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
-}
-```
+## Documentation map
 
-Update `data_lake_dir` to match your machine. Scripts that read/build/analyze the lake now use this value as their default.
+- docs/contracts/canonical_evaluators_v2.md
+- docs/OPERATING_STATUS_V2.md
+- docs/autoresearch_frozen.md
+- docs/handoffs/REPO_TO_TEX_NOTES_V3.md
+- docs/verification/
 
-1. **Parameter Sampling**
+## Current non-claims
 
-   * Open `notebooks/0b1_samplings.ipynb`
-   * Configure your sampling strategy (LHS, grid, random)
-2. **Simulation & Data Cleaning**
-
-   * Run the sampling notebook to generate raw data
-   * Use `scripts/clean_data.py` to filter and label points
-3. **Exploratory Analysis**
-
-   * Open `notebooks/1_exploratory_analysis.ipynb` for plots and statistics
-4. **Model Training**
-
-   * Open `notebooks/2_ml_models.ipynb`
-   * Train regression/classification models, evaluate metrics
-5. **Interpretability**
-
-   * Run `notebooks/3_shap_analysis.ipynb` to generate SHAP summary plots
-6. **Active Learning Loop**
-
-   * Use `scripts/active_learning.py` to propose new points based on model uncertainty
-
----
-
-## Project Structure
-
-```
-├── notebooks/
-│   ├── 0b1_samplings.ipynb
-│   ├── 1_exploratory_analysis.ipynb
-│   ├── 2_ml_models.ipynb
-│   └── 3_shap_analysis.ipynb
-├── install.sh
-├── scripts/
-│   ├── clean_data.py
-│   └── active_learning.py
-├── requirements.txt
-├── setup.py
-└── README.md
-```
-
-## Particle ID References
-From the 2hdmc calculator the particle references id in the lhe outs:
-| Category              | Name | PDG ID |
-|-----------------------|:----:|:------:|
-| Down-type quark (d)   |  –   |   0    |
-|                       | d    |   1    |
-|                       | s    |   3    |
-|                       | b    |   5    |
-| Up-type quark (u)     |  –   |   0    |
-|                       | u    |   2    |
-|                       | c    |   4    |
-|                       | t    |   6    |
-| Charged lepton (ℓ)    |  –   |   0    |
-|                       | e    |  11    |
-|                       | μ    |  13    |
-|                       | τ    |  15    |
-| Neutrino (ν)          |  –   |   0    |
-|                       | νₑ   |  12    |
-|                       | ν_μ  |  14    |
-|                       | ν_τ  |  16    |
-| Neutral Higgs boson   |  –   |   0    |
-|                       | h    |  25    |
-|                       | H    |  35    |
-|                       | A    |  36    |
-| Charged Higgs boson   | H⁺   |  37    |
-| Gauge boson           |  –   |   0    |
-|                       | γ    |  22    |
-|                       | Z    |  23    |
-|                       | W⁺   |  24    |
-
-
-
+The maintained core currently claims no LHS production, SHAP, Bayesian
+optimization, active learning, surrogate training, complete seven-dimensional
+coverage, experimental acceptance, full campaign result, HB/HS gate, STU gate,
+recast integration, or maintained paper result.

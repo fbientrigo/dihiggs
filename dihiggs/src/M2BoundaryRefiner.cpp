@@ -9,7 +9,7 @@ bool evaluate_is_valid(const BatchParams& params, double m2) {
     local_model.set_SM(sm);
     
     PointResult res = evaluate_m2_point(
-        local_model, params.m_phi, params.mH, params.mA, params.mHp,
+        local_model, params.mh, params.mH, params.mA, params.mHp,
         params.sin_ba, params.tan_beta, params.lambda6, params.lambda7, m2
     );
     return res.triple_ok;

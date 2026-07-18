@@ -35,7 +35,7 @@ class M2TrackerEngine:
     """
     Engine adapter for ``Phys_M2BandTracker``.
 
-    Second scan axis = M^2 = m12_sq (units: GeV^2).
+    Second scan axis = M^2 = m12_sq/(sin(beta)cos(beta)) (GeV^2).
     """
 
     @property
@@ -89,6 +89,8 @@ class M2TrackerEngine:
             f"--m2-min={grid.axis_min:.6g}",
             f"--m2-max={grid.axis_max:.6g}",
             f"--ma={fixed.mA:.6g}",
+            f"--mh={(125.13 if fixed.mh is None else fixed.mh):.17g}",
+            f"--mhp={(fixed.mA if fixed.mHp is None else fixed.mHp):.17g}",
             f"--sin-ba={fixed.sin_ba:.6g}",
             f"--tan-beta={fixed.tan_beta:.6g}",
             f"--lam6={fixed.lambda6:.6g}",
@@ -103,7 +105,7 @@ class M2TrackerEngine:
 
     def axis_metadata(self) -> Dict[str, Any]:
         """
-        Axis metadata for M^2 = m12_sq via Phys_M2BandTracker.
+        Axis metadata for M^2 via Phys_M2BandTracker.
         """
         return {
             "engine_name": self.engine_name,
@@ -113,7 +115,8 @@ class M2TrackerEngine:
             "axis_label": "M2",
             "axis_description": (
                 "Soft-breaking parameter M2 dynamically tracked via Phys_M2BandTracker. "
-                "Points output includes only the tightly bounded physically relevant regions."
+                "M2 = m12_sq/(sin(beta)*cos(beta)). "
+                "Output is non-canonical; boundaries are validated only inside tested pilot domains."
             ),
             "csv_column_note": (
                 "Generates points.csv, intervals.csv, summary.jsonl, and meta.json. "

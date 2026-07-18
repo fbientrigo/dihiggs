@@ -38,8 +38,10 @@ plots/
 outputs/
 results/
 graphify-out/
+docs/_build/
 
 *.csv
+!docs/pilots/dihiggs_point_v2_v1/*.csv
 *.parquet
 *.pdf
 *.joblib
@@ -92,6 +94,8 @@ mlpython/lake_pipeline/parallel_plots/
 2hdmc/CalcRoundTrip
 2hdmc/CalcLam1Scan
 2hdmc/CalcLam1ScanFromLake
+2hdmc/working/ParamScan*
+2hdmc/working/paralelscan
 
 # Upstream/example 2HDMC executables
 2hdmc/Demo
@@ -148,3 +152,6 @@ scripts/out/
 /mlpython/Analysis
 /dihiggs/app/Phys_M2BoundaryScan
 /chris/CalcLambda1ScanFixings
+/chris/chris_points_to_bronze
+/chris/chris_points_to_hybrid
+/chris/diag_roundtrip

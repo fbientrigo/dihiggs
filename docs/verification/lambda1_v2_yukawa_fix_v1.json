@@ -1,0 +1,73 @@
+{
+  "report_schema": "dihiggs.lambda1.v2.yukawa_fix.verification.v1",
+  "baseline_commit": "cbb5079c8ecc012395a525ccd1dd54f8481d5be9",
+  "successor_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
+  "schema": "dihiggs.lambda1.v2",
+  "input": "docs/pilots/lambda1_v2_yukawa_fix_v1/input.csv",
+  "output": "docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv",
+  "output_sha256": "59ac49bac86bf2c3922d008827ddadafd782b6173d3d2bc023c795cd8b2bf330",
+  "row_count": 5,
+  "selected_widths_note": "nine H2 partial widths are reported; width_unaccounted_gev closes to total_width_gev",
+  "rows": [
+    {
+      "point_id": "L01",
+      "construction_ok": "1",
+      "yukawa_type_installed": "1.00000000000000000e+00",
+      "theory_ok": "1",
+      "width_bb_gev": "1.68923454963334594e-06",
+      "width_tautau_gev": "1.64557991401991068e-07",
+      "total_width_gev": "5.44093366939228375e-06",
+      "width_unaccounted_gev": "1.19946705313009826e-09",
+      "br_gammagamma": "4.37077986962171403e-03",
+      "ctau_mm": "3.62671174453115750e-08"
+    },
+    {
+      "point_id": "L05",
+      "construction_ok": "1",
+      "yukawa_type_installed": "1.00000000000000000e+00",
+      "theory_ok": "0",
+      "width_bb_gev": "1.68923454963323138e-06",
+      "width_tautau_gev": "1.64557991401977489e-07",
+      "total_width_gev": "5.43236111832007560e-06",
+      "width_unaccounted_gev": "1.19946705313094530e-09",
+      "br_gammagamma": "3.18813702075639244e-03",
+      "ctau_mm": "3.63243488608544801e-08"
+    },
+    {
+      "point_id": "L06",
+      "construction_ok": "1",
+      "yukawa_type_installed": "1.00000000000000000e+00",
+      "theory_ok": "1",
+      "width_bb_gev": "3.92309077122295943e-11",
+      "width_tautau_gev": "4.14221289598296137e-12",
+      "total_width_gev": "5.80801225661750930e-11",
+      "width_unaccounted_gev": "2.89070411208878435e-14",
+      "br_gammagamma": "4.95665388500289832e-04",
+      "ctau_mm": "3.39749593632779259e-03"
+    },
+    {
+      "point_id": "ordering",
+      "construction_ok": "1",
+      "yukawa_type_installed": "1.00000000000000000e+00",
+      "theory_ok": "1",
+      "width_bb_gev": "1.63713177886912064e-06",
+      "width_tautau_gev": "1.58379297015617577e-07",
+      "total_width_gev": "4.02448750676615524e-06",
+      "width_unaccounted_gev": "1.15903004417098839e-09",
+      "br_gammagamma": "5.01393908146598871e-03",
+      "ctau_mm": "4.90315798143849954e-08"
+    },
+    {
+      "point_id": "construction",
+      "construction_ok": "0",
+      "yukawa_type_installed": "nan",
+      "theory_ok": "0",
+      "width_bb_gev": "nan",
+      "width_tautau_gev": "nan",
+      "total_width_gev": "nan",
+      "width_unaccounted_gev": "nan",
+      "br_gammagamma": "nan",
+      "ctau_mm": "nan"
+    }
+  ]
+}

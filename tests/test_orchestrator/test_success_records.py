@@ -160,3 +160,13 @@ class TestSuccessRecordsM2:
         meta = json.loads(metas[0].read_text())
         assert meta["axis_metadata"]["scan_axis"] == "M2"
         assert "GeV^2" in meta["axis_metadata"]["axis_units"]
+        assert len(meta["output_sha256"]) == 64
+        assert meta["output_row_count"] == 1
+        assert meta["command"][1:5] == ["--campaign-id", "test_m2_success", "--run-id", "run_ok"]
+
+        manifest = json.loads(next(tmp_outdir.rglob("run_manifest.json")).read_text())
+        assert manifest["point_schema_version"] == "dihiggs.point.v2"
+        assert manifest["mass_convention"]["mh_GeV"] == 125.13
+        assert manifest["acceptance_definitions"]["theory_ok_v1"] == "triple_ok_legacy"
+        assert manifest["summary"]["completion_status"] == "complete"
+        assert manifest["outputs"][0]["output_sha256"] == meta["output_sha256"]
