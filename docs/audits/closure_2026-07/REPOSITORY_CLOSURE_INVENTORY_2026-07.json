@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-07-17",
+  "phase": "Phase 0 - Safety, inventory and authority",
+  "main_sha_at_baseline": "4d19bb97caa02340e1558ca8d32fc68bcbaf28e5",
+  "branch_protection_on_main": false,
+  "pr_chain": [
+    {
+      "number": 60,
+      "title": "Integrate canonical evaluator v2 operational contracts",
+      "state": "OPEN",
+      "draft": true,
+      "base": "fix/lifetime-integrity-core-v2",
+      "head_branch": "agent/dihiggs-operational-v3-20260717",
+      "head_sha": "daf1ab885bd3050ba5d051dd92cf6cbba463a4bc",
+      "ci": "green",
+      "mergeable": "MERGEABLE"
+    },
+    {
+      "number": 58,
+      "title": "Rescue lifetime integrity and add canonical lambda1 evaluator v2",
+      "state": "OPEN",
+      "draft": true,
+      "base": "main",
+      "head_branch": "fix/lifetime-integrity-core-v2",
+      "head_sha": "9bc300299208dab1ce0b9f7e7510c3b92b8979f4",
+      "ci": "green",
+      "mergeable": "MERGEABLE"
+    },
+    {
+      "number": 54,
+      "title": "chore(deps): bump pillow from 10.4.0 to 12.2.0",
+      "state": "OPEN",
+      "note": "out of closure scope, dependabot"
+    }
+  ],
+  "checkouts": [
+    {"path": "main_dihiggs/", "branch": "main", "sha": "c090b83a85e83a058a6212928a42fead2fcbe9d2", "remote": "git@github.com:fbientrigo/dihiggs.git", "dirty_count": 18, "class": "LEGACY_OR_ARCHIVE", "notes": "28 behind origin/main; read-only, not source of truth"},
+    {"path": "_worktrees/dihiggs-operational-v3", "branch": "agent/dihiggs-operational-v3-20260717", "sha": "daf1ab885bd3050ba5d051dd92cf6cbba463a4bc", "remote": "git@github.com:fbientrigo/dihiggs.git", "dirty_count": 0, "class": "PRIMARY_CLOSE_NOW", "notes": "authoritative for PR #60 review"},
+    {"path": "_worktrees/lifetime-integrity-core-v2", "branch": "fix/lifetime-integrity-core-v2", "sha_before": "05a6217a949ff947abec2c43cac04f6ba340be8b", "sha_after_ff": "9bc300299208dab1ce0b9f7e7510c3b92b8979f4", "remote": "git@github.com:fbientrigo/dihiggs.git", "dirty_count": 1, "dirty_detail": "untracked build binary dihiggs/app/Lambda1EvaluatorV2", "class": "PRIMARY_CLOSE_NOW", "notes": "fast-forwarded in Phase 0, ff-only, 0 commits lost; authoritative for PR #58 review"},
+    {"path": "_worktrees/dihiggs-point-v2", "branch": "feat/dihiggs-point-v2", "sha": "a74189eec02bf8b2a8d89dfec2dff284db51d971", "remote": "git@github.com:fbientrigo/dihiggs.git", "dirty_count": 22, "class": "UNKNOWN_REQUIRES_HUMAN_DECISION", "triage_verdict": "SUPERSEDED", "triage_evidence": "all modified-file hunks byte-identical to or strictly behind origin/fix/lifetime-integrity-core-v2; untracked headers/scripts already exist upstream; untracked ELF files are build artifacts", "human_decision_required": false, "action": "left untouched, no HD-2"},
+    {"path": "_worktrees/lambda1-char", "branch": "test/characterize-lambda1-v1", "sha": "3e22e235684490524c0e7acb9a62f97a1e08b67e", "dirty_count": 0, "class": "LEGACY_OR_ARCHIVE"},
+    {"path": "_worktrees/lambda1-local-c090b83", "branch": "detached", "sha": "c090b83a85e83a058a6212928a42fead2fcbe9d2", "dirty_count": 0, "class": "LEGACY_OR_ARCHIVE"},
+    {"path": "boundary/", "branch": "test/freeze-evaluate-point-v1", "sha": "b4bf2acc263a3cac79dc14b3c9e3c6e97accfbc0", "remote": "https://github.com/fbientrigo/dihiggs_boundary.git", "dirty_count": 4, "class": "DIRECT_DEPENDENT_ALIGN_NOW", "notes": "local HEAD contained in origin/main (b3a70be, 1 ahead); no open PRs; stray local branch feat/stu-boundary-debian-path-audit diverged, not touched"},
+    {"path": "hep_cross/", "branch": "main", "sha": "e6820f5ff0b2fead4ec91e2e56e1493024226346", "remote": "https://github.com/fbientrigo/dihiggs_hep_cross.git", "dirty_count": 0, "class": "INTERFACE_CHECK_ONLY"},
+    {"path": "llp_recast/", "branch": "feat/m2-strong-bm1-reproduction", "sha": "75d732821ab8512486a8555076dd79ee8faacf21", "remote": "https://github.com/fbientrigo/dihiggs_llp_recast.git", "dirty_count": 26, "class": "ACTIVE_SEPARATE_WORKSTREAM", "notes": "governed by own AGENTS.md; hands off"},
+    {"path": "wiki/", "branch": "llm_wiki", "sha": "96bc76bdf876908132f06ff5a84a82ddd974ed6b", "remote": "git@github.com:fbientrigo/dihiggs.git", "dirty_count": 1, "class": "LEGACY_OR_ARCHIVE", "notes": "~11 commits behind main, stale duplicate clone"},
+    {"path": "paper/", "class": "ACTIVE_SEPARATE_WORKSTREAM", "notes": "not a git repo"},
+    {"path": "ufos/", "class": "ACTIVE_SEPARATE_WORKSTREAM", "notes": "not a git repo; validation logs dated 2026-07-17"}
+  ],
+  "prohibited_operations_executed": [],
+  "safety_actions_this_phase": [
+    "git fetch origin in dihiggs gitdir",
+    "git merge --ff-only origin/fix/lifetime-integrity-core-v2 in _worktrees/lifetime-integrity-core-v2 (verified 0-ahead before merge)"
+  ]
+}

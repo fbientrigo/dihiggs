@@ -1,9 +1,10 @@
 # Operating status v2
 
-Authoritative implementation commit: `5835006` (the close-out documentation
-commit follows; the final repository HEAD is reported in the handoff).
-Initial branch commit: `9bc300299208dab1ce0b9f7e7510c3b92b8979f4`.
-This status is an engineering readiness record, not a physics-result claim.
+Authoritative implementation commit: `5b6ab63a3917967c638502d152ca63e1b51e4f11`
+(merged to `main` via PR #58, which absorbed PR #60, on 2026-07-18). Initial
+branch commit: `9bc300299208dab1ce0b9f7e7510c3b92b8979f4`. This status is an
+engineering readiness record, not a physics-result claim. See
+`docs/REPOSITORY_CLOSURE_V2.md` for the full closure record.
 
 ## Canonical components
 
