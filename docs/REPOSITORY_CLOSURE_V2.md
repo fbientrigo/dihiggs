@@ -1,8 +1,10 @@
 # Repository Closure v2
 
-Status: closed. Final `main` SHA: `5b6ab63a3917967c638502d152ca63e1b51e4f11` (merge of PR #58, which
-itself absorbed PR #60). Closure performed 2026-07-17/18. This is an engineering readiness record,
-not a physics-result claim.
+Status: closed. Canonical-core closure point (PR #58, which absorbed PR #60, merged to `main`):
+`5b6ab63a3917967c638502d152ca63e1b51e4f11`. This documentation itself lands in a follow-up commit,
+so it is not the final `main` SHA — see the closure handoff report for the true post-docs SHA.
+Closure performed 2026-07-17/18. This is an engineering readiness record, not a physics-result
+claim.
 
 ## Supported workflows
 
@@ -43,7 +45,7 @@ not a physics-result claim.
 - `Phys_M2BandTracker` is validated only inside bounded pilot domains; its intervals are not final
   boundary evidence.
 - `theory_ok_v1` currently equals the three theory predicates (positivity, unitarity,
-  perturbativity/stability); no experimental viability is implied by any theory-only flag.
+  perturbativity); no experimental viability is implied by any theory-only flag.
 - Several pre-existing test files carry honest skips for components removed or never committed
   prior to this closure (`tests/test_recompute_readiness.py`, `tests/test_run_quarantine.py`,
   legacy comparison-fixture tests) — see the PR #60 skip-classification table in
