@@ -14,6 +14,13 @@ def test_parser_defaults_to_canonical_lambda1_v2_and_exposes_tracker() -> None:
     }
 
 
+def test_readme_uses_current_orchestrator_output_flag() -> None:
+    readme = Path(__file__).resolve().parents[2] / "README.md"
+    text = readme.read_text()
+    assert "--outdir" in text
+    assert "--output-dir" not in text
+
+
 def test_m2_rejects_fixed_lambda1(capsys) -> None:
     assert main(["--engine", "m2", "--lambda1", "1", "--dry-run"]) == 2
     error = capsys.readouterr().err

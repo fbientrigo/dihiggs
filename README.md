@@ -67,11 +67,11 @@ The v2 binaries are written under dihiggs/app/.
 Canonical lambda1 v2 orchestration generates one exact input CSV and validates
 the output schema and row count:
 
-    python -m dihiggs.app.orchestrator --engine lambda1_v2 --campaign lambda1_pilot --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 0 --axis-max 12 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
+    python -m dihiggs.app.orchestrator --engine lambda1_v2 --campaign lambda1_pilot --outdir /tmp/dihiggs_output --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 0 --axis-max 12 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
 
 Canonical M2 orchestration uses named flags and reconstructs lambda1:
 
-    python -m dihiggs.app.orchestrator --engine m2 --exec ./dihiggs/app/DihiggsPointV2Evaluator --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 15000 --axis-max 18000 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --yukawa-type 1 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
+    python -m dihiggs.app.orchestrator --engine m2 --exec ./dihiggs/app/DihiggsPointV2Evaluator --outdir /tmp/dihiggs_output --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 15000 --axis-max 18000 --n-axis 4 --mA 300 --mHp 300 --mh 125.13 --yukawa-type 1 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
 
 m2_tracker is explicitly experimental and bounded-pilot only.
 lambda1_legacy (or the compatibility alias lambda1) invokes

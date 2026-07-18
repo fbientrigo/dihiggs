@@ -61,6 +61,13 @@ build/lambda1_char/
 # Project-specific generated outputs
 dihiggs/app/outcsv/
 dihiggs/app/archive/
+/output/
+/mlpython/2603/
+/2hdmc/test
+/2hdmc/testhybrid
+/dihiggs/app/Lambda1EvaluatorV2
+/dihiggs/app/DihiggsPointV2Evaluator
+/dihiggs/app/Phys_M2BandTracker
 mlpython/img/
 mlpython/branching_ratio_plots/
 mlpython/graphing/*.png

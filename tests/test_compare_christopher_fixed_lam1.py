@@ -1,4 +1,9 @@
-import pandas as pd
+import pytest
+
+pd = pytest.importorskip(
+    "pandas",
+    reason="historical comparison test requires pandas; not part of canonical v2 core",
+)
 
 from scripts.compare_christopher_fixed_lam1 import (
     _normalize_merged,
