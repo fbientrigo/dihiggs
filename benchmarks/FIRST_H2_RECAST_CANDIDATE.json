@@ -1,0 +1,73 @@
+{
+  "status": "NO_VALID_EXISTING_H2_BENCHMARK",
+  "evaluated_at_commit": "27817ab156c23546117c93f1584dd4aa766f4850",
+  "post_yukawa_fix_boundary_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
+  "sources_inspected": [
+    {
+      "path": "docs/pilots/dihiggs_point_v2_v1/L01_accepted_anchor.csv",
+      "point_id": "L01_accepted_anchor",
+      "m_H2_GeV": 130.0,
+      "construction_ok": true,
+      "theory_ok_v1": true,
+      "total_width_GeV": 5.44093329247643563e-06,
+      "ctau_mm": 3.62671199576841017e-08,
+      "br_bb": 0.310467792716594027,
+      "rejection_reason": "eligible on theory/construction gates but ctau_mm ~ 3.6e-8 mm (near-alignment, unsuppressed couplings): far below any ATLAS DV-relevant scale, decays effectively promptly"
+    },
+    {
+      "path": "docs/pilots/dihiggs_point_v2_v1/L05_theory_rejected_anchor.csv",
+      "point_id": "L05_theory_rejected_anchor",
+      "construction_ok": true,
+      "theory_ok_v1": false,
+      "rejection_reason": "fails unitarity gate (rejection_stage=unitarity); excluded by theory-validity requirement"
+    },
+    {
+      "path": "docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv",
+      "point_id": "L06_llp_anchor",
+      "m_H2_GeV": 200.0,
+      "construction_ok": true,
+      "theory_ok_v1": true,
+      "total_width_GeV": 5.80801813354687673e-11,
+      "ctau_mm": 3.39749249852109442e-03,
+      "br_bb": 0.675461177384570122,
+      "rejection_reason": "explicitly forbidden as a physical LLP benchmark by task instructions and by GitHub issue #63 / paper/notas/CLAIM_LEDGER.md claim C010 (SUPERSEDED); also fails the ranking goal on its own corrected numbers (ctau_mm dropped from 1.79e4 mm pre-fix to 3.4e-3 mm post-fix -- no longer displaced at ATLAS scale)"
+    },
+    {
+      "path": "docs/pilots/dihiggs_point_v2_v1/ordering_boundary.csv",
+      "point_id": "ordering_boundary",
+      "construction_ok": "0,1 (2 rows)",
+      "theory_ok_v1": "nan,0.0",
+      "rejection_reason": "boundary/degenerate-mass engineering test case (mH set equal to mh), not a physical scan point; no accepted row is theory_ok"
+    },
+    {
+      "path": "docs/pilots/dihiggs_point_v2_v1/construction_failure.csv",
+      "point_id": "construction_failure",
+      "construction_ok": false,
+      "rejection_reason": "negative reconstructed mass-squared; construction fails, no physics to interpret"
+    },
+    {
+      "path": "docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv",
+      "note": "cross-evaluator (dihiggs.lambda1.v2) reproduction of the same L01/L05/L06/ordering/construction anchors; numerically consistent with dihiggs_point_v2_v1 (same producer_commit 6bfad766), does not add new candidate points"
+    },
+    {
+      "path": "<data_lake_dir>/campaign=*/... (119 campaign directories under project_config.json:data_lake_dir)",
+      "note": "entire lake's most recent write is 2026-05-20T13:17Z, predating the Yukawa-order fix (commit 6bfad766, 2026-07-16T22:02:42-04:00) by ~2 months; every width/BR/ctau value in the lake is pre-correction and excluded per task instructions"
+    }
+  ],
+  "gate_counts_basis": "dihiggs.point.v2 (docs/pilots/dihiggs_point_v2_v1/*.csv, 5 files / 6 rows); the dihiggs.lambda1.v2 cross-check's 'ordering' row is a different physical point (different input parameterization) and is not pooled into this count -- see FIRST_H2_RECAST_CANDIDATE.md",
+  "gate_counts": {
+    "post_yukawa_fix_h2_candidate_rows_found": 6,
+    "construction_ok": 4,
+    "theory_ok_v1_after_construction_ok": 2,
+    "excluded_as_L06": 1,
+    "eligible_after_L06_exclusion": 1,
+    "eligible_with_LLP_scale_lifetime": 0
+  },
+  "known_limitations": [
+    "The only post-Yukawa-fix data available in this repository are 5 small engineering-pilot anchor rows (docs/pilots/dihiggs_point_v2_v1/*, docs/pilots/lambda1_v2_yukawa_fix_v1/*), explicitly scoped as 'engineering validation only; no campaign-level scientific conclusion' (docs/verification/dihiggs_point_v2_verification_v1.md).",
+    "No post-Yukawa-fix physics scan/campaign has been run; the full data lake (119 campaigns under data_lake_dir) predates the fix by ~2 months and is invalid for LLP quantities.",
+    "None of the corrected pilot rows carry sigma_production_fb, required by hep_cross/contracts/model_point_to_llp_recast_v1.yaml; even a valid ctau candidate would still need a production cross section before it satisfies the downstream contract.",
+    "The ctau_mm == hbar_c/total_width_GeV invariant was verified (benchmarks/verify_pilot_ctau_invariant.py, PASS, rel_err=0.0) for all 8 width_ok=1 rows across both pilot files; this confirms 'reproducible ctau' but does not by itself establish theory validity or LLP-relevant lifetime, which are checked separately."
+  ],
+  "next_required_generation_step": "Run the bounded follow-up scan specified in benchmarks/FIRST_H2_RECAST_CANDIDATE.md (Section 'Follow-up scan specification') via dihiggs/app/Lambda1EvaluatorV2 against the dihiggs.lambda1.v2 contract; stop at the first point satisfying theory_ok=1, width_ok=1, and 1 mm <= ctau_mm <= 1e4 mm with br_bb > 0.05."
+}
