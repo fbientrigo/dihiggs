@@ -1,5 +1,32 @@
 {
   "status": "PROVISIONAL_NUMERICAL_H2_BENCHMARK",
+  "channel_validity": {
+    "bb_dvjets": "VALID_FOR_FIRST_BB_RECAST",
+    "gammagamma": "NUMERICALLY_UNRESOLVED",
+    "Zgamma": "NUMERICALLY_UNRESOLVED"
+  },
+  "channel_validity_explanation": {
+    "justification": "The DV+jets recast consumes the total width, ctau and BRbb, and these quantities are stable far below the percent level across the complete theory-valid numerical window. The loop-induced gamma-gamma and Z-gamma channels are not equally stable and remain unresolved.",
+    "bb_dvjets": {
+      "status": "VALID_FOR_FIRST_BB_RECAST",
+      "covers": ["total_width_GeV", "ctau_mm", "br_bb"],
+      "does_not_cover": [
+        "physical production cross section",
+        "gamma-gamma predictions",
+        "Z-gamma predictions",
+        "publication-level benchmark validation"
+      ]
+    },
+    "gammagamma": {
+      "status": "NUMERICALLY_UNRESOLVED",
+      "note": "br_gammagamma varies ~5.4% across the theory-valid m12_2 window; loop-induced, sensitive to lambda3"
+    },
+    "Zgamma": {
+      "status": "NUMERICALLY_UNRESOLVED",
+      "note": "br_Zgamma varies ~9.6% across the theory-valid m12_2 window; loop-induced, sensitive to lambda3"
+    }
+  },
+  "status_note": "Overall status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK (not promoted to VALID_FOR_FIRST_RECAST) because lambda1_residual_warning=1, the loop-induced BRs are numerically sensitive, and sigma_production_fb is still pending -- independent of the channel-scoped validity above.",
   "evaluated_at_commit": "27817ab156c23546117c93f1584dd4aa766f4850",
   "scan_producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
   "scan_producer_dirty": "no",
@@ -124,8 +151,8 @@
     "reason_not_clean": "lambda1_residual_warning=1 (residual ~900x the evaluator's 1e-9 warning threshold), reflecting degraded set_param_phys_lam1 round-trip precision at this tan_beta, not a theory or construction failure.",
     "required_numerical_check": "COMPLETE (see numerical_stability_check below): independently constructed via THDM::set_param_phys with an m12_2 computed from 2HDMC's own closed-form lambda1-inversion formula, bypassing set_param_phys_lam1's round-trip entirely.",
     "known_limitations": [
-      "Not yet promotable to a clean/final benchmark: numerical_stability_check below classifies as NUMERICALLY_UNRESOLVED (br_gammagamma/br_Zgamma unstable), so status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK, not VALID_FOR_FIRST_RECAST.",
-      "total_width_gev, ctau_mm, and br_bb (the quantities the proposed H2->bb DV+jets recast consumes) are independently confirmed numerically robust (<0.002% variation across the entire theory-valid m12_2 window at this point); the open instability is confined to br_gammagamma/br_Zgamma, a channel this recast does not use, but the PI has not yet signed off (see Unresolved decisions).",
+      "Not yet promotable to a clean/final benchmark overall: numerical_stability_check below classifies br_gammagamma/br_Zgamma as NUMERICALLY_UNRESOLVED, so the global status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK. The H2->bb DV+jets recast inputs (total_width_gev, ctau_mm, br_bb) are separately classified VALID_FOR_FIRST_BB_RECAST -- see channel_validity above.",
+      "total_width_gev, ctau_mm, and br_bb (the quantities the proposed H2->bb DV+jets recast consumes) are independently confirmed numerically robust (<0.002% variation across the entire theory-valid m12_2 window at this point); the open instability is confined to br_gammagamma/br_Zgamma, a channel this recast does not use.",
       "sigma_production_fb is pending; requires MadGraph/UFO generation, not performed here.",
       "DV+jets is a candidate first recast channel given br_bb=0.757, not a claimed final publication channel."
     ]
@@ -151,10 +178,11 @@
     },
     "classification": "NUMERICALLY_UNRESOLVED",
     "classification_reason": "br_Zgamma varies by 9.59% and br_gammagamma by 5.42% across the theory-valid m12_2 window (both exceed the 5% threshold). total_width_gev, ctau_mm, and br_bb vary by only 0.0016% over the same window and are not the unstable quantities.",
+    "classification_is_global_and_not_channel_scoped": "The single 'classification' field above reflects the worst-case channel (gammagamma/Zgamma) and predates the channel-scoped split. See top-level channel_validity for the per-channel record: bb_dvjets=VALID_FOR_FIRST_BB_RECAST, gammagamma=NUMERICALLY_UNRESOLVED, Zgamma=NUMERICALLY_UNRESOLVED.",
     "unstable_quantities": ["br_gammagamma", "br_Zgamma"],
     "stable_quantities": ["total_width_gev", "ctau_mm", "br_bb", "br_tautau", "br_gg"],
     "root_cause": "lambda1 (and lambda3, which enters the charged-Higgs-mediated loop widths for h->gammagamma/Zgamma) depends on m12_2 with slope tan_beta/(v^2*cos^2(beta)) = 4.4536e11 GeV^-2 at this (m_H2=150 GeV, tan_beta=3e5) point; double precision's ~1.7e-17 absolute resolution near m12_2=0.075 GeV^2 is amplified into an O(1e-6) floor on lambda1_abs_residual and an O(1) ambiguity in lambda1 within the theory-valid window. Tree-level Yukawa-driven widths (bb, tautau, cc, gg) do not depend on lambda1/lambda3 and are unaffected; the loop-induced gammagamma/Zgamma partial widths do.",
-    "downstream_h2h2_4b_generation": "should not proceed on this point until the PI decision below is resolved, even though the width/ctau/br_bb values themselves are independently confirmed numerically robust"
+    "downstream_h2h2_4b_generation": "diphoton/Zgamma-sensitive downstream work should not proceed on this point until the PI decision below is resolved; the H2->bb DV+jets recast inputs (total_width_gev/ctau_mm/br_bb) are independently confirmed numerically robust and are classified VALID_FOR_FIRST_BB_RECAST (see top-level channel_validity)"
   },
-  "next_required_generation_step": "1) PI decision on whether the br_gammagamma/br_Zgamma instability (numerical_stability_check.classification=NUMERICALLY_UNRESOLVED) blocks use of this point, given that total_width_gev/ctau_mm/br_bb -- the only quantities the proposed H2->bb DV+jets recast consumes -- are independently confirmed stable; 2) if cleared, generate sigma_production_fb via MadGraph/UFO for this exact point and package it against hep_cross/contracts/model_point_to_llp_recast_v1.yaml."
+  "next_required_generation_step": "1) PI sign-off on the channel-scoped classification above (bb_dvjets=VALID_FOR_FIRST_BB_RECAST, gammagamma/Zgamma=NUMERICALLY_UNRESOLVED); 2) generate sigma_production_fb via MadGraph/UFO for this exact point and package the bb_dvjets-valid quantities (total_width_gev/ctau_mm/br_bb) against hep_cross/contracts/model_point_to_llp_recast_v1.yaml for the first H2->bb recast; the gammagamma/Zgamma instability does not need to be resolved before this proceeds."
 }

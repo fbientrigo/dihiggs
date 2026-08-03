@@ -42,8 +42,15 @@ Within that theory-valid window, the relative spread of each required quantity i
 
 **total_width_gev, ctau_mm, br_bb, br_tautau and br_gg are stable to 0.0016% across the entire theory-valid window** (they are dominated by tree-level Yukawa-driven fermionic widths, which do not depend on lambda1/lambda3). `br_gammagamma` and `br_Zgamma` -- loop-induced, charged-Higgs-mediated, subdominant channels that are not part of the proposed DV+jets (H2->bb) recast -- vary by **5.4182%** and **9.5911%** respectively across the same window, because these loop amplitudes are directly sensitive to lambda3 (which shares lambda1's m12_2-linear dependence and is comparably ill-determined here).
 
-## Operational classification: `NUMERICALLY_UNRESOLVED`
+## Operational classification: channel-scoped
 
-br_Zgamma varies by 9.5911% across the theory-valid m12_2 window (|offset| <= 1e-12 GeV^2), while total_width_gev/ctau_mm/br_bb vary by only 0.0016% over the same window.
+br_Zgamma varies by 9.5911% across the theory-valid m12_2 window (|offset| <= 1e-12 GeV^2), while total_width_gev/ctau_mm/br_bb vary by only 0.0016% over the same window. This split motivates a channel-scoped classification rather than one blanket verdict for the whole point:
 
-This is an operational criterion for the first recast (usability of width/ctau/BR values for an initial detector-sensitivity study), not a claim about final publication precision. **Unstable quantity: `br_gammagamma` and `br_Zgamma` only. `total_width_gev`, `ctau_mm`, and `br_bb` -- the quantities the proposed H2->bb DV+jets recast actually consumes -- are numerically robust at this point**, independent of whether the model is built via `set_param_phys_lam1` or directly via `set_param_phys`.
+| Scope | Classification |
+|---|---|
+| Overall benchmark | `PROVISIONAL_NUMERICAL_H2_BENCHMARK` |
+| `H2 -> bb` DV+jets recast inputs (`total_width_gev`, `ctau_mm`, `br_bb`) | `VALID_FOR_FIRST_BB_RECAST` |
+| `H2 -> gamma gamma` | `NUMERICALLY_UNRESOLVED` |
+| `H2 -> Z gamma` | `NUMERICALLY_UNRESOLVED` |
+
+This is an operational criterion for the first recast (usability of width/ctau/BR values for an initial detector-sensitivity study), not a claim about final publication precision. **Unstable quantity: `br_gammagamma` and `br_Zgamma` only. `total_width_gev`, `ctau_mm`, and `br_bb` -- the quantities the proposed H2->bb DV+jets recast actually consumes -- are numerically robust at this point**, independent of whether the model is built via `set_param_phys_lam1` or directly via `set_param_phys`. The `NUMERICALLY_UNRESOLVED` label applies to the `gammagamma`/`Zgamma` channels and to the overall/global benchmark status (pending PI sign-off, plus the still-open `sigma_production_fb` production normalization); it does not apply to the `bb_dvjets` channel, which is `VALID_FOR_FIRST_BB_RECAST`.

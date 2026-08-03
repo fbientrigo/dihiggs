@@ -1,20 +1,44 @@
 # First H2 LLP recast candidate — selection report
 
-**Verdict: `PROVISIONAL_NUMERICAL_H2_BENCHMARK`.** No *existing* post-Yukawa-
-correction H2 point in this repository satisfied the LLP-benchmark eligibility
-gates (see "Part 1" below). A bounded 15-point follow-up scan (Part 2) was
-then executed with the canonical corrected evaluator and found six points with
-theory-valid, finite-width, LLP-scale lifetimes — but every one of them carries
-`lambda1_residual_warning = 1`, so none qualifies as a *clean* candidate. The
-best of the six, `H2scan_mH150_tb300000`, is recorded as a provisional
-numerical candidate. An independent numerical-stability check (see "Part 2 —
-Numerical-stability check" below) has since been completed and classifies it
-`NUMERICALLY_UNRESOLVED`: `total_width_gev`/`ctau_mm`/`br_bb` — the quantities
-the proposed `H2->bb` DV+jets recast consumes — are confirmed stable to
-~0.0016%, but `br_gammagamma`/`br_Zgamma` vary by 5.4%/9.6% across the
-theory-valid parameter window, so the candidate stays provisional pending a PI
-decision. See `benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the
-machine-readable record and `benchmarks/first_h2_bounded_scan.csv` /
+**The selected point is valid for the first `H2 -> bb` DV+jets recast because
+its width, lifetime and `BRbb` are numerically stable. It remains a
+provisional global benchmark because loop-induced channels and the
+production normalization are unresolved.**
+
+**Overall verdict: `PROVISIONAL_NUMERICAL_H2_BENCHMARK`.** No *existing*
+post-Yukawa-correction H2 point in this repository satisfied the LLP-benchmark
+eligibility gates (see "Part 1" below). A bounded 15-point follow-up scan
+(Part 2) was then executed with the canonical corrected evaluator and found
+six points with theory-valid, finite-width, LLP-scale lifetimes — but every
+one of them carries `lambda1_residual_warning = 1`, so none qualifies as a
+*clean* candidate. The best of the six, `H2scan_mH150_tb300000`, is recorded
+as a provisional numerical candidate.
+
+An independent numerical-stability check (see "Part 2 — Numerical-stability
+check" below) has since been completed with a **channel-scoped** result, not
+a single blanket verdict:
+
+| Scope | Classification |
+|---|---|
+| Overall benchmark | `PROVISIONAL_NUMERICAL_H2_BENCHMARK` |
+| `H2 -> bb` DV+jets recast inputs (`total_width_gev`, `ctau_mm`, `br_bb`) | **`VALID_FOR_FIRST_BB_RECAST`** |
+| `H2 -> gamma gamma` | `NUMERICALLY_UNRESOLVED` |
+| `H2 -> Z gamma` | `NUMERICALLY_UNRESOLVED` |
+
+The `H2->bb` DV+jets recast consumes only `total_width_gev`, `ctau_mm`, and
+`br_bb`, which are confirmed stable to ~0.0016% across the *entire*
+theory-valid `m12_2` window at this point — well below the percent level. The
+loop-induced `br_gammagamma`/`br_Zgamma` channels are not equally stable
+(5.4%/9.6% variation across the same window) and remain
+`NUMERICALLY_UNRESOLVED`; they are not used by the `bb` recast. The benchmark
+stays **provisional at the global level** — not because the numerical warning
+blocks the `bb` recast (it does not), but because `lambda1_residual_warning =
+1`, the loop-induced BRs remain numerically sensitive, and the physical 2HDM
+production cross section (`sigma_production_fb`) is still pending. This point
+is **not** being relabeled as publication-ready or as a fully validated 2HDM
+benchmark. See `benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the
+machine-readable record (including the `channel_validity` fields) and
+`benchmarks/first_h2_bounded_scan.csv` /
 `first_h2_bounded_scan_manifest.json` for the full scan output.
 
 - Base commit evaluated (Part 1, existing-data search): `27817ab156c23546117c93f1584dd4aa766f4850` (`main`)
@@ -345,7 +369,7 @@ construction failure — `theory_ok=1` and `construction_ok=1` are unaffected.
 Promoting a point with this residual to "clean" would risk overstating the
 precision of its width/lifetime/BR values downstream.
 
-## Numerical-stability check: `NUMERICALLY_UNRESOLVED`
+## Numerical-stability check: channel-scoped classification
 
 The recheck flagged above has been completed. Method: `THDM::set_param_phys`
 was called directly (bypassing `set_param_phys_lam1` and its lambda1
@@ -388,22 +412,38 @@ point, regardless of construction path. See
 and probe table, and `benchmarks/FIRST_H2_RECAST_CANDIDATE.json`'s
 `numerical_stability_check` object for the machine-readable record.
 
-Per the `NUMERICALLY_UNRESOLVED` outcome, the candidate is **not** promoted;
-it remains `PROVISIONAL_NUMERICAL_H2_BENCHMARK`. Downstream `H2 H2 -> 4b`
-generation should not proceed on this point until the PI decision below is
-resolved, even though the width/`ctau_mm`/`br_bb` values themselves are
-numerically robust.
+The channel-scoped result of this check:
+
+| Scope | Classification | Basis |
+|---|---|---|
+| Overall benchmark | `PROVISIONAL_NUMERICAL_H2_BENCHMARK` | `lambda1_residual_warning=1`; loop-induced BRs numerically sensitive; `sigma_production_fb` pending |
+| `H2 -> bb` DV+jets recast inputs | `VALID_FOR_FIRST_BB_RECAST` | `total_width_gev`/`ctau_mm`/`br_bb` stable to ~0.0016% across the entire theory-valid `m12_2` window |
+| `H2 -> gamma gamma` | `NUMERICALLY_UNRESOLVED` | `br_gammagamma` varies 5.42% across the same window |
+| `H2 -> Z gamma` | `NUMERICALLY_UNRESOLVED` | `br_Zgamma` varies 9.59% across the same window |
+
+The candidate is **not** promoted to a fully validated, publication-ready
+2HDM benchmark; the global status remains `PROVISIONAL_NUMERICAL_H2_BENCHMARK`.
+That global caveat does **not** block the first `H2->bb` DV+jets recast: its
+inputs (`total_width_gev`/`ctau_mm`/`br_bb`) are independently confirmed
+numerically robust and are classified `VALID_FOR_FIRST_BB_RECAST` above.
+Downstream work that depends on `br_gammagamma`/`br_Zgamma` should not
+proceed on this point until those channels are resolved; downstream work
+that depends only on `total_width_gev`/`ctau_mm`/`br_bb` (i.e. the `bb`
+recast) is not blocked by that open item.
 
 ## Next required step
 
-1. PI decision on whether the `br_gammagamma`/`br_Zgamma` instability blocks
-   use of this point, given that `total_width_gev`/`ctau_mm`/`br_bb` — the
-   only quantities the proposed `H2->bb` DV+jets recast consumes — are
-   independently confirmed stable (see "Unresolved decisions" below).
-2. If cleared, generate `sigma_production_fb` via MadGraph/UFO for this exact
+1. Proceed with the first `H2->bb` DV+jets recast using
+   `total_width_gev`/`ctau_mm`/`br_bb` from this point — these inputs are
+   `VALID_FOR_FIRST_BB_RECAST` (see channel-scoped table above).
+2. Generate `sigma_production_fb` via MadGraph/UFO for this exact
    `(m_H2, tan_beta, sin(β-α), Type I)` point and package the result against
    `hep_cross/contracts/model_point_to_llp_recast_v1.yaml`. Not performed here
    (out of scope for this task).
+3. Separately, PI decision on whether/how to pursue resolving the
+   `br_gammagamma`/`br_Zgamma` instability before any downstream work that
+   depends on those loop-induced channels, or a fully validated,
+   publication-ready benchmark (see "Unresolved decisions" below).
 
 ## Files added
 
@@ -434,13 +474,15 @@ artifacts, gitignored, not committed).
 
 ## Unresolved decisions for PI input
 
-1. Whether the `br_gammagamma`/`br_Zgamma` instability found by the
-   numerical-stability check (5.4%/9.6% variation across the theory-valid
-   `m12_2` window) is acceptable to proceed with MadGraph/UFO generation for
-   `total_width_gev`/`ctau_mm`/`br_bb`, which are themselves independently
-   confirmed stable to ~0.0016% — or whether `NUMERICALLY_UNRESOLVED` must
-   block all downstream work on this point regardless of which quantities are
-   affected.
+1. ~~Whether the `br_gammagamma`/`br_Zgamma` instability blocks use of
+   `total_width_gev`/`ctau_mm`/`br_bb` for the first recast.~~ **Resolved in
+   this update:** it does not. The classification is now channel-scoped
+   (see table above) — `bb_dvjets` is `VALID_FOR_FIRST_BB_RECAST` and is not
+   gated by the `gammagamma`/`Zgamma` instability. What remains open for PI
+   input is whether/how to pursue resolving `br_gammagamma`/`br_Zgamma`
+   before any downstream work that specifically depends on those loop-induced
+   channels, or before this point could be considered a fully validated,
+   publication-ready 2HDM benchmark.
 2. Whether to search other suppression mechanisms (e.g. moving slightly off
    exact alignment, or a different mass splitting) instead of pushing
    `tan_beta` further, given that **every** point in this 15-point grid
