@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify ctau_mm = hbar_c_GeV_mm / total_width for every width_ok row in the
-post-Yukawa-fix engineering pilots, against the invariant declared in
-hep_cross/contracts/model_point_to_llp_recast_v1.yaml.
+post-Yukawa-fix engineering pilots and the bounded H2 benchmark scan, against
+the invariant declared in hep_cross/contracts/model_point_to_llp_recast_v1.yaml.
 
 Usage: python3 benchmarks/verify_pilot_ctau_invariant.py
 Exits non-zero if any width_ok=1 row violates the invariant beyond rel_tol.
@@ -20,6 +20,7 @@ PILOT_FILES = [
     ("docs/pilots/dihiggs_point_v2_v1/ordering_boundary.csv", "total_width_GeV", "ctau_mm", "width_ok", "point_id"),
     ("docs/pilots/dihiggs_point_v2_v1/construction_failure.csv", "total_width_GeV", "ctau_mm", "width_ok", "point_id"),
     ("docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv", "total_width_gev", "ctau_mm", "width_ok", "point_id"),
+    ("benchmarks/first_h2_bounded_scan.csv", "total_width_gev", "ctau_mm", "width_ok", "point_id"),
 ]
 
 

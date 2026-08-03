@@ -1,6 +1,8 @@
 {
-  "status": "NO_VALID_EXISTING_H2_BENCHMARK",
+  "status": "PROVISIONAL_NUMERICAL_H2_BENCHMARK",
   "evaluated_at_commit": "27817ab156c23546117c93f1584dd4aa766f4850",
+  "scan_producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
+  "scan_producer_dirty": "no",
   "post_yukawa_fix_boundary_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
   "sources_inspected": [
     {
@@ -64,10 +66,68 @@
     "eligible_with_LLP_scale_lifetime": 0
   },
   "known_limitations": [
-    "The only post-Yukawa-fix data available in this repository are 5 small engineering-pilot anchor rows (docs/pilots/dihiggs_point_v2_v1/*, docs/pilots/lambda1_v2_yukawa_fix_v1/*), explicitly scoped as 'engineering validation only; no campaign-level scientific conclusion' (docs/verification/dihiggs_point_v2_verification_v1.md).",
-    "No post-Yukawa-fix physics scan/campaign has been run; the full data lake (119 campaigns under data_lake_dir) predates the fix by ~2 months and is invalid for LLP quantities.",
-    "None of the corrected pilot rows carry sigma_production_fb, required by hep_cross/contracts/model_point_to_llp_recast_v1.yaml; even a valid ctau candidate would still need a production cross section before it satisfies the downstream contract.",
-    "The ctau_mm == hbar_c/total_width_GeV invariant was verified (benchmarks/verify_pilot_ctau_invariant.py, PASS, rel_err=0.0) for all 8 width_ok=1 rows across both pilot files; this confirms 'reproducible ctau' but does not by itself establish theory validity or LLP-relevant lifetime, which are checked separately."
+    "The only post-Yukawa-fix data available in this repository prior to the bounded scan were 5 small engineering-pilot anchor rows (docs/pilots/dihiggs_point_v2_v1/*, docs/pilots/lambda1_v2_yukawa_fix_v1/*), explicitly scoped as 'engineering validation only; no campaign-level scientific conclusion' (docs/verification/dihiggs_point_v2_verification_v1.md).",
+    "The full data lake (119 campaigns under data_lake_dir) predates the Yukawa fix by ~2 months and is invalid for LLP quantities; excluded wholesale from both the existing-data search and the scan.",
+    "None of the corrected pilot rows or scan rows carry sigma_production_fb, required by hep_cross/contracts/model_point_to_llp_recast_v1.yaml; the provisional candidate still needs a production cross section (MadGraph/UFO, out of scope here) before it satisfies the downstream contract.",
+    "The ctau_mm == hbar_c/total_width_GeV invariant was verified (benchmarks/verify_pilot_ctau_invariant.py, PASS, rel_err=0.0) for all 23 width_ok=1 rows across the pilot files and the new scan CSV; this confirms 'reproducible ctau' but does not by itself establish theory validity or LLP-relevant lifetime, which are checked separately.",
+    "Every one of the 15 scanned points has lambda1_residual_warning=1 (lambda1_abs_residual ranging ~2e-9 to ~9e-5, all above the evaluator's 1e-9 warning threshold); this is a numerical round-trip diagnostic in THDM::set_param_phys_lam1's m12_sq/lambda1 reconstruction, not a theory_ok or construction_ok failure, but it is why no point in this grid qualifies as 'clean'."
   ],
-  "next_required_generation_step": "Run the bounded follow-up scan specified in benchmarks/FIRST_H2_RECAST_CANDIDATE.md (Section 'Follow-up scan specification') via dihiggs/app/Lambda1EvaluatorV2 against the dihiggs.lambda1.v2 contract; stop at the first point satisfying theory_ok=1, width_ok=1, and 1 mm <= ctau_mm <= 1e4 mm with br_bb > 0.05."
+  "bounded_scan": {
+    "runner": "benchmarks/run_first_h2_bounded_scan.py",
+    "canonical_output_csv": "benchmarks/first_h2_bounded_scan.csv",
+    "manifest": "benchmarks/first_h2_bounded_scan_manifest.json",
+    "evaluator_binary": "dihiggs/app/Lambda1EvaluatorV2",
+    "evaluator_schema": "dihiggs.lambda1.v2",
+    "grid": "mH_gev in {150,200,250} x tan_beta in {1e4,3e4,1e5,3e5,1e6}, mA_gev=mHp_gev=mH_gev+300, mh_gev=125.13, sin_beta_minus_alpha=1.0, lambda1_target=1.0, lambda6_input=1e-10, lambda7_input=0.0, Type I",
+    "max_points": 15,
+    "points_evaluated": 15,
+    "stop_reason": "exhausted_grid (no clean candidate found)",
+    "classification_counts": {"clean": 0, "provisional": 6, "rejected": 9},
+    "classification_criteria": {
+      "clean": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=0",
+      "provisional": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=1",
+      "rejected": "fails theory_ok, width_ok, the ctau window, or the br_bb threshold"
+    },
+    "lifetime_scaling_confirmed": "1/tan_beta^2 scaling holds across all four tan_beta ratios checked (3x, 10x, 30x, 100x relative to 1e4 give ~9x, ~100x, ~900x, ~10000x ctau_mm increases respectively)"
+  },
+  "selected_candidate": {
+    "point_id": "H2scan_mH150_tb300000",
+    "source_row": "benchmarks/first_h2_bounded_scan.csv",
+    "producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
+    "producer_dirty": "no",
+    "m_H2_GeV": 150.0,
+    "mA_GeV": 450.0,
+    "mHp_GeV": 450.0,
+    "sin_beta_minus_alpha": 1.0,
+    "tan_beta": 3.0e5,
+    "lambda1_target": 1.0,
+    "lambda6_input": 1.0e-10,
+    "lambda7_input": 0.0,
+    "yukawa_type": "Type I",
+    "construction_ok": 1,
+    "theory_ok": 1,
+    "width_ok": 1,
+    "total_width_GeV": 4.56118529862185007e-14,
+    "ctau_mm": 4.32622152973311191e+00,
+    "br_bb": 7.56737485808578692e-01,
+    "br_gammagamma": 2.65792941770435500e-04,
+    "br_Zgamma": 2.04915508605281493e-05,
+    "br_tautau": 7.56506563863697107e-02,
+    "br_cc": 3.38801335137231124e-02,
+    "br_gg": 1.32901948624741001e-01,
+    "br_WW": 0.0,
+    "br_ZZ": 0.0,
+    "lambda1_abs_residual": 9.34182041500974947e-07,
+    "lambda1_residual_warning": 1,
+    "sigma_production_fb": "pending",
+    "reason_for_selection": "First point reached in scan priority order; best br_bb (0.757) and smallest lambda1_abs_residual (9.34e-07) among the three tan_beta=3e5 points; ctau_mm=4.33 sits well inside the 1-1e4 mm window rather than near an edge.",
+    "reason_not_clean": "lambda1_residual_warning=1 (residual ~900x the evaluator's 1e-9 warning threshold), reflecting degraded set_param_phys_lam1 round-trip precision at this tan_beta, not a theory or construction failure.",
+    "required_numerical_check": "Re-verify total_width_gev/ctau_mm/br_bb via an independent high-precision path (e.g. analytically-derived m12_sq instead of the iterative lambda1 round-trip, or a tighter-tolerance refinement) before promoting to a clean benchmark.",
+    "known_limitations": [
+      "Not yet promotable to a clean/final benchmark pending the numerical-stability check above.",
+      "sigma_production_fb is pending; requires MadGraph/UFO generation, not performed here.",
+      "DV+jets is a candidate first recast channel given br_bb=0.757, not a claimed final publication channel."
+    ]
+  },
+  "next_required_generation_step": "1) Complete the numerical-stability recheck on H2scan_mH150_tb300000 described in selected_candidate.required_numerical_check; 2) if it passes, generate sigma_production_fb via MadGraph/UFO for this exact point and package it against hep_cross/contracts/model_point_to_llp_recast_v1.yaml. Neither step was performed by this task."
 }

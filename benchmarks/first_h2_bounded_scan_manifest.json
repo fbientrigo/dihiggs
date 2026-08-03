@@ -1,0 +1,153 @@
+{
+  "schema": "dihiggs.h2_bounded_scan.manifest.v1",
+  "producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
+  "producer_dirty": "no",
+  "evaluator_binary": "dihiggs/app/Lambda1EvaluatorV2",
+  "evaluator_schema": "dihiggs.lambda1.v2",
+  "fixed_parameters": {
+    "mh_gev": 125.13,
+    "sin_beta_minus_alpha": 1.0,
+    "lambda1_target": 1.0,
+    "lambda6_input": 1e-10,
+    "lambda7_input": 0.0
+  },
+  "mass_relation": "mA_gev = mHp_gev = mH_gev + 300",
+  "grid_declared_in_priority_order": [
+    {
+      "priority_index": 1,
+      "point_id": "H2scan_mH150_tb300000",
+      "mH_gev": 150.0,
+      "mA_gev": 450.0,
+      "mHp_gev": 450.0,
+      "tan_beta": 300000.0
+    },
+    {
+      "priority_index": 2,
+      "point_id": "H2scan_mH200_tb300000",
+      "mH_gev": 200.0,
+      "mA_gev": 500.0,
+      "mHp_gev": 500.0,
+      "tan_beta": 300000.0
+    },
+    {
+      "priority_index": 3,
+      "point_id": "H2scan_mH250_tb300000",
+      "mH_gev": 250.0,
+      "mA_gev": 550.0,
+      "mHp_gev": 550.0,
+      "tan_beta": 300000.0
+    },
+    {
+      "priority_index": 4,
+      "point_id": "H2scan_mH150_tb100000",
+      "mH_gev": 150.0,
+      "mA_gev": 450.0,
+      "mHp_gev": 450.0,
+      "tan_beta": 100000.0
+    },
+    {
+      "priority_index": 5,
+      "point_id": "H2scan_mH200_tb100000",
+      "mH_gev": 200.0,
+      "mA_gev": 500.0,
+      "mHp_gev": 500.0,
+      "tan_beta": 100000.0
+    },
+    {
+      "priority_index": 6,
+      "point_id": "H2scan_mH250_tb100000",
+      "mH_gev": 250.0,
+      "mA_gev": 550.0,
+      "mHp_gev": 550.0,
+      "tan_beta": 100000.0
+    },
+    {
+      "priority_index": 7,
+      "point_id": "H2scan_mH150_tb1000000",
+      "mH_gev": 150.0,
+      "mA_gev": 450.0,
+      "mHp_gev": 450.0,
+      "tan_beta": 1000000.0
+    },
+    {
+      "priority_index": 8,
+      "point_id": "H2scan_mH200_tb1000000",
+      "mH_gev": 200.0,
+      "mA_gev": 500.0,
+      "mHp_gev": 500.0,
+      "tan_beta": 1000000.0
+    },
+    {
+      "priority_index": 9,
+      "point_id": "H2scan_mH250_tb1000000",
+      "mH_gev": 250.0,
+      "mA_gev": 550.0,
+      "mHp_gev": 550.0,
+      "tan_beta": 1000000.0
+    },
+    {
+      "priority_index": 10,
+      "point_id": "H2scan_mH150_tb30000",
+      "mH_gev": 150.0,
+      "mA_gev": 450.0,
+      "mHp_gev": 450.0,
+      "tan_beta": 30000.0
+    },
+    {
+      "priority_index": 11,
+      "point_id": "H2scan_mH200_tb30000",
+      "mH_gev": 200.0,
+      "mA_gev": 500.0,
+      "mHp_gev": 500.0,
+      "tan_beta": 30000.0
+    },
+    {
+      "priority_index": 12,
+      "point_id": "H2scan_mH250_tb30000",
+      "mH_gev": 250.0,
+      "mA_gev": 550.0,
+      "mHp_gev": 550.0,
+      "tan_beta": 30000.0
+    },
+    {
+      "priority_index": 13,
+      "point_id": "H2scan_mH150_tb10000",
+      "mH_gev": 150.0,
+      "mA_gev": 450.0,
+      "mHp_gev": 450.0,
+      "tan_beta": 10000.0
+    },
+    {
+      "priority_index": 14,
+      "point_id": "H2scan_mH200_tb10000",
+      "mH_gev": 200.0,
+      "mA_gev": 500.0,
+      "mHp_gev": 500.0,
+      "tan_beta": 10000.0
+    },
+    {
+      "priority_index": 15,
+      "point_id": "H2scan_mH250_tb10000",
+      "mH_gev": 250.0,
+      "mA_gev": 550.0,
+      "mHp_gev": 550.0,
+      "tan_beta": 10000.0
+    }
+  ],
+  "max_points": 15,
+  "points_evaluated_total": 15,
+  "points_evaluated_this_run": 0,
+  "stop_reason": "exhausted_grid",
+  "classification_criteria": {
+    "clean": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=0",
+    "provisional": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=1",
+    "rejected": "fails theory_ok, width_ok, the ctau window, or the br_bb threshold"
+  },
+  "clean_candidate_point_id": null,
+  "provisional_candidate_point_id": "H2scan_mH150_tb300000",
+  "classification_counts": {
+    "clean": 0,
+    "provisional": 6,
+    "rejected": 9
+  }
+}

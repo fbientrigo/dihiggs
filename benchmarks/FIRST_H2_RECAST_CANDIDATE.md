@@ -1,14 +1,25 @@
 # First H2 LLP recast candidate — selection report
 
-**Verdict: `NO_VALID_EXISTING_H2_BENCHMARK`.** No existing, post-Yukawa-correction
-H2 point in this repository satisfies the LLP-benchmark eligibility gates. See
-`benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the machine-readable record.
+**Verdict: `PROVISIONAL_NUMERICAL_H2_BENCHMARK`.** No *existing* post-Yukawa-
+correction H2 point in this repository satisfied the LLP-benchmark eligibility
+gates (see "Part 1" below). A bounded 15-point follow-up scan (Part 2) was
+then executed with the canonical corrected evaluator and found six points with
+theory-valid, finite-width, LLP-scale lifetimes — but every one of them carries
+`lambda1_residual_warning = 1`, so none qualifies as a *clean* candidate. The
+best of the six, `H2scan_mH150_tb300000`, is recorded as a provisional
+numerical candidate pending a numerical-stability review. See
+`benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the machine-readable record and
+`benchmarks/first_h2_bounded_scan.csv` / `first_h2_bounded_scan_manifest.json`
+for the full scan output.
 
-- Base commit evaluated: `27817ab156c23546117c93f1584dd4aa766f4850` (`main`)
+- Base commit evaluated (Part 1, existing-data search): `27817ab156c23546117c93f1584dd4aa766f4850` (`main`)
+- Scan producer commit (Part 2): `38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151`, `evaluator_dirty=no`
 - Yukawa-order fix commit (the validity boundary): `6bfad7662fd87750d838bf2fe0bd7ac00ee2326a`
   ("fix: initialize canonical evaluator Yukawas after construction", 2026-07-16 22:02:42 -0400)
 - Branch: `analysis/select-first-h2-benchmark`, worked in the pre-existing worktree
   `/home/fabi/atlas_dihiggs/_worktrees/select-first-h2-benchmark`
+
+# Part 1 — existing-data search (no valid candidate)
 
 ## What was inspected
 
@@ -87,7 +98,8 @@ pre-correction (invalid) quantity under this task's rules.
 `hep_cross/contracts/model_point_to_llp_recast_v1.yaml` declares
 `ctau_mm == hbar_c / total_width_GeV` (`hbar_c = 1.973269804e-13 GeV·mm`) as a
 required invariant. `benchmarks/verify_pilot_ctau_invariant.py` checks this
-against every `width_ok=1` row in both pilot files:
+against every `width_ok=1` row in the pilot files and (after Part 2) the
+bounded scan output:
 
 ```
 $ python3 benchmarks/verify_pilot_ctau_invariant.py
@@ -97,12 +109,14 @@ docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv: 1 width_ok=1 row(s) checked
 docs/pilots/dihiggs_point_v2_v1/ordering_boundary.csv: 1 width_ok=1 row(s) checked
 docs/pilots/dihiggs_point_v2_v1/construction_failure.csv: 0 width_ok=1 row(s) checked
 docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv: 4 width_ok=1 row(s) checked
+benchmarks/first_h2_bounded_scan.csv: 15 width_ok=1 row(s) checked
 PASS: ctau_mm == hbar_c_GeV_mm / total_width for all width_ok=1 pilot rows
 ```
 
-All 8 checked rows satisfy the invariant to floating-point precision (rel_err
-`0.0`), so "reproducible `ctau`" (one of the minimum validity requirements) is
-confirmed for every row that reports a width, including `L01`.
+All 23 checked rows satisfy the invariant to floating-point precision
+(rel_err `0.0`), so "reproducible `ctau`" (one of the minimum validity
+requirements) is confirmed for every row that reports a width, including `L01`
+and every scan row.
 
 ## Why no point survives
 
@@ -152,12 +166,16 @@ finite positive width, and an LLP-relevant lifetime. This matches the prior
 finding recorded in issue #63 and in `paper/notas/CLAIM_LEDGER.md` (claim
 `C010`, `SUPERSEDED`).
 
-## What the recast agent needs next
+# Part 2 — bounded follow-up scan (executed)
 
-A small, decision-oriented follow-up scan (not run by this task) is required
-before a first H2 recast point exists. See the specification below.
+Part 1 found no valid existing candidate, so the smallest justified follow-up
+scan was specified and then executed with the canonical corrected evaluator
+(`dihiggs/app/Lambda1EvaluatorV2`, `dihiggs.lambda1.v2` schema), built locally
+in this worktree from unmodified source
+(`git diff --stat dihiggs/src/Lambda1EvaluatorV2.cpp dihiggs/src/ReplaySafeOutput.cpp`
+is empty). No 2HDMC/HiggsTools physics code or Yukawa convention was changed.
 
-## Follow-up scan specification
+## Scan specification (as run)
 
 **Goal:** find the first `dihiggs.lambda1.v2`-valid H2 point with
 LLP-relevant lifetime, reusing L06's suppression strategy (Type I, exact
@@ -212,24 +230,164 @@ the corrected Yukawa installation order.
   `hep_cross/contracts/model_point_to_llp_recast_v1.yaml` before the point can
   be packaged for `llp_recast`, but out of scope for benchmark *selection*
   (needs MadGraph, explicitly a non-goal of this task).
+- **Runner:** `benchmarks/run_first_h2_bounded_scan.py`, resumable and
+  interrupt-safe (rewrites the canonical CSV after every point, skips
+  `point_id`s already present, refuses to mix rows from a different producer
+  commit or dirty state).
+
+## Scan results
+
+All 15 grid points were evaluated (`stop_reason: exhausted_grid` — no *clean*
+candidate was found, so the scan ran to completion rather than stopping
+early). Every point is `construction_ok=1` and `theory_ok=1`
+(positivity/unitarity/perturbativity all hold across this entire alignment-
+limit, large-`tan_beta` region); every point has `width_ok=1` and
+`br_bb > 0.5`. The only thing separating "provisional" from "rejected" here is
+the `1 mm <= ctau_mm <= 1e4 mm` window and `lambda1_residual_warning`:
+
+| point_id | m_H2 (GeV) | tan β | ctau_mm | br_bb | lambda1_abs_residual | lambda1_residual_warning | classification |
+|---|---:|---:|---:|---:|---:|---:|---|
+| H2scan_mH150_tb300000 | 150 | 3×10⁵ | 4.326 | 0.7567 | 9.342e-07 | 1 | **provisional** |
+| H2scan_mH200_tb300000 | 200 | 3×10⁵ | 3.058 | 0.6755 | 9.342e-07 | 1 | provisional |
+| H2scan_mH250_tb300000 | 250 | 3×10⁵ | 2.181 | 0.5776 | 9.342e-07 | 1 | provisional |
+| H2scan_mH150_tb100000 | 150 | 1×10⁵ | 0.481 | 0.7567 | 2.700e-07 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH200_tb100000 | 200 | 1×10⁵ | 0.340 | 0.6755 | 2.700e-07 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH250_tb100000 | 250 | 1×10⁵ | 0.242 | 0.5776 | 2.700e-07 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH150_tb1000000 | 150 | 1×10⁶ | 48.070 | 0.7567 | 8.750e-06 | 1 | provisional |
+| H2scan_mH200_tb1000000 | 200 | 1×10⁶ | 33.976 | 0.6755 | 5.126e-05 | 1 | provisional |
+| H2scan_mH250_tb1000000 | 250 | 1×10⁶ | 24.231 | 0.5776 | 5.126e-05 | 1 | provisional |
+| H2scan_mH150_tb30000 | 150 | 3×10⁴ | 0.0433 | 0.7567 | 1.160e-08 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH200_tb30000 | 200 | 3×10⁴ | 0.0306 | 0.6755 | 4.241e-08 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH250_tb30000 | 250 | 3×10⁴ | 0.0218 | 0.5776 | 4.241e-08 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH150_tb10000 | 150 | 1×10⁴ | 0.00481 | 0.7567 | 8.062e-09 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH200_tb10000 | 200 | 1×10⁴ | 0.00340 | 0.6755 | 2.061e-09 | 1 | rejected (ctau below 1 mm) |
+| H2scan_mH250_tb10000 | 250 | 1×10⁴ | 0.00242 | 0.5776 | 2.061e-09 | 1 | rejected (ctau below 1 mm) |
+
+Full per-row provenance (all input parameters, reconstructed λ's, all nine
+partial widths and BRs, producer commit/dirty state) is in
+`benchmarks/first_h2_bounded_scan.csv`; run parameters and classification
+counts (6 provisional, 0 clean, 9 rejected) are in
+`benchmarks/first_h2_bounded_scan_manifest.json`.
+
+**Lifetime scaling.** The predicted `1/tan^2(beta)` scaling from the scan
+specification holds well: going from `tan_beta=1e4` to `3e4` (factor 3) moves
+`ctau_mm` by very close to `3^2=9`x at fixed mass (e.g. `mH=200`:
+`3.397e-3 -> 3.058e-2`, a 9.0x increase); `1e4 -> 1e5` (factor 10) gives
+`3.397e-3 -> 0.340`, a 100x increase; `1e4 -> 3e5` gives `3.397e-3 -> 3.058`,
+a 900x increase; `1e4 -> 1e6` gives `3.397e-3 -> 33.98`, a ~10,000x increase —
+all within the predicted `tan_beta^2` law. The earlier estimate
+(`tan_beta ~ 1.7e5` for `ctau=1mm`) is confirmed to fall between the scanned
+`1e5` (still sub-mm, rejected) and `3e5` (already 2-4 mm) grid points.
+
+**Numerical stability.** `lambda1_abs_residual` grows sharply with `tan_beta`:
+`~2e-9` at `1e4`, `~1e-8` at `3e4`, `~3e-7` at `1e5`, `~9e-7` at `3e5`, and
+`5e-5`-`9e-6` at `1e6`. All 15 points exceed the evaluator's built-in
+`1e-9` warning threshold, so **every** point in the entire grid — not just the
+six lifetime-window points — carries `lambda1_residual_warning=1`. This
+confirms the concern flagged in the original scan specification: pushing
+`tan_beta` this high measurably degrades the `set_param_phys_lam1` round-trip
+(`m12_sq`/`lambda1` reconstruction), and no point in this grid is clean by the
+numerical-stability criterion alone.
+
+## Provisional candidate: `H2scan_mH150_tb300000`
+
+Selected as the best of the six lifetime-window points per the task's ranking
+order (LLP-plausible lifetime; DV+jets-compatible `H2->bb`; plausible mass;
+complete provenance; stable numerics; minimal extra work): it is the first
+point reached in scan priority order, has the highest `br_bb` (0.757) and the
+smallest `lambda1_abs_residual` (9.34e-07) among the three `tan_beta=3e5`
+points, and its `ctau_mm=4.33` sits comfortably inside the 1–1e4 mm window
+rather than near either edge.
+
+| Field | Value |
+|---|---|
+| `m_H2_GeV` (`mH_input_gev`) | `150.0` |
+| `mA_input_gev` / `mHp_input_gev` | `450.0` / `450.0` |
+| `sin_beta_minus_alpha_input` | `1.0` |
+| `tan_beta_input` | `3.0e5` |
+| `lambda1_target` | `1.0` |
+| `lambda6_input` / `lambda7_input` | `1.0e-10` / `0.0` |
+| `construction_ok` / `theory_ok` (`triple_ok`) | `1` / `1` |
+| `yukawa_type_installed` | `1` (Type I) |
+| `total_width_gev` | `4.56118529862185007e-14` |
+| `ctau_mm` | `4.32622152973311191e+00` |
+| `br_bb` | `7.56737485808578692e-01` |
+| `br_gammagamma` | `2.65792941770435500e-04` |
+| `br_Zgamma` | `2.04915508605281493e-05` |
+| `br_tautau` / `br_cc` / `br_gg` | `0.0757` / `0.0339` / `0.1329` |
+| `br_WW` / `br_ZZ` | `0.0` / `0.0` (vanish at exact alignment) |
+| `lambda1_abs_residual` | `9.34182041500974947e-07` |
+| `lambda1_residual_warning` | `1` |
+| `sigma_production_fb` | `pending` — not computed; requires MadGraph/UFO (out of scope here) |
+| `producer_commit` / `evaluator_dirty` | `38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151` / `no` |
+| `evaluator_schema` / `evaluator_api` | `dihiggs.lambda1.v2` / `THDM::set_param_phys_lam1+2HDMC::DecayTable` |
+| Source row | `benchmarks/first_h2_bounded_scan.csv`, `point_id=H2scan_mH150_tb300000` |
+
+**Why physically interesting:** it is a Type I, exact-alignment (`sin(β-α)=1`)
+H2 with a detector-scale lifetime (`ctau_mm ≈ 4.3 mm`) and a dominant,
+DV+jets-plausible `H2 -> bb` branching ratio (0.757), reached by the same
+`cot^2(beta)` suppression mechanism already validated on `L06` but pushed far
+enough in `tan_beta` to survive the post-Yukawa-fix corrected widths. Unlike
+`L06`, its post-fix lifetime is genuinely in the LLP range rather than having
+collapsed to micron scale.
+
+**Why it is not cleanly accepted:** `lambda1_residual_warning=1` with
+`lambda1_abs_residual=9.34e-07`, roughly 900x the evaluator's `1e-9` warning
+threshold. This flags degraded numerical accuracy in the
+`set_param_phys_lam1` round-trip (the reconstructed `m12_sq`/`lambda1` do not
+close to the same precision as at moderate `tan_beta`), not a theory or
+construction failure — `theory_ok=1` and `construction_ok=1` are unaffected.
+Promoting a point with this residual to "clean" would risk overstating the
+precision of its width/lifetime/BR values downstream.
+
+**Numerical stability check required before promotion to clean:** rerun this
+exact point (or a nearby one) through an independent high-precision path —
+e.g. `THDM::set_param_phys` with a directly supplied `m12_sq` derived
+analytically from `lambda1_target` at this `tan_beta`, rather than 2HDMC's
+internal iterative round-trip, or a bisection/Newton refinement in
+`lambda1_target` with a tighter tolerance than 2HDMC's default — and confirm
+the width/`ctau_mm`/`br_bb` values are stable to the precision the downstream
+recast needs. This is a numerical-verification task on the existing point, not
+a new physics scan, and does not require re-deriving Yukawa conventions or
+touching 2HDMC itself.
+
+## Next required step
+
+The provisional candidate `H2scan_mH150_tb300000` needs the numerical-
+stability recheck described above *before* it can be promoted to a clean,
+final benchmark. Once (if) it passes that check, the next step is unchanged
+from the original plan: generate `sigma_production_fb` via MadGraph/UFO for
+this exact `(m_H2, tan_beta, sin(β-α), Type I)` point and package the result
+against `hep_cross/contracts/model_point_to_llp_recast_v1.yaml`. Neither step
+was performed here (both are out of scope for this task).
 
 ## Files added
 
 - `benchmarks/FIRST_H2_RECAST_CANDIDATE.json`
 - `benchmarks/FIRST_H2_RECAST_CANDIDATE.md` (this file)
-- `benchmarks/verify_pilot_ctau_invariant.py` (focused schema/provenance
-  consistency check, run above; no new dependencies)
+- `benchmarks/verify_pilot_ctau_invariant.py` (extended to also check the new
+  scan CSV)
+- `benchmarks/run_first_h2_bounded_scan.py` (deterministic, resumable 15-point
+  scan runner)
+- `benchmarks/first_h2_bounded_scan.csv` (full per-point evaluator output, 15
+  rows)
+- `benchmarks/first_h2_bounded_scan_manifest.json` (grid declaration,
+  producer provenance, classification counts, stop reason)
 
-No existing files were modified; no C++ or physics code was touched; no scan
-was executed.
+No existing C++ or physics code was touched; no Yukawa convention changed; no
+MadGraph/Pythia generation was run; `dihiggs/app/Lambda1EvaluatorV2` and
+`2hdmc/lib/lib2HDMC.a` were built locally from unmodified source (build
+artifacts, gitignored, not committed).
 
 ## Unresolved decisions for PI input
 
-1. Whether to authorize running the 15-point follow-up scan specified above.
-2. Whether the `tan_beta` upper bound (`1e6`) and mass grid (`150–250 GeV`)
-   are the right first region to probe, or whether a different suppression
-   mechanism (e.g. moving off exact alignment, or a different mass splitting)
-   should be tried first.
+1. Whether `lambda1_abs_residual ~ 9.3e-07` at `tan_beta=3e5` is acceptable
+   for this benchmark's intended use, or whether the numerical-stability
+   recheck must complete before any downstream (MadGraph/recast) work starts.
+2. Whether to search other suppression mechanisms (e.g. moving slightly off
+   exact alignment, or a different mass splitting) instead of pushing
+   `tan_beta` further, given that **every** point in this 15-point grid
+   already exceeds the evaluator's residual-warning threshold.
 3. Whether `1 mm <= ctau_mm <= 1e4 mm` is the right operational LLP-scale
    window for "population of the recast selections," or whether the
    `llp_recast`/DV+jets validation contract already fixes a narrower
