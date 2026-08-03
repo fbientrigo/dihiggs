@@ -7,6 +7,13 @@ The previous `1e-12 GeV^2` offsets changed reconstructed `lambda1` by order one 
 - one ULP: `1.38777878078144568e-17` GeV^2
 - propagated half-ULP `lambda1` bound: `3.09033350026551164e-06`
 
+- center reproduction tolerance: `1.00000000000000002e-08`
+- maximum center reproduction difference: `0.00000000000000000e+00` in `total_width_gev`
+- all values finite: `yes`
+- all relevant values physically valid: `yes`
+- adjacent-float maximum spread: `1.66564239607794041e-06` in `br_Zgamma`
+- all adjacent probes theory-valid: `yes`
+
 | Probe | ULP | theory_ok | lambda1 | total_width_gev | ctau_mm | br_bb | br_gammagamma | br_Zgamma |
 |---|---:|:-:|---:|---:|---:|---:|---:|---:|
 | previous_float | -1 | 1 | 1.00001173568050961e+00 | 4.56118529774213195e-14 | 4.32622153056751202e+00 | 7.56737485954531053e-01 | 2.65792771709345886e-04 | 2.04915281061213073e-05 |
