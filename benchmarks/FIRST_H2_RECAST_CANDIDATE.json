@@ -1,188 +1,67 @@
 {
-  "status": "PROVISIONAL_NUMERICAL_H2_BENCHMARK",
-  "channel_validity": {
-    "bb_dvjets": "VALID_FOR_FIRST_BB_RECAST",
-    "gammagamma": "NUMERICALLY_UNRESOLVED",
-    "Zgamma": "NUMERICALLY_UNRESOLVED"
-  },
-  "channel_validity_explanation": {
-    "justification": "The DV+jets recast consumes the total width, ctau and BRbb, and these quantities are stable far below the percent level across the complete theory-valid numerical window. The loop-induced gamma-gamma and Z-gamma channels are not equally stable and remain unresolved.",
-    "bb_dvjets": {
-      "status": "VALID_FOR_FIRST_BB_RECAST",
-      "covers": ["total_width_GeV", "ctau_mm", "br_bb"],
-      "does_not_cover": [
-        "physical production cross section",
-        "gamma-gamma predictions",
-        "Z-gamma predictions",
-        "publication-level benchmark validation"
-      ]
-    },
-    "gammagamma": {
-      "status": "NUMERICALLY_UNRESOLVED",
-      "note": "br_gammagamma varies ~5.4% across the theory-valid m12_2 window; loop-induced, sensitive to lambda3"
-    },
-    "Zgamma": {
-      "status": "NUMERICALLY_UNRESOLVED",
-      "note": "br_Zgamma varies ~9.6% across the theory-valid m12_2 window; loop-induced, sensitive to lambda3"
-    }
-  },
-  "status_note": "Overall status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK (not promoted to VALID_FOR_FIRST_RECAST) because lambda1_residual_warning=1, the loop-induced BRs are numerically sensitive, and sigma_production_fb is still pending -- independent of the channel-scoped validity above.",
-  "evaluated_at_commit": "27817ab156c23546117c93f1584dd4aa766f4850",
-  "scan_producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
-  "scan_producer_dirty": "no",
-  "post_yukawa_fix_boundary_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
-  "sources_inspected": [
-    {
-      "path": "docs/pilots/dihiggs_point_v2_v1/L01_accepted_anchor.csv",
-      "point_id": "L01_accepted_anchor",
-      "m_H2_GeV": 130.0,
-      "construction_ok": true,
-      "theory_ok_v1": true,
-      "total_width_GeV": 5.44093329247643563e-06,
-      "ctau_mm": 3.62671199576841017e-08,
-      "br_bb": 0.310467792716594027,
-      "rejection_reason": "eligible on theory/construction gates but ctau_mm ~ 3.6e-8 mm (near-alignment, unsuppressed couplings): far below any ATLAS DV-relevant scale, decays effectively promptly"
-    },
-    {
-      "path": "docs/pilots/dihiggs_point_v2_v1/L05_theory_rejected_anchor.csv",
-      "point_id": "L05_theory_rejected_anchor",
-      "construction_ok": true,
-      "theory_ok_v1": false,
-      "rejection_reason": "fails unitarity gate (rejection_stage=unitarity); excluded by theory-validity requirement"
-    },
-    {
-      "path": "docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv",
-      "point_id": "L06_llp_anchor",
-      "m_H2_GeV": 200.0,
-      "construction_ok": true,
-      "theory_ok_v1": true,
-      "total_width_GeV": 5.80801813354687673e-11,
-      "ctau_mm": 3.39749249852109442e-03,
-      "br_bb": 0.675461177384570122,
-      "rejection_reason": "explicitly forbidden as a physical LLP benchmark by task instructions and by GitHub issue #63 / paper/notas/CLAIM_LEDGER.md claim C010 (SUPERSEDED); also fails the ranking goal on its own corrected numbers (ctau_mm dropped from 1.79e4 mm pre-fix to 3.4e-3 mm post-fix -- no longer displaced at ATLAS scale)"
-    },
-    {
-      "path": "docs/pilots/dihiggs_point_v2_v1/ordering_boundary.csv",
-      "point_id": "ordering_boundary",
-      "construction_ok": "0,1 (2 rows)",
-      "theory_ok_v1": "nan,0.0",
-      "rejection_reason": "boundary/degenerate-mass engineering test case (mH set equal to mh), not a physical scan point; no accepted row is theory_ok"
-    },
-    {
-      "path": "docs/pilots/dihiggs_point_v2_v1/construction_failure.csv",
-      "point_id": "construction_failure",
-      "construction_ok": false,
-      "rejection_reason": "negative reconstructed mass-squared; construction fails, no physics to interpret"
-    },
-    {
-      "path": "docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv",
-      "note": "cross-evaluator (dihiggs.lambda1.v2) reproduction of the same L01/L05/L06/ordering/construction anchors; numerically consistent with dihiggs_point_v2_v1 (same producer_commit 6bfad766), does not add new candidate points"
-    },
-    {
-      "path": "<data_lake_dir>/campaign=*/... (119 campaign directories under project_config.json:data_lake_dir)",
-      "note": "entire lake's most recent write is 2026-05-20T13:17Z, predating the Yukawa-order fix (commit 6bfad766, 2026-07-16T22:02:42-04:00) by ~2 months; every width/BR/ctau value in the lake is pre-correction and excluded per task instructions"
-    }
-  ],
-  "gate_counts_basis": "dihiggs.point.v2 (docs/pilots/dihiggs_point_v2_v1/*.csv, 5 files / 6 rows); the dihiggs.lambda1.v2 cross-check's 'ordering' row is a different physical point (different input parameterization) and is not pooled into this count -- see FIRST_H2_RECAST_CANDIDATE.md",
-  "gate_counts": {
-    "post_yukawa_fix_h2_candidate_rows_found": 6,
-    "construction_ok": 4,
-    "theory_ok_v1_after_construction_ok": 2,
-    "excluded_as_L06": 1,
-    "eligible_after_L06_exclusion": 1,
-    "eligible_with_LLP_scale_lifetime": 0
-  },
-  "known_limitations": [
-    "The only post-Yukawa-fix data available in this repository prior to the bounded scan were 5 small engineering-pilot anchor rows (docs/pilots/dihiggs_point_v2_v1/*, docs/pilots/lambda1_v2_yukawa_fix_v1/*), explicitly scoped as 'engineering validation only; no campaign-level scientific conclusion' (docs/verification/dihiggs_point_v2_verification_v1.md).",
-    "The full data lake (119 campaigns under data_lake_dir) predates the Yukawa fix by ~2 months and is invalid for LLP quantities; excluded wholesale from both the existing-data search and the scan.",
-    "None of the corrected pilot rows or scan rows carry sigma_production_fb, required by hep_cross/contracts/model_point_to_llp_recast_v1.yaml; the provisional candidate still needs a production cross section (MadGraph/UFO, out of scope here) before it satisfies the downstream contract.",
-    "The ctau_mm == hbar_c/total_width_GeV invariant was verified (benchmarks/verify_pilot_ctau_invariant.py, PASS, rel_err=0.0) for all 23 width_ok=1 rows across the pilot files and the new scan CSV; this confirms 'reproducible ctau' but does not by itself establish theory validity or LLP-relevant lifetime, which are checked separately.",
-    "Every one of the 15 scanned points has lambda1_residual_warning=1 (lambda1_abs_residual ranging ~2e-9 to ~9e-5, all above the evaluator's 1e-9 warning threshold); this is a numerical round-trip diagnostic in THDM::set_param_phys_lam1's m12_sq/lambda1 reconstruction, not a theory_ok or construction_ok failure, but it is why no point in this grid qualifies as 'clean'."
-  ],
-  "bounded_scan": {
-    "runner": "benchmarks/run_first_h2_bounded_scan.py",
-    "canonical_output_csv": "benchmarks/first_h2_bounded_scan.csv",
-    "manifest": "benchmarks/first_h2_bounded_scan_manifest.json",
-    "evaluator_binary": "dihiggs/app/Lambda1EvaluatorV2",
-    "evaluator_schema": "dihiggs.lambda1.v2",
-    "grid": "mH_gev in {150,200,250} x tan_beta in {1e4,3e4,1e5,3e5,1e6}, mA_gev=mHp_gev=mH_gev+300, mh_gev=125.13, sin_beta_minus_alpha=1.0, lambda1_target=1.0, lambda6_input=1e-10, lambda7_input=0.0, Type I",
-    "max_points": 15,
-    "points_evaluated": 15,
-    "stop_reason": "exhausted_grid (no clean candidate found)",
-    "classification_counts": {"clean": 0, "provisional": 6, "rejected": 9},
-    "classification_criteria": {
-      "clean": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=0",
-      "provisional": "theory_ok=1 and width_ok=1 and 1<=ctau_mm<=1e4 and br_bb>0.05 and lambda1_residual_warning=1",
-      "rejected": "fails theory_ok, width_ok, the ctau window, or the br_bb threshold"
-    },
-    "lifetime_scaling_confirmed": "1/tan_beta^2 scaling holds across all four tan_beta ratios checked (3x, 10x, 30x, 100x relative to 1e4 give ~9x, ~100x, ~900x, ~10000x ctau_mm increases respectively)"
-  },
+  "status": "PROVISIONAL_UNFROZEN_H2_CANDIDATE",
+  "status_reason": "The bounded scan found an LLP-scale, theory-valid H2 candidate, but the scan-runner provenance recorded in the original manifest is not reproducible and the prior numerical-channel classifications used perturbations far larger than the double-representation scale. Both items require rerun before downstream promotion.",
   "selected_candidate": {
     "point_id": "H2scan_mH150_tb300000",
     "source_row": "benchmarks/first_h2_bounded_scan.csv",
-    "producer_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
-    "producer_dirty": "no",
     "m_H2_GeV": 150.0,
     "mA_GeV": 450.0,
     "mHp_GeV": 450.0,
     "sin_beta_minus_alpha": 1.0,
-    "tan_beta": 3.0e5,
+    "tan_beta": 300000.0,
     "lambda1_target": 1.0,
-    "lambda6_input": 1.0e-10,
+    "lambda6_input": 1e-10,
     "lambda7_input": 0.0,
     "yukawa_type": "Type I",
     "construction_ok": 1,
     "theory_ok": 1,
     "width_ok": 1,
-    "total_width_GeV": 4.56118529862185007e-14,
-    "ctau_mm": 4.32622152973311191e+00,
-    "br_bb": 7.56737485808578692e-01,
-    "br_gammagamma": 2.65792941770435500e-04,
-    "br_Zgamma": 2.04915508605281493e-05,
-    "br_tautau": 7.56506563863697107e-02,
-    "br_cc": 3.38801335137231124e-02,
-    "br_gg": 1.32901948624741001e-01,
-    "br_WW": 0.0,
-    "br_ZZ": 0.0,
-    "lambda1_abs_residual": 9.34182041500974947e-07,
+    "total_width_GeV": 4.56118529862185e-14,
+    "ctau_mm": 4.326221529733112,
+    "br_bb": 0.7567374858085787,
+    "br_gammagamma": 0.0002657929417704355,
+    "br_Zgamma": 0.00002049155086052815,
+    "lambda1_abs_residual": 9.34182041500975e-7,
     "lambda1_residual_warning": 1,
-    "sigma_production_fb": "pending",
-    "reason_for_selection": "First point reached in scan priority order; best br_bb (0.757) and smallest lambda1_abs_residual (9.34e-07) among the three tan_beta=3e5 points; ctau_mm=4.33 sits well inside the 1-1e4 mm window rather than near an edge.",
-    "reason_not_clean": "lambda1_residual_warning=1 (residual ~900x the evaluator's 1e-9 warning threshold), reflecting degraded set_param_phys_lam1 round-trip precision at this tan_beta, not a theory or construction failure.",
-    "required_numerical_check": "COMPLETE (see numerical_stability_check below): independently constructed via THDM::set_param_phys with an m12_2 computed from 2HDMC's own closed-form lambda1-inversion formula, bypassing set_param_phys_lam1's round-trip entirely.",
-    "known_limitations": [
-      "Not yet promotable to a clean/final benchmark overall: numerical_stability_check below classifies br_gammagamma/br_Zgamma as NUMERICALLY_UNRESOLVED, so the global status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK. The H2->bb DV+jets recast inputs (total_width_gev, ctau_mm, br_bb) are separately classified VALID_FOR_FIRST_BB_RECAST -- see channel_validity above.",
-      "total_width_gev, ctau_mm, and br_bb (the quantities the proposed H2->bb DV+jets recast consumes) are independently confirmed numerically robust (<0.002% variation across the entire theory-valid m12_2 window at this point); the open instability is confined to br_gammagamma/br_Zgamma, a channel this recast does not use.",
-      "sigma_production_fb is pending; requires MadGraph/UFO generation, not performed here.",
-      "DV+jets is a candidate first recast channel given br_bb=0.757, not a claimed final publication channel."
-    ]
+    "sigma_production_fb": "pending"
   },
-  "numerical_stability_check": {
-    "artifacts": [
-      "benchmarks/check_H2scan_mH150_tb300000.py",
-      "benchmarks/check_H2scan_mH150_tb300000.cpp",
-      "benchmarks/H2scan_mH150_tb300000_numerical_check.csv",
-      "benchmarks/H2scan_mH150_tb300000_numerical_check.md"
-    ],
-    "method": "Independent construction via THDM::set_param_phys (never set_param_phys_lam1) with m12_2 recomputed from 2HDMC's own closed-form lambda1-inversion formula (2hdmc/src/THDM.cpp), reproduced bit-for-bit as a baseline (0.0 relative difference from the canonical row), then probed at m12_2 offsets of order 1e-12 GeV^2 (the scale set by the analytic sensitivity d(lambda1)/d(m12_2)=4.4536e11 GeV^-2 at this point) to map the theory-valid window and the stability of physical outputs within it. No 2HDMC source modified; Yukawa convention (set_yukawas_type(1)) unchanged; no other mass or tan_beta point scanned.",
-    "reproduction_max_relative_difference": "0.0",
-    "theory_valid_m12_2_window_gev2": "approximately +/-1e-12 around 7.49999999996479594e-02 (lambda1_reconstructed ranges ~0.55-1.45 within this window; theory_ok fails by an offset of +/-1e-11)",
-    "spread_across_theory_valid_window": {
-      "total_width_gev": "1.5905e-05",
-      "ctau_mm": "1.5905e-05",
-      "br_bb": "1.5905e-05",
-      "br_tautau": "1.5905e-05",
-      "br_gg": "1.5905e-05",
-      "br_gammagamma": "5.4182e-02",
-      "br_Zgamma": "9.5911e-02"
+  "bounded_scan": {
+    "runner": "benchmarks/run_first_h2_bounded_scan.py",
+    "output_csv": "benchmarks/first_h2_bounded_scan.csv",
+    "manifest": "benchmarks/first_h2_bounded_scan_manifest.json",
+    "reported_points": 15,
+    "reported_classification_counts": {
+      "clean": 0,
+      "provisional": 6,
+      "rejected": 9
     },
-    "classification": "NUMERICALLY_UNRESOLVED",
-    "classification_reason": "br_Zgamma varies by 9.59% and br_gammagamma by 5.42% across the theory-valid m12_2 window (both exceed the 5% threshold). total_width_gev, ctau_mm, and br_bb vary by only 0.0016% over the same window and are not the unstable quantities.",
-    "classification_is_global_and_not_channel_scoped": "The single 'classification' field above reflects the worst-case channel (gammagamma/Zgamma) and predates the channel-scoped split. See top-level channel_validity for the per-channel record: bb_dvjets=VALID_FOR_FIRST_BB_RECAST, gammagamma=NUMERICALLY_UNRESOLVED, Zgamma=NUMERICALLY_UNRESOLVED.",
-    "unstable_quantities": ["br_gammagamma", "br_Zgamma"],
-    "stable_quantities": ["total_width_gev", "ctau_mm", "br_bb", "br_tautau", "br_gg"],
-    "root_cause": "lambda1 (and lambda3, which enters the charged-Higgs-mediated loop widths for h->gammagamma/Zgamma) depends on m12_2 with slope tan_beta/(v^2*cos^2(beta)) = 4.4536e11 GeV^-2 at this (m_H2=150 GeV, tan_beta=3e5) point; double precision's ~1.7e-17 absolute resolution near m12_2=0.075 GeV^2 is amplified into an O(1e-6) floor on lambda1_abs_residual and an O(1) ambiguity in lambda1 within the theory-valid window. Tree-level Yukawa-driven widths (bb, tautau, cc, gg) do not depend on lambda1/lambda3 and are unaffected; the loop-induced gammagamma/Zgamma partial widths do.",
-    "downstream_h2h2_4b_generation": "diphoton/Zgamma-sensitive downstream work should not proceed on this point until the PI decision below is resolved; the H2->bb DV+jets recast inputs (total_width_gev/ctau_mm/br_bb) are independently confirmed numerically robust and are classified VALID_FOR_FIRST_BB_RECAST (see top-level channel_validity)"
+    "recorded_evaluator_commit": "38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151",
+    "runner_provenance_status": "INVALIDATED_REQUIRES_CLEAN_RERUN",
+    "runner_provenance_issue": "The original runner excluded the entire benchmarks/ directory from git dirtiness tracking, so the manifest could report producer_dirty=no even though the runner, grid, and constants were not present in the recorded commit.",
+    "interpretation": "The existing CSV remains evidence of the reported evaluator outputs, but it is not a frozen, reproducible candidate-selection campaign until regenerated with manifest v2 from a clean commit."
   },
-  "next_required_generation_step": "1) PI sign-off on the channel-scoped classification above (bb_dvjets=VALID_FOR_FIRST_BB_RECAST, gammagamma/Zgamma=NUMERICALLY_UNRESOLVED); 2) generate sigma_production_fb via MadGraph/UFO for this exact point and package the bb_dvjets-valid quantities (total_width_gev/ctau_mm/br_bb) against hep_cross/contracts/model_point_to_llp_recast_v1.yaml for the first H2->bb recast; the gammagamma/Zgamma instability does not need to be resolved before this proceeds."
+  "numerical_representation_check": {
+    "runner": "benchmarks/check_H2scan_mH150_tb300000.py",
+    "status": "PENDING_CORRECTED_ULP_RERUN",
+    "withdrawn_method": "The prior check perturbed m12_2 by approximately 1e-12 GeV^2, which changes reconstructed lambda1 by order one and compares different physical models rather than numerical representations of lambda1_target=1.",
+    "corrected_method": "Reproduce the exact center and evaluate math.nextafter(center, -inf) and math.nextafter(center, +inf), while reporting the half-ULP propagated lambda1 error bound.",
+    "withdrawn_classifications": [
+      "VALID_FOR_FIRST_BB_RECAST",
+      "NUMERICALLY_UNRESOLVED for gamma gamma",
+      "NUMERICALLY_UNRESOLVED for Z gamma"
+    ],
+    "channel_validity": {
+      "bb_dvjets": "PENDING_CORRECTED_ULP_RERUN",
+      "gammagamma": "PENDING_CORRECTED_ULP_RERUN",
+      "Zgamma": "PENDING_CORRECTED_ULP_RERUN"
+    }
+  },
+  "allowed_current_claim": "H2scan_mH150_tb300000 is the leading provisional candidate from the reported bounded scan, with detector-scale lifetime and dominant bb branching ratio. It is not yet a frozen benchmark and is not cleared for downstream generation or recast.",
+  "next_required_steps": [
+    "Commit the corrected scan runner and numerical checker.",
+    "Archive the current CSV/manifest and rerun the 15-point scan from a clean commit so manifest v2 records the runner and evaluator source hashes.",
+    "Run the corrected adjacent-representable-value numerical check and regenerate its CSV/Markdown artifacts.",
+    "Update this record with evidence-backed channel validity only after both reruns pass.",
+    "Generate sigma_production_fb with the validated UFO/MadGraph workflow before normalization or paper use."
+  ]
 }
