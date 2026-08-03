@@ -41,17 +41,35 @@ for those channels. Production normalization remains pending MadGraph.
 ## Soft scale export
 
 All soft-scale values are in `GeV²` and were derived from the selected fresh
-CSV row, not hardcoded.
+numerical-check construction center. The round-trip readback is retained only
+as a diagnostic.
 
 | Field | Value |
 |---|---:|
-| `source_soft_scale_field` | `m12_sq_reconstructed_gev2` |
-| `source_soft_scale_value` | `0.07499975253962432` |
-| `m12_sq_GeV2` | `0.07499975253962432` |
-| `M2_GeV2` | `22499.925761493243` |
+| `m12_sq_construction_GeV2` | `7.49999999996479594e-02` |
+| `M2_construction_GeV2` | `2.24999999995003345e+04` |
+| `m12_sq_roundtrip_reconstructed_GeV2` | `7.49997525396243203e-02` |
+| `m12_sq_roundtrip_delta_GeV2` | `-2.47460023639067828e-07` |
+| `m12_sq_roundtrip_relative_difference` | `3.29946698186972485e-06` |
+| `soft_scale_export_status` | `VALIDATED_BY_SET_PARAM_PHYS_REPLAY` |
 | `soft_scale_relation` | `m12_sq = M2 * sin(beta) * cos(beta)` |
 | `beta` | `atan(tan_beta)` |
-| `soft_scale_consistency_relative_error` | `0.0` |
+
+`m12_sq_roundtrip_reconstructed_GeV2` is diagnostic only and must not be used
+as the downstream physical construction input.
+
+The replay gate uses the existing independent `set_param_phys` checker and
+requires `lambda1_reconstructed` plus `total_width`, `ctau`, `br_bb`,
+`br_gammagamma`, and `br_Zgamma` to reproduce the canonical row. The declared
+absolute `lambda1` residual tolerance is `1e-6`:
+
+| Replay field | Value |
+|---|---:|
+| `lambda1_target` | `1.00000000000000000e+00` |
+| `lambda1_reconstructed` | `1.00000093418204150e+00` |
+| `lambda1_abs_residual` | `9.34182041500974947e-07` |
+| `lambda1_abs_residual_tolerance` | `1.00000000000000000e-06` |
+| maximum observable relative difference | `0.00000000000000000e+00` |
 
 ## Fresh scan provenance
 

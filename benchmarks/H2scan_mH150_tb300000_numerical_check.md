@@ -3,6 +3,23 @@
 This check uses only the exact `m12_2` double and its immediately adjacent representable values.
 The previous `1e-12 GeV^2` offsets changed reconstructed `lambda1` by order one and therefore compared different physical models; their channel classifications are withdrawn.
 
+- construction `m12_sq`: `7.49999999996479594e-02` GeV^2
+- construction `M2`: `2.24999999995003345e+04` GeV^2
+- round-trip reconstructed `m12_sq`: `7.49997525396243203e-02` GeV^2
+- round-trip delta: `-2.47460023639067828e-07` GeV^2
+- round-trip relative difference: `3.29946698186972485e-06`
+- the round-trip reconstructed value is diagnostic only and must not be used as the downstream physical construction input.
+
+## Soft-scale export gate
+
+- `soft_scale_export_status`: `VALIDATED_BY_SET_PARAM_PHYS_REPLAY`
+- replay `lambda1_target`: `1.00000000000000000e+00`
+- replay `lambda1_reconstructed`: `1.00000093418204150e+00`
+- replay `lambda1` absolute residual: `9.34182041500974947e-07`
+- declared replay `lambda1` absolute residual tolerance: `9.99999999999999955e-07`
+- maximum replay observable relative difference: `0.00000000000000000e+00` in `total_width_gev`
+- replay gate fields: `total_width_gev`, `ctau_mm`, `br_bb`, `br_gammagamma`, `br_Zgamma`, and `lambda1_reconstructed`.
+
 - center: `7.49999999996479594e-02` GeV^2
 - one ULP: `1.38777878078144568e-17` GeV^2
 - propagated half-ULP `lambda1` bound: `3.09033350026551164e-06`

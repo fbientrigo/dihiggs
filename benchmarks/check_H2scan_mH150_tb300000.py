@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check double-representation stability of H2scan_mH150_tb300000.
+"""Check the H2 construction coordinate and double-representation stability.
 
 Only the exact m12_2 value produced by set_param_phys_lam1 and its immediately
 adjacent representable doubles are compared. Wider offsets change reconstructed
@@ -22,7 +22,9 @@ POINT_ID = "H2scan_mH150_tb300000"
 MH, MH2, MA, MHP = 125.13, 150.0, 450.0, 450.0
 SBA, L1, L6, L7, TB, GF = 1.0, 1.0, 1e-10, 0.0, 300000.0, 1.16637e-5
 FIELDS = ("total_width_gev", "ctau_mm", "br_bb", "br_gammagamma", "br_Zgamma", "br_tautau", "br_gg")
+REPLAY_FIELDS = ("total_width_gev", "ctau_mm", "br_bb", "br_gammagamma", "br_Zgamma")
 CENTER_REPRO_REL_TOL = 1e-8
+LAMBDA1_REPLAY_ABS_TOL = 1e-6
 
 
 def faithful_m12_2() -> float:
@@ -39,6 +41,11 @@ def sensitivity() -> float:
     beta = math.atan(TB)
     cb, tb = math.cos(beta), math.tan(beta)
     return tb / ((1.0 / (math.sqrt(2.0) * GF)) * cb**2)
+
+
+def construction_M2(m12_2: float) -> float:
+    beta = math.atan(TB)
+    return m12_2 / (math.sin(beta) * math.cos(beta))
 
 
 def canonical_row() -> dict[str, str]:
@@ -79,6 +86,39 @@ def finite_value(probe: dict[str, str], field: str) -> bool:
         return False
 
 
+def replay_gate(row: dict[str, str], replay: dict[str, str]) -> dict[str, object]:
+    target = float(row["lambda1_target"])
+    reconstructed = float(replay["lambda1_reconstructed"])
+    lambda1_residual = abs(reconstructed - target)
+    observable_reproduction = {
+        key: abs(float(replay[key]) - float(row[key])) / max(abs(float(row[key])), 1e-300)
+        if finite_value(replay, key) and finite_value(row, key) else math.inf
+        for key in REPLAY_FIELDS
+    }
+    max_field = max(observable_reproduction, key=observable_reproduction.get)
+    max_difference = observable_reproduction[max_field]
+    passed = (
+        replay.get("construction_ok") == "1"
+        and replay.get("theory_ok") == "1"
+        and math.isfinite(lambda1_residual)
+        and lambda1_residual <= LAMBDA1_REPLAY_ABS_TOL
+        and all(
+            math.isfinite(value) and value <= CENTER_REPRO_REL_TOL
+            for value in observable_reproduction.values()
+        )
+    )
+    return {
+        "lambda1_target": target,
+        "lambda1_reconstructed": reconstructed,
+        "lambda1_abs_residual": lambda1_residual,
+        "lambda1_abs_residual_tolerance": LAMBDA1_REPLAY_ABS_TOL,
+        "observable_reproduction": observable_reproduction,
+        "maximum_observable_reproduction_relative_difference": max_difference,
+        "maximum_observable_reproduction_field": max_field,
+        "passed": passed,
+    }
+
+
 def main() -> None:
     row = canonical_row()
     compile_checker()
@@ -95,6 +135,15 @@ def main() -> None:
         probes.append(result)
 
     center_result = probes[1]
+    m12_sq_construction = center
+    m12_sq_roundtrip = float(center_result["m12_sq_reconstructed_gev2"])
+    m12_sq_roundtrip_delta = m12_sq_roundtrip - m12_sq_construction
+    m12_sq_roundtrip_relative_difference = abs(m12_sq_roundtrip_delta) / abs(m12_sq_construction)
+    replay = replay_gate(row, center_result)
+    soft_scale_export_status = (
+        "VALIDATED_BY_SET_PARAM_PHYS_REPLAY"
+        if replay["passed"] else "REJECTED_BY_SET_PARAM_PHYS_REPLAY"
+    )
     reproduction = {}
     for key in FIELDS:
         if finite_value(center_result, key) and finite_value(row, key):
@@ -140,6 +189,18 @@ def main() -> None:
     with OUT_CSV.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         writer.writerow(["m12_2_center_gev2", f"{center:.17e}"])
+        writer.writerow(["m12_sq_construction_GeV2", f"{m12_sq_construction:.17e}"])
+        writer.writerow(["M2_construction_GeV2", f"{construction_M2(m12_sq_construction):.17e}"])
+        writer.writerow(["m12_sq_roundtrip_reconstructed_GeV2", f"{m12_sq_roundtrip:.17e}"])
+        writer.writerow(["m12_sq_roundtrip_delta_GeV2", f"{m12_sq_roundtrip_delta:.17e}"])
+        writer.writerow(["m12_sq_roundtrip_relative_difference", f"{m12_sq_roundtrip_relative_difference:.17e}"])
+        writer.writerow(["soft_scale_export_status", soft_scale_export_status])
+        writer.writerow(["lambda1_replay_target", f"{replay['lambda1_target']:.17e}"])
+        writer.writerow(["lambda1_replay_reconstructed", f"{replay['lambda1_reconstructed']:.17e}"])
+        writer.writerow(["lambda1_replay_abs_residual", f"{replay['lambda1_abs_residual']:.17e}"])
+        writer.writerow(["lambda1_replay_abs_residual_tolerance", f"{replay['lambda1_abs_residual_tolerance']:.17e}"])
+        writer.writerow(["maximum_replay_observable_relative_difference", f"{replay['maximum_observable_reproduction_relative_difference']:.17e}"])
+        writer.writerow(["maximum_replay_observable_field", replay["maximum_observable_reproduction_field"]])
         writer.writerow(["m12_2_ulp_gev2", f"{ulp:.17e}"])
         writer.writerow(["rounding_bound_half_ulp_gev2", f"{0.5 * ulp:.17e}"])
         writer.writerow(["abs_dlambda1_dm12_2_per_gev2", f"{slope:.17e}"])
@@ -166,6 +227,20 @@ def main() -> None:
         f"# Numerical representation check: `{POINT_ID}`", "",
         "This check uses only the exact `m12_2` double and its immediately adjacent representable values.",
         "The previous `1e-12 GeV^2` offsets changed reconstructed `lambda1` by order one and therefore compared different physical models; their channel classifications are withdrawn.", "",
+        f"- construction `m12_sq`: `{m12_sq_construction:.17e}` GeV^2",
+        f"- construction `M2`: `{construction_M2(m12_sq_construction):.17e}` GeV^2",
+        f"- round-trip reconstructed `m12_sq`: `{m12_sq_roundtrip:.17e}` GeV^2",
+        f"- round-trip delta: `{m12_sq_roundtrip_delta:.17e}` GeV^2",
+        f"- round-trip relative difference: `{m12_sq_roundtrip_relative_difference:.17e}`",
+        "- the round-trip reconstructed value is diagnostic only and must not be used as the downstream physical construction input.", "",
+        "## Soft-scale export gate", "",
+        f"- `soft_scale_export_status`: `{soft_scale_export_status}`",
+        f"- replay `lambda1_target`: `{replay['lambda1_target']:.17e}`",
+        f"- replay `lambda1_reconstructed`: `{replay['lambda1_reconstructed']:.17e}`",
+        f"- replay `lambda1` absolute residual: `{replay['lambda1_abs_residual']:.17e}`",
+        f"- declared replay `lambda1` absolute residual tolerance: `{replay['lambda1_abs_residual_tolerance']:.17e}`",
+        f"- maximum replay observable relative difference: `{replay['maximum_observable_reproduction_relative_difference']:.17e}` in `{replay['maximum_observable_reproduction_field']}`",
+        "- replay gate fields: `total_width_gev`, `ctau_mm`, `br_bb`, `br_gammagamma`, `br_Zgamma`, and `lambda1_reconstructed`.", "",
         f"- center: `{center:.17e}` GeV^2",
         f"- one ULP: `{ulp:.17e}` GeV^2",
         f"- propagated half-ULP `lambda1` bound: `{slope * 0.5 * ulp:.17e}`", "",
@@ -184,7 +259,18 @@ def main() -> None:
     lines += [f"| {key} | {spreads[key]:.6%} |" for key in FIELDS]
     lines += ["", f"## Classification: `{classification}`", "", f"Maximum spread: `{max_spread:.6%}` in `{max_field}`.", "", "This result addresses double-representation uncertainty only; it does not validate scan provenance, production normalization, detector acceptance, or publication readiness."]
     OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({"classification": classification, "max_spread": max_spread, "max_field": max_field, "all_adjacent_theory_valid": all_theory_valid}, indent=2))
+    print(json.dumps({
+        "classification": classification,
+        "max_spread": max_spread,
+        "max_field": max_field,
+        "all_adjacent_theory_valid": all_theory_valid,
+        "soft_scale_export_status": soft_scale_export_status,
+        "m12_sq_construction_GeV2": m12_sq_construction,
+        "M2_construction_GeV2": construction_M2(m12_sq_construction),
+        "m12_sq_roundtrip_reconstructed_GeV2": m12_sq_roundtrip,
+        "lambda1_reconstructed": replay["lambda1_reconstructed"],
+        "maximum_replay_observable_relative_difference": replay["maximum_observable_reproduction_relative_difference"],
+    }, indent=2))
 
 
 if __name__ == "__main__":
