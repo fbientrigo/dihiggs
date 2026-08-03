@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Check double-representation stability of H2scan_mH150_tb300000.
+
+Only the exact m12_2 value produced by set_param_phys_lam1 and its immediately
+adjacent representable doubles are compared. Wider offsets change reconstructed
+lambda1 and are physical sensitivity tests, not numerical-error estimates.
+"""
+import csv
+import json
+import math
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CPP_SRC = ROOT / "benchmarks/check_H2scan_mH150_tb300000.cpp"
+CPP_BIN = ROOT / "benchmarks/.check_H2scan_mH150_tb300000_bin"
+CANONICAL_CSV = ROOT / "benchmarks/first_h2_bounded_scan.csv"
+OUT_CSV = ROOT / "benchmarks/H2scan_mH150_tb300000_numerical_check.csv"
+OUT_MD = ROOT / "benchmarks/H2scan_mH150_tb300000_numerical_check.md"
+POINT_ID = "H2scan_mH150_tb300000"
+
+MH, MH2, MA, MHP = 125.13, 150.0, 450.0, 450.0
+SBA, L1, L6, L7, TB, GF = 1.0, 1.0, 1e-10, 0.0, 300000.0, 1.16637e-5
+FIELDS = ("total_width_gev", "ctau_mm", "br_bb", "br_gammagamma", "br_Zgamma", "br_tautau", "br_gg")
+
+
+def faithful_m12_2() -> float:
+    beta = math.atan(TB)
+    cb, tb = math.cos(beta), math.tan(beta)
+    alpha = -math.asin(SBA) + beta
+    sa, ca = math.sin(alpha), math.cos(alpha)
+    v2 = 1.0 / (math.sqrt(2.0) * GF)
+    bracket = L1 + 1.5 * L6 * tb - 0.5 * L7 * tb**3
+    return (MH2**2 * ca**2 + MH**2 * sa**2 - v2 * cb**2 * bracket) / tb
+
+
+def sensitivity() -> float:
+    beta = math.atan(TB)
+    cb, tb = math.cos(beta), math.tan(beta)
+    return tb / ((1.0 / (math.sqrt(2.0) * GF)) * cb**2)
+
+
+def canonical_row() -> dict[str, str]:
+    with CANONICAL_CSV.open(newline="", encoding="utf-8") as stream:
+        for row in csv.DictReader(stream):
+            if row["point_id"] == POINT_ID:
+                return row
+    raise SystemExit(f"{POINT_ID} not found in {CANONICAL_CSV}")
+
+
+def compile_checker() -> None:
+    subprocess.run([
+        "g++", "-I", str(ROOT / "2hdmc/src"), "-std=gnu++17", "-O0", "-g",
+        str(CPP_SRC), "-o", str(CPP_BIN), "-L", str(ROOT / "2hdmc/lib"),
+        "-l2HDMC", "-lgsl", "-lgslcblas", "-lm",
+    ], cwd=ROOT, check=True)
+
+
+def evaluate(m12_2: float) -> dict[str, str]:
+    result = subprocess.run([
+        str(CPP_BIN), str(MH), str(MH2), str(MA), str(MHP), str(SBA),
+        str(L6), str(L7), f"{m12_2:.17e}", str(TB),
+    ], cwd=ROOT, check=True, capture_output=True, text=True)
+    values = result.stdout.strip().split(",")
+    if len(values) % 2:
+        raise RuntimeError(f"unexpected checker output: {result.stdout!r}")
+    return dict(zip(values[0::2], values[1::2]))
+
+
+def relative_spread(values: list[float]) -> float:
+    return (max(values) - min(values)) / max(max(abs(v) for v in values), 1e-300)
+
+
+def main() -> None:
+    row = canonical_row()
+    compile_checker()
+    center = faithful_m12_2()
+    points = [
+        ("previous_float", -1, math.nextafter(center, -math.inf)),
+        ("center", 0, center),
+        ("next_float", 1, math.nextafter(center, math.inf)),
+    ]
+    probes = []
+    for name, ulps, value in points:
+        result = evaluate(value)
+        result.update(probe=name, ulp_offset=str(ulps), m12_2_gev2=f"{value:.17e}")
+        probes.append(result)
+
+    center_result = probes[1]
+    reproduction = {
+        key: abs(float(center_result[key]) - float(row[key])) / max(abs(float(row[key])), 1e-300)
+        for key in FIELDS
+    }
+    spreads = {key: relative_spread([float(probe[key]) for probe in probes]) for key in FIELDS}
+    max_field = max(spreads, key=spreads.get)
+    max_spread = spreads[max_field]
+    all_theory_valid = all(probe.get("theory_ok") == "1" for probe in probes)
+    if not all_theory_valid or max_spread > 0.05:
+        classification = "NUMERICALLY_UNRESOLVED"
+    elif max_spread > 0.02:
+        classification = "USABLE_WITH_DECLARED_NUMERICAL_SYSTEMATIC"
+    else:
+        classification = "STABLE_AT_DOUBLE_REPRESENTATION_SCALE"
+
+    ulp = math.ulp(center)
+    slope = sensitivity()
+    with OUT_CSV.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["m12_2_center_gev2", f"{center:.17e}"])
+        writer.writerow(["m12_2_ulp_gev2", f"{ulp:.17e}"])
+        writer.writerow(["rounding_bound_half_ulp_gev2", f"{0.5 * ulp:.17e}"])
+        writer.writerow(["abs_dlambda1_dm12_2_per_gev2", f"{slope:.17e}"])
+        writer.writerow(["lambda1_half_ulp_error_bound", f"{slope * 0.5 * ulp:.17e}"])
+        writer.writerow([])
+        writer.writerow(["probe", "ulp_offset", "m12_2_gev2", "theory_ok", "lambda1_reconstructed", *FIELDS])
+        for probe in probes:
+            writer.writerow([probe["probe"], probe["ulp_offset"], probe["m12_2_gev2"], probe.get("theory_ok"), probe.get("lambda1_reconstructed"), *(probe[key] for key in FIELDS)])
+        writer.writerow([])
+        writer.writerow(["field", "center_reproduction_relative_difference", "adjacent_float_relative_spread"])
+        for key in FIELDS:
+            writer.writerow([key, f"{reproduction[key]:.17e}", f"{spreads[key]:.17e}"])
+        writer.writerow(["classification", classification])
+
+    lines = [
+        f"# Numerical representation check: `{POINT_ID}`", "",
+        "This check uses only the exact `m12_2` double and its immediately adjacent representable values.",
+        "The previous `1e-12 GeV^2` offsets changed reconstructed `lambda1` by order one and therefore compared different physical models; their channel classifications are withdrawn.", "",
+        f"- center: `{center:.17e}` GeV^2",
+        f"- one ULP: `{ulp:.17e}` GeV^2",
+        f"- propagated half-ULP `lambda1` bound: `{slope * 0.5 * ulp:.17e}`", "",
+        "| Probe | ULP | theory_ok | lambda1 | total_width_gev | ctau_mm | br_bb | br_gammagamma | br_Zgamma |",
+        "|---|---:|:-:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for probe in probes:
+        lines.append(f"| {probe['probe']} | {probe['ulp_offset']} | {probe.get('theory_ok')} | {probe.get('lambda1_reconstructed')} | {probe.get('total_width_gev')} | {probe.get('ctau_mm')} | {probe.get('br_bb')} | {probe.get('br_gammagamma')} | {probe.get('br_Zgamma')} |")
+    lines += ["", "| Field | Adjacent-float relative spread |", "|---|---:|"]
+    lines += [f"| {key} | {spreads[key]:.6%} |" for key in FIELDS]
+    lines += ["", f"## Classification: `{classification}`", "", f"Maximum spread: `{max_spread:.6%}` in `{max_field}`.", "", "This result addresses double-representation uncertainty only; it does not validate scan provenance, production normalization, detector acceptance, or publication readiness."]
+    OUT_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(json.dumps({"classification": classification, "max_spread": max_spread, "max_field": max_field, "all_adjacent_theory_valid": all_theory_valid}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
