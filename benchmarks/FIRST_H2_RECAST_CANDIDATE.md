@@ -7,10 +7,15 @@ then executed with the canonical corrected evaluator and found six points with
 theory-valid, finite-width, LLP-scale lifetimes — but every one of them carries
 `lambda1_residual_warning = 1`, so none qualifies as a *clean* candidate. The
 best of the six, `H2scan_mH150_tb300000`, is recorded as a provisional
-numerical candidate pending a numerical-stability review. See
-`benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the machine-readable record and
-`benchmarks/first_h2_bounded_scan.csv` / `first_h2_bounded_scan_manifest.json`
-for the full scan output.
+numerical candidate. An independent numerical-stability check (see "Part 2 —
+Numerical-stability check" below) has since been completed and classifies it
+`NUMERICALLY_UNRESOLVED`: `total_width_gev`/`ctau_mm`/`br_bb` — the quantities
+the proposed `H2->bb` DV+jets recast consumes — are confirmed stable to
+~0.0016%, but `br_gammagamma`/`br_Zgamma` vary by 5.4%/9.6% across the
+theory-valid parameter window, so the candidate stays provisional pending a PI
+decision. See `benchmarks/FIRST_H2_RECAST_CANDIDATE.json` for the
+machine-readable record and `benchmarks/first_h2_bounded_scan.csv` /
+`first_h2_bounded_scan_manifest.json` for the full scan output.
 
 - Base commit evaluated (Part 1, existing-data search): `27817ab156c23546117c93f1584dd4aa766f4850` (`main`)
 - Scan producer commit (Part 2): `38c9cbd73d388e82ee4c4f3dcf8b25e4894ea151`, `evaluator_dirty=no`
@@ -340,26 +345,65 @@ construction failure — `theory_ok=1` and `construction_ok=1` are unaffected.
 Promoting a point with this residual to "clean" would risk overstating the
 precision of its width/lifetime/BR values downstream.
 
-**Numerical stability check required before promotion to clean:** rerun this
-exact point (or a nearby one) through an independent high-precision path —
-e.g. `THDM::set_param_phys` with a directly supplied `m12_sq` derived
-analytically from `lambda1_target` at this `tan_beta`, rather than 2HDMC's
-internal iterative round-trip, or a bisection/Newton refinement in
-`lambda1_target` with a tighter tolerance than 2HDMC's default — and confirm
-the width/`ctau_mm`/`br_bb` values are stable to the precision the downstream
-recast needs. This is a numerical-verification task on the existing point, not
-a new physics scan, and does not require re-deriving Yukawa conventions or
-touching 2HDMC itself.
+## Numerical-stability check: `NUMERICALLY_UNRESOLVED`
+
+The recheck flagged above has been completed. Method: `THDM::set_param_phys`
+was called directly (bypassing `set_param_phys_lam1` and its lambda1
+round-trip entirely) with an `m12_2` recomputed in double precision from
+2HDMC's own closed-form lambda1-inversion formula
+(`2hdmc/src/THDM.cpp::set_param_phys_lam1`), via a small standalone C++
+program, `benchmarks/check_H2scan_mH150_tb300000.cpp`, driven by
+`benchmarks/check_H2scan_mH150_tb300000.py`. This reproduces the canonical
+row bit-for-bit (0.0 relative difference) when fed the identical `m12_2` —
+confirming the reimplementation is faithful — then probes `m12_2` at offsets
+of order `1e-12 GeV^2` (the scale set by the analytic sensitivity
+`d(lambda1)/d(m12_2) = tan_beta/(v^2 cos^2(beta)) = 4.4536e11 GeV^-2` at this
+point) to map the theory-valid window and the stability of the physical
+outputs within it. No 2HDMC source was modified, the Yukawa convention was
+unchanged, and no other mass or `tan_beta` point was scanned.
+
+Findings:
+
+- The theory-valid (`positivity_ok`/`unitarity_ok`/`perturbativity_ok`)
+  window in `m12_2` at this exact point is only a few times `1e-12 GeV^2`
+  wide; `lambda1_reconstructed` itself ranges from about 0.55 to 1.45 across
+  that window (it is not pinned to 1.0 by theory-validity alone) — this,
+  amplified by the huge sensitivity coefficient above, is the root cause of
+  `lambda1_residual_warning=1`, and is not a fixable bug in
+  `set_param_phys_lam1`.
+- Within that theory-valid window, **`total_width_gev`, `ctau_mm`, `br_bb`,
+  `br_tautau`, and `br_gg` vary by only ~0.0016%** — they are dominated by
+  tree-level Yukawa-driven fermionic widths, which do not depend on
+  `lambda1`/`lambda3`.
+- **`br_gammagamma` (5.42%) and `br_Zgamma` (9.59%) vary by more than the 5%
+  `NUMERICALLY_UNRESOLVED` threshold** across the same window — these
+  loop-induced, charged-Higgs-mediated channels are directly sensitive to
+  `lambda3`, which shares `lambda1`'s `m12_2`-linear dependence.
+
+**Unstable quantities: `br_gammagamma`, `br_Zgamma` only.** `total_width_gev`,
+`ctau_mm`, and `br_bb` — the only quantities the proposed `H2->bb` DV+jets
+recast consumes — are independently confirmed numerically robust at this
+point, regardless of construction path. See
+`benchmarks/H2scan_mH150_tb300000_numerical_check.md` for the full derivation
+and probe table, and `benchmarks/FIRST_H2_RECAST_CANDIDATE.json`'s
+`numerical_stability_check` object for the machine-readable record.
+
+Per the `NUMERICALLY_UNRESOLVED` outcome, the candidate is **not** promoted;
+it remains `PROVISIONAL_NUMERICAL_H2_BENCHMARK`. Downstream `H2 H2 -> 4b`
+generation should not proceed on this point until the PI decision below is
+resolved, even though the width/`ctau_mm`/`br_bb` values themselves are
+numerically robust.
 
 ## Next required step
 
-The provisional candidate `H2scan_mH150_tb300000` needs the numerical-
-stability recheck described above *before* it can be promoted to a clean,
-final benchmark. Once (if) it passes that check, the next step is unchanged
-from the original plan: generate `sigma_production_fb` via MadGraph/UFO for
-this exact `(m_H2, tan_beta, sin(β-α), Type I)` point and package the result
-against `hep_cross/contracts/model_point_to_llp_recast_v1.yaml`. Neither step
-was performed here (both are out of scope for this task).
+1. PI decision on whether the `br_gammagamma`/`br_Zgamma` instability blocks
+   use of this point, given that `total_width_gev`/`ctau_mm`/`br_bb` — the
+   only quantities the proposed `H2->bb` DV+jets recast consumes — are
+   independently confirmed stable (see "Unresolved decisions" below).
+2. If cleared, generate `sigma_production_fb` via MadGraph/UFO for this exact
+   `(m_H2, tan_beta, sin(β-α), Type I)` point and package the result against
+   `hep_cross/contracts/model_point_to_llp_recast_v1.yaml`. Not performed here
+   (out of scope for this task).
 
 ## Files added
 
@@ -373,6 +417,15 @@ was performed here (both are out of scope for this task).
   rows)
 - `benchmarks/first_h2_bounded_scan_manifest.json` (grid declaration,
   producer provenance, classification counts, stop reason)
+- `benchmarks/check_H2scan_mH150_tb300000.cpp` (one-use standalone C++
+  program: constructs the model via `THDM::set_param_phys` directly, given an
+  externally supplied `m12_2`)
+- `benchmarks/check_H2scan_mH150_tb300000.py` (one-use driver: recomputes
+  `m12_2` from 2HDMC's closed-form formula, compiles/runs the `.cpp` checker,
+  probes the theory-valid window, writes the two artifacts below)
+- `benchmarks/H2scan_mH150_tb300000_numerical_check.csv` /
+  `.md` (numerical-stability check results: reproduction check, sensitivity
+  probe table, classification)
 
 No existing C++ or physics code was touched; no Yukawa convention changed; no
 MadGraph/Pythia generation was run; `dihiggs/app/Lambda1EvaluatorV2` and
@@ -381,13 +434,20 @@ artifacts, gitignored, not committed).
 
 ## Unresolved decisions for PI input
 
-1. Whether `lambda1_abs_residual ~ 9.3e-07` at `tan_beta=3e5` is acceptable
-   for this benchmark's intended use, or whether the numerical-stability
-   recheck must complete before any downstream (MadGraph/recast) work starts.
+1. Whether the `br_gammagamma`/`br_Zgamma` instability found by the
+   numerical-stability check (5.4%/9.6% variation across the theory-valid
+   `m12_2` window) is acceptable to proceed with MadGraph/UFO generation for
+   `total_width_gev`/`ctau_mm`/`br_bb`, which are themselves independently
+   confirmed stable to ~0.0016% — or whether `NUMERICALLY_UNRESOLVED` must
+   block all downstream work on this point regardless of which quantities are
+   affected.
 2. Whether to search other suppression mechanisms (e.g. moving slightly off
    exact alignment, or a different mass splitting) instead of pushing
    `tan_beta` further, given that **every** point in this 15-point grid
-   already exceeds the evaluator's residual-warning threshold.
+   already exceeds the evaluator's residual-warning threshold, and that the
+   underlying cause (a ~1e-12 GeV^2-wide theory-valid `m12_2` window at large
+   `tan_beta`) is intrinsic to the `lambda1`-input parameterization at this
+   corner of parameter space, not a fixable implementation bug.
 3. Whether `1 mm <= ctau_mm <= 1e4 mm` is the right operational LLP-scale
    window for "population of the recast selections," or whether the
    `llp_recast`/DV+jets validation contract already fixes a narrower

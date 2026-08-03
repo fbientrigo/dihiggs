@@ -122,12 +122,39 @@
     "sigma_production_fb": "pending",
     "reason_for_selection": "First point reached in scan priority order; best br_bb (0.757) and smallest lambda1_abs_residual (9.34e-07) among the three tan_beta=3e5 points; ctau_mm=4.33 sits well inside the 1-1e4 mm window rather than near an edge.",
     "reason_not_clean": "lambda1_residual_warning=1 (residual ~900x the evaluator's 1e-9 warning threshold), reflecting degraded set_param_phys_lam1 round-trip precision at this tan_beta, not a theory or construction failure.",
-    "required_numerical_check": "Re-verify total_width_gev/ctau_mm/br_bb via an independent high-precision path (e.g. analytically-derived m12_sq instead of the iterative lambda1 round-trip, or a tighter-tolerance refinement) before promoting to a clean benchmark.",
+    "required_numerical_check": "COMPLETE (see numerical_stability_check below): independently constructed via THDM::set_param_phys with an m12_2 computed from 2HDMC's own closed-form lambda1-inversion formula, bypassing set_param_phys_lam1's round-trip entirely.",
     "known_limitations": [
-      "Not yet promotable to a clean/final benchmark pending the numerical-stability check above.",
+      "Not yet promotable to a clean/final benchmark: numerical_stability_check below classifies as NUMERICALLY_UNRESOLVED (br_gammagamma/br_Zgamma unstable), so status remains PROVISIONAL_NUMERICAL_H2_BENCHMARK, not VALID_FOR_FIRST_RECAST.",
+      "total_width_gev, ctau_mm, and br_bb (the quantities the proposed H2->bb DV+jets recast consumes) are independently confirmed numerically robust (<0.002% variation across the entire theory-valid m12_2 window at this point); the open instability is confined to br_gammagamma/br_Zgamma, a channel this recast does not use, but the PI has not yet signed off (see Unresolved decisions).",
       "sigma_production_fb is pending; requires MadGraph/UFO generation, not performed here.",
       "DV+jets is a candidate first recast channel given br_bb=0.757, not a claimed final publication channel."
     ]
   },
-  "next_required_generation_step": "1) Complete the numerical-stability recheck on H2scan_mH150_tb300000 described in selected_candidate.required_numerical_check; 2) if it passes, generate sigma_production_fb via MadGraph/UFO for this exact point and package it against hep_cross/contracts/model_point_to_llp_recast_v1.yaml. Neither step was performed by this task."
+  "numerical_stability_check": {
+    "artifacts": [
+      "benchmarks/check_H2scan_mH150_tb300000.py",
+      "benchmarks/check_H2scan_mH150_tb300000.cpp",
+      "benchmarks/H2scan_mH150_tb300000_numerical_check.csv",
+      "benchmarks/H2scan_mH150_tb300000_numerical_check.md"
+    ],
+    "method": "Independent construction via THDM::set_param_phys (never set_param_phys_lam1) with m12_2 recomputed from 2HDMC's own closed-form lambda1-inversion formula (2hdmc/src/THDM.cpp), reproduced bit-for-bit as a baseline (0.0 relative difference from the canonical row), then probed at m12_2 offsets of order 1e-12 GeV^2 (the scale set by the analytic sensitivity d(lambda1)/d(m12_2)=4.4536e11 GeV^-2 at this point) to map the theory-valid window and the stability of physical outputs within it. No 2HDMC source modified; Yukawa convention (set_yukawas_type(1)) unchanged; no other mass or tan_beta point scanned.",
+    "reproduction_max_relative_difference": "0.0",
+    "theory_valid_m12_2_window_gev2": "approximately +/-1e-12 around 7.49999999996479594e-02 (lambda1_reconstructed ranges ~0.55-1.45 within this window; theory_ok fails by an offset of +/-1e-11)",
+    "spread_across_theory_valid_window": {
+      "total_width_gev": "1.5905e-05",
+      "ctau_mm": "1.5905e-05",
+      "br_bb": "1.5905e-05",
+      "br_tautau": "1.5905e-05",
+      "br_gg": "1.5905e-05",
+      "br_gammagamma": "5.4182e-02",
+      "br_Zgamma": "9.5911e-02"
+    },
+    "classification": "NUMERICALLY_UNRESOLVED",
+    "classification_reason": "br_Zgamma varies by 9.59% and br_gammagamma by 5.42% across the theory-valid m12_2 window (both exceed the 5% threshold). total_width_gev, ctau_mm, and br_bb vary by only 0.0016% over the same window and are not the unstable quantities.",
+    "unstable_quantities": ["br_gammagamma", "br_Zgamma"],
+    "stable_quantities": ["total_width_gev", "ctau_mm", "br_bb", "br_tautau", "br_gg"],
+    "root_cause": "lambda1 (and lambda3, which enters the charged-Higgs-mediated loop widths for h->gammagamma/Zgamma) depends on m12_2 with slope tan_beta/(v^2*cos^2(beta)) = 4.4536e11 GeV^-2 at this (m_H2=150 GeV, tan_beta=3e5) point; double precision's ~1.7e-17 absolute resolution near m12_2=0.075 GeV^2 is amplified into an O(1e-6) floor on lambda1_abs_residual and an O(1) ambiguity in lambda1 within the theory-valid window. Tree-level Yukawa-driven widths (bb, tautau, cc, gg) do not depend on lambda1/lambda3 and are unaffected; the loop-induced gammagamma/Zgamma partial widths do.",
+    "downstream_h2h2_4b_generation": "should not proceed on this point until the PI decision below is resolved, even though the width/ctau/br_bb values themselves are independently confirmed numerically robust"
+  },
+  "next_required_generation_step": "1) PI decision on whether the br_gammagamma/br_Zgamma instability (numerical_stability_check.classification=NUMERICALLY_UNRESOLVED) blocks use of this point, given that total_width_gev/ctau_mm/br_bb -- the only quantities the proposed H2->bb DV+jets recast consumes -- are independently confirmed stable; 2) if cleared, generate sigma_production_fb via MadGraph/UFO for this exact point and package it against hep_cross/contracts/model_point_to_llp_recast_v1.yaml."
 }
