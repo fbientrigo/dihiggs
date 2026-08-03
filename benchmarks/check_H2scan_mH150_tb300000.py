@@ -119,6 +119,17 @@ def replay_gate(row: dict[str, str], replay: dict[str, str]) -> dict[str, object
     }
 
 
+def enforce_export_gate(replay: dict[str, object], classification: str) -> None:
+    usable_classifications = {
+        "STABLE_AT_DOUBLE_REPRESENTATION_SCALE",
+        "USABLE_WITH_DECLARED_NUMERICAL_SYSTEMATIC",
+    }
+    if not replay["passed"]:
+        raise SystemExit("soft-scale set_param_phys replay gate failed")
+    if classification not in usable_classifications:
+        raise SystemExit(f"numerical representation gate failed: {classification}")
+
+
 def main() -> None:
     row = canonical_row()
     compile_checker()
@@ -271,6 +282,7 @@ def main() -> None:
         "lambda1_reconstructed": replay["lambda1_reconstructed"],
         "maximum_replay_observable_relative_difference": replay["maximum_observable_reproduction_relative_difference"],
     }, indent=2))
+    enforce_export_gate(replay, classification)
 
 
 if __name__ == "__main__":
