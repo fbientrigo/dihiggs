@@ -54,6 +54,11 @@ def producer_state() -> tuple[str, str]:
     return commit, "no"
 
 
+def clean_build() -> None:
+    for command in BUILD_COMMANDS:
+        subprocess.run(command.split(), cwd=ROOT, check=True)
+
+
 def grid() -> list[dict[str, object]]:
     rows = []
     for tan_beta in TAN_BETAS:
@@ -83,12 +88,13 @@ def write_rows(rows: list[dict[str, str]], fields: list[str]) -> None:
 
 
 def main() -> None:
-    if not BINARY.is_file():
-        raise SystemExit("build dihiggs/app/Lambda1EvaluatorV2 first")
     existing = [rel(path) for path in GENERATED if path.exists()]
     if existing:
         raise SystemExit("refusing to run: fresh scan requires empty generated outputs: " + ", ".join(existing))
     commit, dirty = producer_state()
+    clean_build()
+    if not BINARY.is_file():
+        raise SystemExit("clean build did not produce dihiggs/app/Lambda1EvaluatorV2")
     hashes = {rel(path): sha256(path) for path in PROVENANCE_FILES}
     scan_grid = grid()
     if not LIB2HDMC.is_file():
