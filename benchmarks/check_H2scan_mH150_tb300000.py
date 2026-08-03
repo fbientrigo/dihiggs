@@ -22,6 +22,7 @@ POINT_ID = "H2scan_mH150_tb300000"
 MH, MH2, MA, MHP = 125.13, 150.0, 450.0, 450.0
 SBA, L1, L6, L7, TB, GF = 1.0, 1.0, 1e-10, 0.0, 300000.0, 1.16637e-5
 FIELDS = ("total_width_gev", "ctau_mm", "br_bb", "br_gammagamma", "br_Zgamma", "br_tautau", "br_gg")
+CENTER_REPRO_REL_TOL = 1e-8
 
 
 def faithful_m12_2() -> float:
@@ -71,6 +72,13 @@ def relative_spread(values: list[float]) -> float:
     return (max(values) - min(values)) / max(max(abs(v) for v in values), 1e-300)
 
 
+def finite_value(probe: dict[str, str], field: str) -> bool:
+    try:
+        return math.isfinite(float(probe[field]))
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 def main() -> None:
     row = canonical_row()
     compile_checker()
@@ -87,15 +95,40 @@ def main() -> None:
         probes.append(result)
 
     center_result = probes[1]
-    reproduction = {
-        key: abs(float(center_result[key]) - float(row[key])) / max(abs(float(row[key])), 1e-300)
+    reproduction = {}
+    for key in FIELDS:
+        if finite_value(center_result, key) and finite_value(row, key):
+            reproduction[key] = abs(float(center_result[key]) - float(row[key])) / max(abs(float(row[key])), 1e-300)
+        else:
+            reproduction[key] = math.inf
+    max_reproduction_field = max(reproduction, key=reproduction.get)
+    max_reproduction = reproduction[max_reproduction_field]
+    spreads = {
+        key: relative_spread([float(probe[key]) for probe in probes])
+        if all(finite_value(probe, key) for probe in probes) else math.nan
         for key in FIELDS
     }
-    spreads = {key: relative_spread([float(probe[key]) for probe in probes]) for key in FIELDS}
-    max_field = max(spreads, key=spreads.get)
-    max_spread = spreads[max_field]
+    finite_spreads = {key: value for key, value in spreads.items() if math.isfinite(value)}
+    max_field = max(finite_spreads, key=finite_spreads.get) if finite_spreads else ""
+    max_spread = finite_spreads[max_field] if max_field else math.nan
     all_theory_valid = all(probe.get("theory_ok") == "1" for probe in probes)
-    if not all_theory_valid or max_spread > 0.05:
+    all_values_finite = all(
+        finite_value(probe, key) for probe in [*probes, row] for key in FIELDS
+    )
+    all_relevant_values_physically_valid = all(
+        float(probe["total_width_gev"]) > 0.0
+        and float(probe["ctau_mm"]) > 0.0
+        and all(0.0 <= float(probe[key]) <= 1.0 for key in FIELDS[2:])
+        for probe in [*probes, row]
+    ) if all_values_finite else False
+    center_reproduces = all(math.isfinite(value) and value <= CENTER_REPRO_REL_TOL for value in reproduction.values())
+    if not all_theory_valid:
+        classification = "NON_USABLE_PROBE_THEORY_INVALID"
+    elif not all_values_finite or not all_relevant_values_physically_valid:
+        classification = "NONFINITE_OR_PHYSICALLY_UNUSABLE"
+    elif not center_reproduces:
+        classification = "CENTER_DOES_NOT_REPRODUCE_CANONICAL_ROW"
+    elif max_spread > 0.05:
         classification = "NUMERICALLY_UNRESOLVED"
     elif max_spread > 0.02:
         classification = "USABLE_WITH_DECLARED_NUMERICAL_SYSTEMATIC"
@@ -111,6 +144,14 @@ def main() -> None:
         writer.writerow(["rounding_bound_half_ulp_gev2", f"{0.5 * ulp:.17e}"])
         writer.writerow(["abs_dlambda1_dm12_2_per_gev2", f"{slope:.17e}"])
         writer.writerow(["lambda1_half_ulp_error_bound", f"{slope * 0.5 * ulp:.17e}"])
+        writer.writerow(["center_reproduction_tolerance", f"{CENTER_REPRO_REL_TOL:.17e}"])
+        writer.writerow(["maximum_center_reproduction_relative_difference", f"{max_reproduction:.17e}"])
+        writer.writerow(["maximum_center_reproduction_field", max_reproduction_field])
+        writer.writerow(["all_values_finite", "yes" if all_values_finite else "no"])
+        writer.writerow(["all_relevant_values_physically_valid", "yes" if all_relevant_values_physically_valid else "no"])
+        writer.writerow(["all_adjacent_theory_valid", "yes" if all_theory_valid else "no"])
+        writer.writerow(["adjacent_float_maximum_spread", f"{max_spread:.17e}"])
+        writer.writerow(["adjacent_float_maximum_spread_field", max_field])
         writer.writerow([])
         writer.writerow(["probe", "ulp_offset", "m12_2_gev2", "theory_ok", "lambda1_reconstructed", *FIELDS])
         for probe in probes:
@@ -128,6 +169,12 @@ def main() -> None:
         f"- center: `{center:.17e}` GeV^2",
         f"- one ULP: `{ulp:.17e}` GeV^2",
         f"- propagated half-ULP `lambda1` bound: `{slope * 0.5 * ulp:.17e}`", "",
+        f"- center reproduction tolerance: `{CENTER_REPRO_REL_TOL:.17e}`",
+        f"- maximum center reproduction difference: `{max_reproduction:.17e}` in `{max_reproduction_field}`",
+        f"- all values finite: `{'yes' if all_values_finite else 'no'}`",
+        f"- all relevant values physically valid: `{'yes' if all_relevant_values_physically_valid else 'no'}`",
+        f"- adjacent-float maximum spread: `{max_spread:.17e}` in `{max_field}`",
+        f"- all adjacent probes theory-valid: `{'yes' if all_theory_valid else 'no'}`", "",
         "| Probe | ULP | theory_ok | lambda1 | total_width_gev | ctau_mm | br_bb | br_gammagamma | br_Zgamma |",
         "|---|---:|:-:|---:|---:|---:|---:|---:|---:|",
     ]

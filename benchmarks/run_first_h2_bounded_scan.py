@@ -15,6 +15,13 @@ TMP_IN = ROOT / "benchmarks/.scan_point_input.csv.tmp"
 TMP_OUT = ROOT / "benchmarks/.scan_point_output.csv.tmp"
 GENERATED = (CSV_OUT, MANIFEST, TMP_IN, TMP_OUT)
 PROVENANCE_FILES = (Path(__file__).resolve(), ROOT / "dihiggs/src/Lambda1EvaluatorV2.cpp", ROOT / "dihiggs/src/ReplaySafeOutput.cpp")
+LIB2HDMC = ROOT / "2hdmc/lib/lib2HDMC.a"
+BUILD_COMMANDS = [
+    "make -C 2hdmc clean",
+    "make -C 2hdmc -j2",
+    "make -C dihiggs clean",
+    "make -C dihiggs -j2 app/Lambda1EvaluatorV2",
+]
 
 HEADER = "point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,tan_beta,lambda1_target,lambda6_input,lambda7_input"
 FIXED = {"mh_gev": 125.13, "sin_beta_minus_alpha": 1.0, "lambda1_target": 1.0, "lambda6_input": 1e-10, "lambda7_input": 0.0}
@@ -68,13 +75,6 @@ def classify(row: dict[str, str]) -> tuple[str, str]:
     return "clean", "all scan gates pass"
 
 
-def load_existing() -> list[dict[str, str]]:
-    if not CSV_OUT.exists():
-        return []
-    with CSV_OUT.open(newline="", encoding="utf-8") as stream:
-        return list(csv.DictReader(stream))
-
-
 def write_rows(rows: list[dict[str, str]], fields: list[str]) -> None:
     with CSV_OUT.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields)
@@ -85,47 +85,43 @@ def write_rows(rows: list[dict[str, str]], fields: list[str]) -> None:
 def main() -> None:
     if not BINARY.is_file():
         raise SystemExit("build dihiggs/app/Lambda1EvaluatorV2 first")
+    existing = [rel(path) for path in GENERATED if path.exists()]
+    if existing:
+        raise SystemExit("refusing to run: fresh scan requires empty generated outputs: " + ", ".join(existing))
     commit, dirty = producer_state()
     hashes = {rel(path): sha256(path) for path in PROVENANCE_FILES}
     scan_grid = grid()
-    rows = load_existing()
-    if rows and {(row["evaluator_commit"], row["evaluator_dirty"]) for row in rows} != {(commit, dirty)}:
-        raise SystemExit("existing CSV has different evaluator provenance; archive CSV/manifest and rerun from scratch")
+    if not LIB2HDMC.is_file():
+        raise SystemExit(f"linked 2HDMC archive not found: {rel(LIB2HDMC)}")
 
-    fields = list(rows[0].keys()) if rows else None
-    done = {row["point_id"] for row in rows}
-    clean = next((row for row in rows if row.get("classification") == "clean"), None)
-    provisional = next((row for row in rows if row.get("classification") == "provisional"), None)
+    rows: list[dict[str, str]] = []
+    fields = None
+    clean = None
+    provisional = None
     evaluated = 0
-    stop_reason = "clean_candidate_already_found_in_prior_run" if clean else None
+    stop_reason = None
     env = {**os.environ, "DIHIGGS_GIT_COMMIT": commit, "DIHIGGS_GIT_DIRTY": dirty}
 
     try:
-        if not clean:
-            for point in scan_grid:
-                if point["point_id"] in done:
-                    continue
-                values = [point["point_id"], FIXED["mh_gev"], point["mH_gev"], point["mA_gev"], point["mHp_gev"], FIXED["sin_beta_minus_alpha"], point["tan_beta"], FIXED["lambda1_target"], FIXED["lambda6_input"], FIXED["lambda7_input"]]
-                TMP_IN.write_text(HEADER + "\n" + ",".join(map(str, values)) + "\n", encoding="utf-8")
-                subprocess.run([str(BINARY), str(TMP_IN), str(TMP_OUT)], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
-                with TMP_OUT.open(newline="", encoding="utf-8") as stream:
-                    reader = csv.DictReader(stream)
-                    if fields is None:
-                        fields = list(reader.fieldnames or []) + ["scan_priority_index", "scan_mH_gev", "scan_tan_beta", "classification", "classification_reason"]
-                    result = next(reader)
-                result["scan_priority_index"], result["scan_mH_gev"], result["scan_tan_beta"] = point["priority_index"], point["mH_gev"], point["tan_beta"]
-                result["classification"], result["classification_reason"] = classify(result)
-                rows.append(result)
-                done.add(point["point_id"])
-                evaluated += 1
-                write_rows(rows, fields)
-                if result["classification"] == "clean":
-                    clean, stop_reason = result, "clean_candidate_found"
-                    break
-                if result["classification"] == "provisional" and provisional is None:
-                    provisional = result
-            else:
-                stop_reason = "exhausted_grid"
+        for point in scan_grid:
+            values = [point["point_id"], FIXED["mh_gev"], point["mH_gev"], point["mA_gev"], point["mHp_gev"], FIXED["sin_beta_minus_alpha"], point["tan_beta"], FIXED["lambda1_target"], FIXED["lambda6_input"], FIXED["lambda7_input"]]
+            TMP_IN.write_text(HEADER + "\n" + ",".join(map(str, values)) + "\n", encoding="utf-8")
+            subprocess.run([str(BINARY), str(TMP_IN), str(TMP_OUT)], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
+            with TMP_OUT.open(newline="", encoding="utf-8") as stream:
+                reader = csv.DictReader(stream)
+                if fields is None:
+                    fields = list(reader.fieldnames or []) + ["scan_priority_index", "scan_mH_gev", "scan_tan_beta", "classification", "classification_reason"]
+                result = next(reader)
+            result["scan_priority_index"], result["scan_mH_gev"], result["scan_tan_beta"] = point["priority_index"], point["mH_gev"], point["tan_beta"]
+            result["classification"], result["classification_reason"] = classify(result)
+            rows.append(result)
+            evaluated += 1
+            write_rows(rows, fields)
+            if result["classification"] == "clean" and clean is None:
+                clean = result
+            if result["classification"] == "provisional" and provisional is None:
+                provisional = result
+        stop_reason = "exhausted_grid"
     finally:
         TMP_IN.unlink(missing_ok=True)
         TMP_OUT.unlink(missing_ok=True)
@@ -136,8 +132,19 @@ def main() -> None:
         "producer_commit": commit,
         "producer_dirty": dirty,
         "producer_files_sha256": hashes,
+        "execution_mode": "FRESH_FROM_EMPTY_OUTPUT",
+        "resumed_rows": 0,
         "generated_paths_excluded_from_dirty_check": [rel(path) for path in GENERATED],
         "evaluator_binary": rel(BINARY),
+        "build": {
+            "commands": BUILD_COMMANDS,
+            "compiler_version": subprocess.run(["g++", "--version"], check=True, text=True, capture_output=True).stdout.splitlines()[0],
+            "evaluator_binary": rel(BINARY),
+            "evaluator_binary_sha256": sha256(BINARY),
+            "lib2hdmc_path": rel(LIB2HDMC),
+            "lib2hdmc_sha256": sha256(LIB2HDMC),
+            "linkage": "static archive linked by dihiggs/Makefile; ldd has no lib2HDMC.so entry",
+        },
         "evaluator_schema": "dihiggs.lambda1.v2",
         "fixed_parameters": FIXED,
         "mass_relation": "mA_gev = mHp_gev = mH_gev + 300",
