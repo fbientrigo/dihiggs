@@ -7,6 +7,7 @@ Usage: python3 benchmarks/verify_pilot_ctau_invariant.py
 Exits non-zero if any width_ok=1 row violates the invariant beyond rel_tol.
 """
 import csv
+import math
 import sys
 from pathlib import Path
 
@@ -29,12 +30,42 @@ def check_file(repo_root: Path, rel_path: str, width_col: str, ctau_col: str, ok
     checked = 0
     with open(repo_root / rel_path, newline="") as f:
         for row in csv.DictReader(f):
-            if row[ok_col] in ("", "nan") or float(row[ok_col]) != 1.0:
+            try:
+                width_ok = float(row[ok_col])
+            except (TypeError, ValueError):
                 continue
-            width = float(row[width_col])
-            ctau = float(row[ctau_col])
+            if not math.isfinite(width_ok) or width_ok != 1.0:
+                continue
+            try:
+                width = float(row[width_col])
+            except (TypeError, ValueError):
+                failures.append(f"{rel_path}:{row[id_col]} total width is non-finite: {row[width_col]!r}")
+                continue
+            if not math.isfinite(width):
+                failures.append(f"{rel_path}:{row[id_col]} total width is non-finite: {width!r}")
+                continue
+            if width <= 0.0:
+                failures.append(f"{rel_path}:{row[id_col]} total width <= 0: {width!r}")
+                continue
+            try:
+                ctau = float(row[ctau_col])
+            except (TypeError, ValueError):
+                failures.append(f"{rel_path}:{row[id_col]} ctau is non-finite: {row[ctau_col]!r}")
+                continue
+            if not math.isfinite(ctau):
+                failures.append(f"{rel_path}:{row[id_col]} ctau is non-finite: {ctau!r}")
+                continue
+            if ctau <= 0.0:
+                failures.append(f"{rel_path}:{row[id_col]} ctau <= 0: {ctau!r}")
+                continue
             predicted = HBAR_C_GEV_MM / width
+            if not math.isfinite(predicted):
+                failures.append(f"{rel_path}:{row[id_col]} predicted ctau is non-finite: {predicted!r}")
+                continue
             rel_err = abs(predicted - ctau) / ctau
+            if not math.isfinite(rel_err):
+                failures.append(f"{rel_path}:{row[id_col]} relative error is non-finite: {rel_err!r}")
+                continue
             checked += 1
             if rel_err > REL_TOL:
                 failures.append(

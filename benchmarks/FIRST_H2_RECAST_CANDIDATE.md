@@ -1,122 +1,123 @@
-# First H2 LLP recast candidate — corrected review status
+# First H2 benchmark freeze: `H2scan_mH150_tb300000`
 
-## Verdict
+## Scoped verdict
 
-`H2scan_mH150_tb300000` remains the **leading provisional candidate** from the
-reported bounded scan, but it is **not yet a frozen benchmark and is not
-cleared for downstream generation or recast**.
+The fresh 15-point campaign and corrected numerical check pass the scoped
+handoff gate for the first `H2H2 -> 4b` downstream chain.
 
-Two P1 review findings changed the admissible claim:
+| Gate | Result |
+|---|---|
+| `channel_validity.bb_dvjets` | `VALID_FOR_FIRST_BB_RECAST` |
+| `scan_provenance_status` | `VALIDATED` |
+| `numerical_check_status` | `PASS` |
 
-1. The previous numerical check perturbed `m12_2` at approximately
-   `1e-12 GeV^2`. Near `m12_2 ≈ 0.075 GeV^2`, that is about five orders of
-   magnitude larger than one double-precision ULP and changes reconstructed
-   `lambda1` by order one. Those probes compare different physical models,
-   not alternative numerical representations of the fixed
-   `lambda1_target = 1` benchmark.
-2. The scan runner excluded the entire `benchmarks/` directory from its git
-   dirtiness check. Consequently, the v1 manifest could report
-   `producer_dirty = no` even when the runner, grid, and constants were not in
-   the recorded commit. The current scan cannot be reproduced from its
-   manifest alone.
+Numerical stability for `gammagamma` and `Zgamma` is recorded below as a
+representation-scale classification only; it is not downstream authorization
+for those channels. Production normalization remains pending MadGraph.
 
-The previous channel-scoped labels — `VALID_FOR_FIRST_BB_RECAST` and
-`NUMERICALLY_UNRESOLVED` for the loop channels — are therefore withdrawn until
-the corrected checks are rerun.
+## Selected row
 
-## Reported candidate
-
-| Field | Reported value |
+| Field | Value |
 |---|---:|
 | `point_id` | `H2scan_mH150_tb300000` |
-| `m_H2` | `150 GeV` |
-| `mA = mHp` | `450 GeV` |
-| `sin(beta-alpha)` | `1.0` |
-| `tan_beta` | `3e5` |
+| `m_H2_GeV` | `150.0` |
+| `mA_GeV` | `450.0` |
+| `mHp_GeV` | `450.0` |
+| `tan_beta` | `300000.0` |
+| `sin_beta_minus_alpha` | `1.0` |
 | `lambda1_target` | `1.0` |
-| `lambda6`, `lambda7` | `1e-10`, `0.0` |
-| `construction_ok`, `theory_ok`, `width_ok` | `1`, `1`, `1` |
-| `total_width_GeV` | `4.56118529862185e-14` |
-| `ctau_mm` | `4.326221529733112` |
-| `br_bb` | `0.7567374858085787` |
-| `lambda1_abs_residual` | `9.34182041500975e-7` |
+| `lambda6_input` | `1.00000000000000004e-10` |
+| `lambda7_input` | `0.0` |
+| `yukawa_type` | `Type I` |
+| `construction_ok` / `theory_ok` / `width_ok` | `1 / 1 / 1` |
+| `total_width_GeV` | `4.56118529862185007e-14` |
+| `ctau_mm` | `4.32622152973311191` |
+| `br_bb` | `0.756737485808578692` |
+| `br_gammagamma` | `0.0002657929417704355` |
+| `br_Zgamma` | `0.0000204915508605281493` |
+| `lambda1_abs_residual` | `9.34182041500974947e-7` |
 | `lambda1_residual_warning` | `1` |
-| `sigma_production_fb` | pending |
 
-These values are retained as the reported output of the existing CSV. They are
-not promoted to a reproducible campaign result until the clean rerun below.
+## Soft scale export
 
-## Corrected numerical check
+All soft-scale values are in `GeV²` and were derived from the selected fresh
+numerical-check construction center. The round-trip readback is retained only
+as a diagnostic.
 
-`benchmarks/check_H2scan_mH150_tb300000.py` now:
+| Field | Value |
+|---|---:|
+| `m12_sq_construction_GeV2` | `7.49999999996479594e-02` |
+| `M2_construction_GeV2` | `2.24999999995003345e+04` |
+| `m12_sq_roundtrip_reconstructed_GeV2` | `7.49997525396243203e-02` |
+| `m12_sq_roundtrip_delta_GeV2` | `-2.47460023639067828e-07` |
+| `m12_sq_roundtrip_relative_difference` | `3.29946698186972485e-06` |
+| `soft_scale_export_status` | `VALIDATED_BY_SET_PARAM_PHYS_REPLAY` |
+| `soft_scale_relation` | `m12_sq = M2 * sin(beta) * cos(beta)` |
+| `beta` | `atan(tan_beta)` |
 
-- reproduces the exact double-precision `m12_2` center used by
-  `set_param_phys_lam1`;
-- evaluates only the immediately adjacent representable doubles with
-  `math.nextafter`;
-- reports the local ULP, the half-ULP rounding bound, and the propagated
-  `lambda1` error bound;
-- classifies output stability only across the previous/center/next-double
-  bracket.
+`m12_sq_roundtrip_reconstructed_GeV2` is diagnostic only and must not be used
+as the downstream physical construction input.
 
-A wider `m12_2` interval may still be useful as a **physical sensitivity
-study**, but it must not be labeled numerical uncertainty of this fixed point.
-The stale numerical-check CSV and Markdown outputs were removed; the corrected
-runner must regenerate them.
+The replay gate uses the existing independent `set_param_phys` checker and
+requires `lambda1_reconstructed` plus `total_width`, `ctau`, `br_bb`,
+`br_gammagamma`, and `br_Zgamma` to reproduce the canonical row. The declared
+absolute `lambda1` residual tolerance is `1e-6`:
 
-Current channel status:
+| Replay field | Value |
+|---|---:|
+| `lambda1_target` | `1.00000000000000000e+00` |
+| `lambda1_reconstructed` | `1.00000093418204150e+00` |
+| `lambda1_abs_residual` | `9.34182041500974947e-07` |
+| `lambda1_abs_residual_tolerance` | `1.00000000000000000e-06` |
+| maximum observable relative difference | `0.00000000000000000e+00` |
 
-| Scope | Status |
+## Fresh scan provenance
+
+| Field | Value |
 |---|---|
-| `H2 -> bb` DV+jets inputs | `PENDING_CORRECTED_ULP_RERUN` |
-| `H2 -> gamma gamma` | `PENDING_CORRECTED_ULP_RERUN` |
-| `H2 -> Z gamma` | `PENDING_CORRECTED_ULP_RERUN` |
+| `scan_producer_commit` | `31adde89d831195adde927b364046723ba29e3fe` |
+| `scan_manifest_schema` | `dihiggs.h2_bounded_scan.manifest.v2` |
+| `scan_execution_mode` | `FRESH_FROM_EMPTY_OUTPUT` |
+| `scan_resumed_rows` | `0` |
+| `scan_row_count` | `15` |
+| runner SHA-256 | `c8b8fdff3a18121d9b165b8d23fab4253bb5a9e9cf582fe04b96f21e7e46e859` |
+| evaluator source SHA-256 | `5e3a81ff53e1778d1700824acbe20d8808aaefdd46a349ef5339d64ddf795eb4` |
+| ReplaySafeOutput source SHA-256 | `77102e8db53b0fbf8bc88abe92bb10ce44d82420cd9a975c7f6c1dddca0615d4` |
+| evaluator binary SHA-256 | `0685693d60b2bf55c6c0ab2ebe3f7fa9f8da2fb0dc3421cb2ed1fdc68a01b31a` |
+| linked `lib2HDMC` | `2hdmc/lib/lib2HDMC.a` |
+| linked `lib2HDMC` SHA-256 | `4dc3443da9e5c86f0b37b924b92f3b2f03d71bfb524e3d96a7d387630fd76742` |
 
-## Corrected scan provenance
+The evaluator is statically linked to the rebuilt `lib2HDMC.a`; `ldd` showed
+no `lib2HDMC.so` entry.
 
-`benchmarks/run_first_h2_bounded_scan.py` now excludes only files it generates:
+## Corrected numerical evidence
 
-- `benchmarks/first_h2_bounded_scan.csv`;
-- `benchmarks/first_h2_bounded_scan_manifest.json`;
-- the two scratch CSV files.
+The checker uses the exact center and its immediately adjacent representable
+double values only.
 
-The runner refuses to execute if any experiment-defining source or
-configuration is dirty. Manifest v2 also records SHA-256 hashes for:
+| Field | Value |
+|---|---:|
+| center reproduction tolerance | `1.00000000000000002e-08` |
+| maximum center reproduction difference | `0.00000000000000000e+00` |
+| field producing maximum center difference | `total_width_gev` |
+| all values finite | yes |
+| all relevant values physically valid | yes |
+| all adjacent probes theory-valid | yes |
+| adjacent-float maximum spread | `1.66564239607794041e-06` |
+| field producing maximum adjacent spread | `br_Zgamma` |
+| final classification | `STABLE_AT_DOUBLE_REPRESENTATION_SCALE` |
 
-- the runner itself;
-- `dihiggs/src/Lambda1EvaluatorV2.cpp`;
-- `dihiggs/src/ReplaySafeOutput.cpp`.
+Numerical classifications: `bb_dvjets`, `gammagamma`, and `Zgamma` are each
+`STABLE_AT_DOUBLE_REPRESENTATION_SCALE`. Only `bb_dvjets` receives downstream
+validity authorization in this freeze.
 
-The existing v1 manifest is explicitly marked
-`INVALIDATED_PROVENANCE_REQUIRES_RERUN`. The evaluator commit recorded in the
-CSV is still useful for identifying the evaluator source, but it does not
-recover the missing runner state that determined the grid and selection.
+## Lifetime and production status
 
-## Required rerun sequence
+`python3 benchmarks/verify_pilot_ctau_invariant.py` passed for all 15 fresh
+benchmark rows and all checked pilot rows using the unchanged
+`1.973269804e-13 GeV mm` constant and `1e-4` relative tolerance.
 
-From a clean commit containing the corrected scripts:
-
-```bash
-mv benchmarks/first_h2_bounded_scan.csv \
-   benchmarks/first_h2_bounded_scan.pre_provenance_fix.csv
-mv benchmarks/first_h2_bounded_scan_manifest.json \
-   benchmarks/first_h2_bounded_scan_manifest.pre_provenance_fix.json
-
-python3 benchmarks/run_first_h2_bounded_scan.py
-python3 benchmarks/verify_pilot_ctau_invariant.py
-python3 benchmarks/check_H2scan_mH150_tb300000.py
-python3 -m json.tool benchmarks/first_h2_bounded_scan_manifest.json >/dev/null
-git diff --check
-```
-
-After the rerun, update `FIRST_H2_RECAST_CANDIDATE.json` and this report from
-the regenerated artifacts. Only then may a channel receive a validity label or
-the point proceed to MadGraph/UFO normalization and the recast chain.
-
-## Allowed current claim
-
-The bounded scan reported six theory-valid, finite-width points in the
-operational lifetime window and selected `H2scan_mH150_tb300000` as the leading
-candidate. Because the scan provenance and numerical representation test are
-not yet rerun under the corrected contracts, the point remains provisional and
-unfrozen.
+| Field | Value |
+|---|---|
+| `sigma_production_fb` | `null` |
+| `sigma_status` | `PENDING_MADGRAPH` |

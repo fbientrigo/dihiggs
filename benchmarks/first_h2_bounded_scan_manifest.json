@@ -1,13 +1,15 @@
 {
   "schema": "dihiggs.h2_bounded_scan.manifest.v2",
   "provenance_status": "REPRODUCIBLE_FROM_CLEAN_COMMIT",
-  "producer_commit": "5166b445ab39ea077f242a609acbe78f6f7f7fca",
+  "producer_commit": "31adde89d831195adde927b364046723ba29e3fe",
   "producer_dirty": "no",
   "producer_files_sha256": {
-    "benchmarks/run_first_h2_bounded_scan.py": "6a6378cc2224ec8b80af40e7dd49f7194338a8740e00dce6b7aff70cc28c34a9",
+    "benchmarks/run_first_h2_bounded_scan.py": "c8b8fdff3a18121d9b165b8d23fab4253bb5a9e9cf582fe04b96f21e7e46e859",
     "dihiggs/src/Lambda1EvaluatorV2.cpp": "5e3a81ff53e1778d1700824acbe20d8808aaefdd46a349ef5339d64ddf795eb4",
     "dihiggs/src/ReplaySafeOutput.cpp": "77102e8db53b0fbf8bc88abe92bb10ce44d82420cd9a975c7f6c1dddca0615d4"
   },
+  "execution_mode": "FRESH_FROM_EMPTY_OUTPUT",
+  "resumed_rows": 0,
   "generated_paths_excluded_from_dirty_check": [
     "benchmarks/first_h2_bounded_scan.csv",
     "benchmarks/first_h2_bounded_scan_manifest.json",
@@ -15,6 +17,20 @@
     "benchmarks/.scan_point_output.csv.tmp"
   ],
   "evaluator_binary": "dihiggs/app/Lambda1EvaluatorV2",
+  "build": {
+    "commands": [
+      "make -C 2hdmc clean",
+      "make -C 2hdmc -j2",
+      "make -C dihiggs clean",
+      "make -C dihiggs -j2 app/Lambda1EvaluatorV2"
+    ],
+    "compiler_version": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "evaluator_binary": "dihiggs/app/Lambda1EvaluatorV2",
+    "evaluator_binary_sha256": "0685693d60b2bf55c6c0ab2ebe3f7fa9f8da2fb0dc3421cb2ed1fdc68a01b31a",
+    "lib2hdmc_path": "2hdmc/lib/lib2HDMC.a",
+    "lib2hdmc_sha256": "4dc3443da9e5c86f0b37b924b92f3b2f03d71bfb524e3d96a7d387630fd76742",
+    "linkage": "static archive linked by dihiggs/Makefile; ldd has no lib2HDMC.so entry"
+  },
   "evaluator_schema": "dihiggs.lambda1.v2",
   "fixed_parameters": {
     "mh_gev": 125.13,
