@@ -1,7 +1,6 @@
 #pragma once
 
 #include "THDM.h"
-#include <complex>
 #include <limits>
 
 struct PointResult {
@@ -37,10 +36,6 @@ struct PointResult {
     double width_hh = std::numeric_limits<double>::quiet_NaN();
     double total_width = std::numeric_limits<double>::quiet_NaN();
     double br_gaga = std::numeric_limits<double>::quiet_NaN();
-    // 2HDMC returns -i times the real scalar coefficient for h1-h2-h2.
-    std::complex<double> coupling_h1h2h2_native = {
-        std::numeric_limits<double>::quiet_NaN(),
-        std::numeric_limits<double>::quiet_NaN()};
 };
 
 PointResult evaluate_m2_point(

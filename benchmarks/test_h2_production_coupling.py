@@ -25,3 +25,8 @@ def test_h2_production_coupling_replay_contract() -> None:
 
     width = data["ufo_width_cross_check"]
     assert abs(width["reproduced_width_GeV"] - replay["total_width_GeV"]) <= width["absolute_tolerance_GeV"]
+
+    assert data["evaluator_source_sha256"] == {
+        "benchmarks/check_H2scan_mH150_tb300000.cpp":
+        "3ce43838b366702e7ebeabd2a2a122ad1311df543100bfbad985c87faae8fae9"
+    }

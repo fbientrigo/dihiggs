@@ -60,7 +60,6 @@
     "status": "PASS"
   },
   "evaluator_source_sha256": {
-    "dihiggs/src/M2PointEvaluator.cpp": "078e7f5c14ee1fc2abc0ea6a9f7351637e6904f9c4b5809f569b8e75db7b495d",
-    "dihiggs/include/M2PointEvaluator.hpp": "206b9912a947193b97b3367962f46076c8fd9fb2c17199f70fa7a95c7f83a232"
+    "benchmarks/check_H2scan_mH150_tb300000.cpp": "3ce43838b366702e7ebeabd2a2a122ad1311df543100bfbad985c87faae8fae9"
   }
 }
