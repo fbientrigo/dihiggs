@@ -48,7 +48,7 @@ bool get_arg_b(const map<string, string>& args, const string& key, bool def) {
 
 // Write the header for points.csv
 void write_points_header(ofstream& out) {
-    out << "m_phi,M2_input,m12_sq_input,m12_sq_out,lam1_out,lam2_out,lam3_out,lam4_out,lam5_out,lam6_out,lam7_out,positivity_ok,unitarity_ok,perturbativity_ok,stability_ok,theory_ok,triple_ok,construction_ok,yukawa_type_installed\n";
+    out << "m_phi,M2_input,m12_sq_input,m12_sq_out,lam1_out,lam2_out,lam3_out,lam4_out,lam5_out,lam6_out,lam7_out,positivity_ok,unitarity_ok,perturbativity_ok,stability_ok,theory_ok,triple_ok,construction_ok,yukawa_type_installed,coupling_h1h2h2_native_real,coupling_h1h2h2_native_imag\n";
 }
 
 // Write a batch of points to points.csv
@@ -58,7 +58,8 @@ void write_points_batch(ofstream& out, const vector<PointResult>& results) {
             << r.m_phi << "," << r.M2_input << "," << r.m12_sq_input << "," << r.m12_sq_out << ","
             << r.lam1_out << "," << r.lam2_out << "," << r.lam3_out << "," << r.lam4_out << "," << r.lam5_out << "," << r.lam6_out << "," << r.lam7_out << ","
             << r.positivity_ok << "," << r.unitarity_ok << "," << r.perturbativity_ok << "," << r.stability_ok << ","
-            << r.theory_ok << "," << r.triple_ok << "," << r.construction_ok << "," << r.yukawa_type_installed << "\n";
+            << r.theory_ok << "," << r.triple_ok << "," << r.construction_ok << "," << r.yukawa_type_installed << ","
+            << r.coupling_h1h2h2_native.real() << "," << r.coupling_h1h2h2_native.imag() << "\n";
     }
 }
 

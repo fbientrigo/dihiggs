@@ -58,6 +58,7 @@ PointResult evaluate_m2_point(
     res.triple_ok = res.theory_ok; // Conceptually triple_ok == theory_ok for now
     
     if (res.theory_ok) {
+        model.get_coupling_hhh(1, 2, 2, res.coupling_h1h2h2_native);
         DecayTable decays(model);
         res.width_bb = decays.get_gamma_hdd(2, 3, 3);
         res.width_tautau = decays.get_gamma_hll(2, 3, 3);
