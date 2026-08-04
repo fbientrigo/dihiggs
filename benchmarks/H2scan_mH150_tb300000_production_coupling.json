@@ -1,0 +1,65 @@
+{
+  "schema": "dihiggs.h2_production_coupling.v1",
+  "point_id": "H2scan_mH150_tb300000",
+  "construction_theory_status": "VALIDATED",
+  "benchmark_commit": "92ad4d80f537bffd8663e42f1c6881e82849feab",
+  "scan_producer_commit": "31adde89d831195adde927b364046723ba29e3fe",
+  "two_hdmc_source": {
+    "commit": "92ad4d80f537bffd8663e42f1c6881e82849feab",
+    "THDM.cpp_sha256": "f38c2f8ec0a993590e8c81802e3d0605e1ee5fa4b7959717631936aef5755996",
+    "THDM.h_sha256": "be6a31cbae1931363ff7a7ce9f2162ee2910a7cfc56883f08d2faab4dbea5198",
+    "linked_lib2HDMC_sha256": "4dc3443da9e5c86f0b37b924b92f3b2f03d71bfb524e3d96a7d387630fd76742"
+  },
+  "construction": {
+    "m_H2_GeV": 150.0,
+    "mA_GeV": 450.0,
+    "mHp_GeV": 450.0,
+    "tan_beta": 300000.0,
+    "sin_beta_minus_alpha": 1.0,
+    "lambda1_target": 1.0,
+    "lambda6_input": 1e-10,
+    "lambda7_input": 0.0,
+    "yukawa_type": "Type I",
+    "m12_sq_construction_GeV2": 7.49999999996479594e-02,
+    "M2_construction_GeV2": 2.24999999995003345e+04,
+    "roundtrip_coordinate_rejected": true
+  },
+  "scalar_state_mapping": {
+    "2HDMC_h1": "SM-like 125.13 GeV scalar",
+    "2HDMC_h2": "150 GeV H2 scalar",
+    "native_call": "THDM::get_coupling_hhh(1, 2, 2, c)",
+    "mediator_pdg": 25,
+    "final_scalar_pdg": 9000006
+  },
+  "coupling": {
+    "name": "h-H2-H2",
+    "g_hH2H2_GeV": 63.5914252007596588,
+    "two_hdmc_returned_real_GeV": 0.0,
+    "two_hdmc_returned_imag_GeV": -63.5914252007596588,
+    "two_hdmc_convention": "c = -i*g for the real scalar coefficient g; no factorial or symmetry rescaling",
+    "ufo_GHphiphi_convention": "H h2 h2 vertex is +i*GHphiphi",
+    "converted_GHphiphi_GeV": -63.5914252007596588,
+    "conversion_formula": "GHphiphi = Im(c) = -g_hH2H2_GeV",
+    "source_evidence": "2hdmc/src/THDM.cpp get_coupling_hhh; output block REGH1H2H2/IMGH1H2H2"
+  },
+  "replay": {
+    "total_width_GeV": 4.56118529862185007e-14,
+    "ctau_mm": 4.32622152973311191,
+    "br_bb": 0.756737485808578692,
+    "evaluator_source": "benchmarks/check_H2scan_mH150_tb300000.cpp",
+    "evaluator_source_sha256": "3ce43838b366702e7ebeabd2a2a122ad1311df543100bfbad985c87faae8fae9",
+    "same_direct_set_param_phys_construction": true,
+    "width_and_branching_replay_status": "PASS"
+  },
+  "ufo_width_cross_check": {
+    "ctauh2_m": 4.32622152973311191e-03,
+    "formula": "1.9732698e-16 / ctauh2_m",
+    "reproduced_width_GeV": 4.56118528937590628e-14,
+    "absolute_tolerance_GeV": 1e-21,
+    "absolute_difference_GeV": 9.24594395e-23,
+    "status": "PASS"
+  },
+  "evaluator_source_sha256": {
+    "benchmarks/check_H2scan_mH150_tb300000.cpp": "3ce43838b366702e7ebeabd2a2a122ad1311df543100bfbad985c87faae8fae9"
+  }
+}

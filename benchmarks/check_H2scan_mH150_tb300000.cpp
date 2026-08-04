@@ -15,6 +15,7 @@
 #include "THDM.h"
 
 #include <cstdlib>
+#include <complex>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -59,6 +60,8 @@ int main(int argc, char** argv) {
     const int theory_ok = positivity_ok && unitarity_ok && perturbativity_ok;
 
     DecayTable decays(model);
+    std::complex<double> coupling_h1_h2_h2;
+    model.get_coupling_hhh(1, 2, 2, coupling_h1_h2_h2);
     const double width_bb = decays.get_gamma_hdd(2, 3, 3);
     const double width_cc = decays.get_gamma_huu(2, 2, 2);
     const double width_tautau = decays.get_gamma_hll(2, 3, 3);
@@ -98,6 +101,8 @@ int main(int argc, char** argv) {
               << ",br_Zgamma," << (width_Zgamma / total_width)
               << ",br_tautau," << (width_tautau / total_width)
               << ",br_gg," << (width_gg / total_width)
+              << ",g_h1h2h2_real_gev," << std::real(coupling_h1_h2_h2)
+              << ",g_h1h2h2_imag_gev," << std::imag(coupling_h1_h2_h2)
               << "\n";
     return 0;
 }
