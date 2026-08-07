@@ -17,7 +17,7 @@ HEADER = (
     "lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,tan_beta_reconstructed,"
     "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
     "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
-    "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,width_bb_GeV,width_cc_GeV,"
+    "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,width_bb_GeV,width_cc_GeV,"
     "width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,width_Zgamma_GeV,width_gg_GeV,"
     "width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,br_gammagamma,br_Zgamma,br_gg,"
     "br_hh,width_ok,ctau_mm"
@@ -61,6 +61,7 @@ def test_exact_header_cardinality_and_provenance(tmp_path):
     assert {(row["schema_version"], row["campaign_id"], row["run_id"]) for row in rows} == {
         ("dihiggs.point.v2", "pilot", "run")
     }
+    assert all("THDM::get_coupling_hhh" in row["evaluator_api"] for row in rows)
 
 
 def test_adjacent_doubles_round_trip_and_get_distinct_ids(tmp_path):
@@ -86,6 +87,8 @@ def test_m2_reconstruction_width_br_lifetime_and_unevaluated_experiments(tmp_pat
     expected_m12 = float(row["M2_input_GeV2"]) * math.sin(beta) * math.cos(beta)
     assert float(row["m12_sq_input_GeV2"]) == pytest.approx(expected_m12, rel=2e-16)
     assert float(row["M2_reconstructed_GeV2"]) == pytest.approx(float(row["M2_input_GeV2"]), rel=2e-14)
+    assert math.isfinite(float(row["g_hH2H2_GeV"]))
+    assert float(row["g_hH2H2_GeV"]) >= 0.0
     total = float(row["total_width_GeV"])
     assert row["width_ok"] == "1.00000000000000000e+00"
     assert float(row["br_gammagamma"]) == pytest.approx(float(row["width_gammagamma_GeV"]) / total)
@@ -100,12 +103,33 @@ def test_m2_reconstruction_width_br_lifetime_and_unevaluated_experiments(tmp_pat
     assert row["experimental_ok"] == "nan"
 
 
+def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
+    _, (row,), _ = run_point(
+        tmp_path,
+        "h2-benchmark",
+        mh=125.13,
+        mH=150.0,
+        mA=450.0,
+        mHp=450.0,
+        sba=1.0,
+        tb=300000.0,
+        M2=22499.999999500335,
+        l6=1e-10,
+        l7=0.0,
+    )
+    assert row["construction_ok"] == "1"
+    assert float(row["g_hH2H2_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
+    assert float(row["total_width_GeV"]) == pytest.approx(4.56118529862185007e-14, rel=0.0, abs=1e-24)
+    assert float(row["br_bb"]) == pytest.approx(0.756737485808578692, rel=0.0, abs=1e-12)
+    assert float(row["ctau_mm"]) == pytest.approx(4.32622152973311191, rel=0.0, abs=1e-10)
+
+
 def test_ordering_boundary_emits_success_and_failure_with_nan_masks(tmp_path):
     below = math.nextafter(125.13, -math.inf)
     _, rows, _ = run_point(tmp_path, "ordering", mH=below, mH_max=125.13, n_mH=2)
     assert [row["construction_ok"] for row in rows] == ["0", "1"]
     assert rows[0]["rejection_reason"] == "mh_gt_mH"
-    for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "total_width_GeV", "width_ok"):
+    for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "g_hH2H2_GeV", "total_width_GeV", "width_ok"):
         assert rows[0][field] == "nan"
     assert rows[0]["yukawa_type_installed"] == "nan"
 
@@ -114,7 +138,7 @@ def test_construction_failure_preserves_row_without_decay_evaluation(tmp_path):
     _, (row,), _ = run_point(tmp_path, "construction-failure", mA=-1.0)
     assert row["construction_ok"] == "0"
     assert row["yukawa_type_installed"] == "nan"
-    for field in ("width_bb_GeV", "width_tautau_GeV", "total_width_GeV", "width_unaccounted_GeV", "ctau_mm"):
+    for field in ("g_hH2H2_GeV", "width_bb_GeV", "width_tautau_GeV", "total_width_GeV", "width_unaccounted_GeV", "ctau_mm"):
         assert row[field] == "nan"
 
 
