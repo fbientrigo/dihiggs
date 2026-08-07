@@ -69,6 +69,49 @@ m12_sq = M² * sin(beta) * cos(beta)
 gets a row, including construction failures. Experimental fields remain
 unevaluated.
 
+### Canonical `h-H2-H2` observable
+
+`DihiggsPointV2Evaluator` owns the production-coupling observable used by the
+LLP downstream stack. For every point that completes 2HDMC construction and
+numerical reconstruction, the evaluator calls
+
+```text
+THDM::get_coupling_hhh(1, 2, 2, c)
+```
+
+on the same `THDM` object used to compute the point's widths and branching
+ratios, and exports
+
+```text
+g_hH2H2_GeV = abs(Im(c))
+```
+
+The frozen convention is
+
+```text
+2HDMC: c = -i*g
+UFO:   GHphiphi = Im(c) = -g_hH2H2_GeV
+```
+
+There is no factorial or symmetry rescaling. The field is a derived observable,
+not a scan coordinate, so adding it does not change `point_id`. It remains
+`nan` for rows that fail before the coupling can be evaluated. Theory rejection
+alone does not mask the observable: a successfully constructed numerical point
+still carries its model coupling even if a later theory predicate fails.
+
+The benchmark `H2scan_mH150_tb300000` freezes the cross-contract anchor
+
+```text
+mH = 150 GeV
+g_hH2H2_GeV = 63.5914252007596588 GeV
+ctau_mm = 4.32622152973311191
+br_bb = 0.756737485808578692
+```
+
+and the point-v2 tests require the canonical producer to reproduce that anchor
+from the same direct `set_param_phys` construction. Downstream repositories
+must consume `g_hH2H2_GeV`; they must not rederive the coupling convention.
+
 ## Experimental M² tracker
 
 `Phys_M2BandTracker` is a boundary-search helper, not a canonical rectangular
@@ -82,4 +125,3 @@ scientific boundary evidence. It makes no fixed-input-lambda1 claim.
 historical output loses lifetime and branching-ratio information and it is
 retained for replay/compatibility only. `PhysScanWithFixings` is not permitted
 for new LLP lifetime production. New work must use the v2 producers above.
-
