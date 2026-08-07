@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cmath>
+#include <complex>
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
@@ -22,7 +23,7 @@ namespace {
 
 constexpr const char* kSchema = "dihiggs.point.v2";
 constexpr const char* kProducer = "DihiggsPointV2Evaluator";
-constexpr const char* kApi = "THDM::set_param_phys+THDM::get_param_gen+2HDMC::DecayTable";
+constexpr const char* kApi = "THDM::set_param_phys+THDM::get_param_gen+THDM::get_coupling_hhh+2HDMC::DecayTable";
 constexpr const char* kStabilityAlias = "2HDMC-patched:check_stability==check_positivity";
 constexpr double kHbarCGeVmm = 1.973269804e-13;
 
@@ -49,6 +50,7 @@ struct Result {
     double positivity_ok = nan(), unitarity_ok = nan(), perturbativity_ok = nan();
     double stability_ok = nan(), triple_ok = nan(), theory_ok = nan();
     double experimental_evaluated = 0.0, experimental_ok = nan();
+    double g_hH2H2_GeV = nan();
     std::array<double, 9> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     std::array<double, 9> brs{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     double total_width = nan(), width_unaccounted = nan(), width_ok = nan(), ctau_mm = nan();
@@ -187,6 +189,10 @@ Result evaluate(const Config& c, double mH, double M2) {
     else if (!r.perturbativity_ok) { r.rejection_stage = "perturbativity"; r.rejection_reason = "check_perturbativity_false"; }
     else { r.rejection_stage = "accepted"; r.rejection_reason = "none"; }
 
+    std::complex<double> coupling_h1_h2_h2;
+    model.get_coupling_hhh(1, 2, 2, coupling_h1_h2_h2);
+    r.g_hH2H2_GeV = std::abs(coupling_h1_h2_h2.imag());
+
     DecayTable decays(model);
     r.widths = {{decays.get_gamma_hdd(2, 3, 3), decays.get_gamma_huu(2, 2, 2),
                  decays.get_gamma_hll(2, 3, 3), decays.get_gamma_hvv(2, 3),
@@ -216,7 +222,7 @@ void header(std::ostream& out) {
         << "lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,tan_beta_reconstructed,"
         << "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
         << "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
-        << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,"
+        << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,"
         << "width_bb_GeV,width_cc_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,"
         << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,"
         << "br_gammagamma,br_Zgamma,br_gg,br_hh,width_ok,ctau_mm\n";
@@ -232,7 +238,7 @@ void row(std::ostream& out, const Config& c, const Result& r, const std::string&
         << ',' << r.construction_ok << ',' << r.numerical_ok << ',' << r.rejection_stage << ',' << r.rejection_reason
         << ',' << r.positivity_ok << ',' << r.unitarity_ok << ',' << r.perturbativity_ok << ',' << r.stability_ok
         << ',' << kStabilityAlias << ',' << r.triple_ok << ',' << r.theory_ok << ',' << r.experimental_evaluated
-        << ',' << r.experimental_ok;
+        << ',' << r.experimental_ok << ',' << r.g_hH2H2_GeV;
     for (double value : r.widths) out << ',' << value;
     out << ',' << r.total_width << ',' << r.width_unaccounted;
     for (double value : r.brs) out << ',' << value;
