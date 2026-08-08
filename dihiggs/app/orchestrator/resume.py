@@ -6,10 +6,17 @@ Resume semantics
 A task is eligible to be skipped (not re-run) when:
   1. ``--force`` is not set, AND
   2. Either:
-     a. The output CSV already exists in the current run directory, OR
-     b. ``--resume-scope=fixed`` is set and a CSV from a previous run
-        under the same fixed-param directory exists with a matching
-        grid signature (and its scan_meta.json has event="done").
+     a. The expected output CSV exists in the current run directory and its
+        per-task ``scan_meta.json`` records ``event="done"`` with the exact
+        grid signature, OR
+     b. ``--resume-scope=fixed`` is set and a non-empty CSV from a previous run
+        under the same fixed-param directory exists with a matching per-task
+        ``scan_meta.json`` carrying ``event="done"`` and the exact grid
+        signature.
+
+A historical ``done`` record without its output artifact is not resumable.
+Likewise, run-level manifests are not sufficient evidence that an individual
+CSV completed successfully.
 
 Grid signature matching
 -----------------------
@@ -40,6 +47,10 @@ def load_done_signatures(jsonl_path: Path) -> Set[str]:
     Read a task_summary.jsonl and return the set of grid signatures
     whose tasks completed with status ``"done"``.
 
+    These records are useful audit information, but a signature alone is not
+    sufficient to skip execution: the expected output artifact and its
+    per-task ``scan_meta.json`` must still be present and valid.
+
     Parameters
     ----------
     jsonl_path:
@@ -48,7 +59,7 @@ def load_done_signatures(jsonl_path: Path) -> Set[str]:
     Returns
     -------
     Set[str]
-        Grid signatures that have been successfully completed.
+        Grid signatures that have been recorded as successfully completed.
     """
     done: Set[str] = set()
     if not jsonl_path.exists():
@@ -96,7 +107,9 @@ def should_skip(
     force:
         If True, always run (never skip).
     done_signatures:
-        Set of grid signatures already completed in this run.
+        Historical in-run completion records.  Kept for API compatibility and
+        auditing, but never trusted without the concrete output artifact and
+        per-task done metadata.
 
     Returns
     -------
@@ -107,13 +120,11 @@ def should_skip(
     if force:
         return False, ""
 
-    # Check if the output CSV already exists (same-run or leftover).
-    #
-    # A non-empty CSV may only be reused if its recorded grid signature
-    # matches the current effective grid + fixed parameters.  Otherwise the
-    # CSV is stale (left over from a previous run with a different grid or
-    # fixed config) and must be re-run rather than silently skipped.  If the
-    # metadata is missing, not "done", or mismatched, we do NOT skip.
+    # A non-empty CSV may only be reused if its recorded per-task grid
+    # signature matches the current effective grid + fixed parameters and the
+    # task metadata explicitly says event="done".  If the artifact is absent,
+    # an old JSONL done record is not enough: rerun rather than silently
+    # producing a skipped task with no output.
     if output_csv.exists() and output_csv.stat().st_size > 0:
         existing_sig = _grid_sig_from_meta(output_csv.parent)
         if existing_sig is None:
@@ -121,10 +132,6 @@ def should_skip(
         if existing_sig != grid_sig:
             return False, "stale_csv_grid_signature_mismatch"
         return True, "output_csv_exists"
-
-    # Check if this grid signature was already completed in this run
-    if grid_sig in done_signatures:
-        return True, "grid_signature_done_in_run"
 
     return False, ""
 
@@ -144,15 +151,6 @@ def _grid_sig_from_meta(tb_dir: Path) -> Optional[str]:
     return sig.strip() if isinstance(sig, str) and sig.strip() else None
 
 
-def _grid_sig_from_manifest(run_dir: Path) -> Optional[str]:
-    """Fallback: read grid signature from run_manifest.json."""
-    mani = load_json_best_effort(run_dir / "run_manifest.json")
-    if not mani:
-        return None
-    sg = mani.get("scan_grid") or {}
-    return sg.get("grid_signature")
-
-
 def find_previous_csv(
     fixed_dir: Path,
     current_run_dir: Path,
@@ -163,8 +161,10 @@ def find_previous_csv(
     Search all previous runs under *fixed_dir* for a CSV matching
     the given *tb_tag* and *desired_grid_sig*.
 
-    Only returns non-empty CSVs whose associated scan_meta.json (or
-    manifest fallback) carries the exact grid signature and event=done.
+    Only returns non-empty CSVs whose associated per-task scan_meta.json
+    carries the exact grid signature and event=done.  A run-level manifest is
+    intentionally insufficient because it cannot prove that a particular task
+    finished successfully.
 
     Parameters
     ----------
@@ -198,9 +198,7 @@ def find_previous_csv(
                 continue
 
             tb_dir = csv_path.parent
-            run_dir = tb_dir.parent
-
-            sig = _grid_sig_from_meta(tb_dir) or _grid_sig_from_manifest(run_dir)
+            sig = _grid_sig_from_meta(tb_dir)
             if sig != desired_grid_sig:
                 continue
 
