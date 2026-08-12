@@ -99,6 +99,28 @@ not a scan coordinate, so adding it does not change `point_id`. It remains
 alone does not mask the observable: a successfully constructed numerical point
 still carries its model coupling even if a later theory predicate fails.
 
+### Explicit top-pair width (Gate A, high-mass factory)
+
+Through commit `9f80196`, `width_bb_GeV` and `width_cc_GeV` were exported
+explicitly but `H2 -> t tbar` was not; any top-pair contribution above
+threshold was silently folded into `width_unaccounted_GeV`. This is corrected:
+the evaluator now exports `width_tt_GeV` and `br_tt` from
+`DecayTable::get_gamma_huu(2, 3, 3)` on the same `DecayTable` object as the
+other partial widths, positioned immediately after `width_cc_GeV` /
+`br_cc` in the CSV. This is a breaking column-order change to the
+`dihiggs.point.v2` CSV (nine selected widths become ten); consumers must key
+by header name, not position.
+
+2HDMC's `get_gamma_huu` for `u1=u2=3` does not impose a hard step at
+`M_H2 = 2*m_t^pole` (172.5 GeV pole mass, so 345 GeV); it uses a running-mass
+threshold treatment that yields a small nonzero width below the naive
+kinematic threshold and a rapid rise through it (empirically: exactly zero at
+250 GeV, ~1.5e-7 GeV at 300 GeV, ~9e-5 GeV at 350 GeV, dominant by 400 GeV for
+tan_beta=50 Type-I anchors). This is 2HDMC's own physical treatment, not an
+artifact of this change; `width_tt_GeV` reports whatever value the shared
+`DecayTable` object returns. See `docs/HIGH_MASS_H2_CONTRACT.md` for the full
+high-mass audit.
+
 The benchmark `H2scan_mH150_tb300000` freezes the cross-contract anchor
 
 ```text

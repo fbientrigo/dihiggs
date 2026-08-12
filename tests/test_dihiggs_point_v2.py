@@ -18,8 +18,8 @@ HEADER = (
     "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
     "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
     "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,width_bb_GeV,width_cc_GeV,"
-    "width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,width_Zgamma_GeV,width_gg_GeV,"
-    "width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,br_gammagamma,br_Zgamma,br_gg,"
+    "width_tt_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,width_Zgamma_GeV,width_gg_GeV,"
+    "width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tt,br_tautau,br_WW,br_ZZ,br_gammagamma,br_Zgamma,br_gg,"
     "br_hh,width_ok,ctau_mm"
 )
 
@@ -95,7 +95,7 @@ def test_m2_reconstruction_width_br_lifetime_and_unevaluated_experiments(tmp_pat
     assert float(row["ctau_mm"]) == pytest.approx(1.973269804e-13 / total)
     assert row["yukawa_type_installed"] == "1.00000000000000000e+00"
     selected = sum(float(row[field]) for field in (
-        "width_bb_GeV", "width_cc_GeV", "width_tautau_GeV", "width_WW_GeV",
+        "width_bb_GeV", "width_cc_GeV", "width_tt_GeV", "width_tautau_GeV", "width_WW_GeV",
         "width_ZZ_GeV", "width_gammagamma_GeV", "width_Zgamma_GeV", "width_gg_GeV", "width_hh_GeV",
     ))
     assert float(row["width_unaccounted_GeV"]) + selected == pytest.approx(total, rel=1e-14)
@@ -122,6 +122,31 @@ def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
     assert float(row["total_width_GeV"]) == pytest.approx(4.56118529862185007e-14, rel=0.0, abs=1e-24)
     assert float(row["br_bb"]) == pytest.approx(0.756737485808578692, rel=0.0, abs=1e-12)
     assert float(row["ctau_mm"]) == pytest.approx(4.32622152973311191, rel=0.0, abs=1e-10)
+
+
+def test_top_pair_width_is_explicit_and_zero_below_threshold(tmp_path):
+    _, (row,), _ = run_point(
+        tmp_path, "below-tt", mH=250.0, mA=800.0, mHp=800.0, sba=1.0, tb=50.0,
+        M2=16721.68154468371, l6=0.1, l7=0.0,
+    )
+    assert row["construction_ok"] == "1"
+    assert float(row["width_tt_GeV"]) == 0.0
+    assert float(row["br_tt"]) == 0.0
+    assert float(row["total_width_GeV"]) == pytest.approx(4.15329937678296080e-06, rel=0.0, abs=1e-18)
+    assert float(row["width_unaccounted_GeV"]) == pytest.approx(1.41522478536371598e-09, rel=0.0, abs=1e-20)
+
+
+def test_top_pair_width_dominates_above_threshold(tmp_path):
+    _, (row,), _ = run_point(
+        tmp_path, "above-tt", mH=400.0, mA=800.0, mHp=800.0, sba=1.0, tb=50.0,
+        M2=16721.68154468371, l6=0.1, l7=0.0,
+    )
+    assert row["construction_ok"] == "1"
+    assert float(row["width_tt_GeV"]) == pytest.approx(1.67384971497793258e-03, rel=0.0, abs=1e-15)
+    assert float(row["br_tt"]) == pytest.approx(0.966756638952535385, rel=0.0, abs=1e-12)
+    assert float(row["width_tt_GeV"]) > 0.0
+    # width_tt_GeV must never be silently folded into width_unaccounted_GeV.
+    assert float(row["width_unaccounted_GeV"]) < 0.01 * float(row["width_tt_GeV"])
 
 
 def test_ordering_boundary_emits_success_and_failure_with_nan_masks(tmp_path):
