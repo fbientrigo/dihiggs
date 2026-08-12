@@ -1,0 +1,90 @@
+contract_name: dihiggs.high_mass_h2.cascade_contract.v1
+description: >
+  Explicit boolean kinematic flags for H2 decay channels that the mass
+  hierarchy (mHp = mA > mH2 > mh) is intended to close. Computed for every
+  point regardless of model_variant, even when the desired hierarchy should
+  make a flag false by construction — the flags are an independent
+  cross-check, not a restatement of the hierarchy invariant. A point that
+  passes hierarchy construction but somehow opens a forbidden channel (e.g.
+  due to a future evaluator bug, an off-hierarchy campaign misconfiguration,
+  or a boundary-precision edge case) must fail closed, not silently pass.
+
+constants_GeV:
+  m_W: 80.36951   # 2HDMC 1.8.0 SM default (SM::MW)
+  m_Z: 91.15349   # 2HDMC 1.8.0 SM default (SM::MZ)
+  m_t_pole: 172.5 # 2HDMC 1.8.0 SM default (SM::mt_p)
+  m_h: 125.13     # frozen for this campaign; see HIGH_MASS_H2_CONTRACT.md section 3
+
+flag_groups:
+  forbidden_in_no_heavy_cascade_study:
+    description: >
+      Must be false for every point used in the
+      PHYSICAL_DECAYS_NO_HEAVY_CASCADES variant. Computed for
+      FACTORIZED_G_ONLY points too, purely as a diagnostic (that variant does
+      not claim a complete physical H2 decay model at all, so a true flag
+      there is not itself a contract violation, only a note).
+    flags:
+      - name: H2_to_AZ_open
+        formula: m_H2_GeV > m_A_GeV + m_Z
+        note: >
+          Purely kinematic two-body threshold. Not computed by
+          DihiggsPointV2Evaluator's DecayTable calls today (no
+          get_gamma_hvh(2, 3, ...) call is made); this flag exists
+          specifically so its kinematic openness can be checked even though
+          no width is exported for it.
+      - name: H2_to_HpW_open
+        formula: m_H2_GeV > m_Hp_GeV + m_W
+        note: Same caveat as H2_to_AZ_open; no corresponding width is exported.
+      - name: H2_to_AA_open
+        formula: m_H2_GeV > 2 * m_A_GeV
+        note: Same caveat; no corresponding width is exported.
+      - name: H2_to_HpHm_open
+        formula: m_H2_GeV > 2 * m_Hp_GeV
+        note: Same caveat; no corresponding width is exported.
+    on_any_true_for_variant_b: FAIL_CLOSED — reject the point from the
+      PHYSICAL_DECAYS_NO_HEAVY_CASCADES dataset; record rejection_stage =
+      "cascade_contract", rejection_reason = "<flag_name>_true".
+
+  physical_and_permitted:
+    description: >
+      Expected to become true above their thresholds and must never be
+      treated as forbidden or filtered out. These are ordinary open decay
+      channels of a light-enough H2, not heavy-state cascades.
+    flags:
+      - name: H2_to_hh_open
+        formula: m_H2_GeV > 2 * m_h
+        threshold_GeV: 250.26
+        note: >
+          Kinematic approximation only. The evaluator's actual
+          width_hh_GeV (from DecayTable::get_gamma_hhh(2,1,1)) is the
+          authoritative physical value near threshold; this flag is a coarse
+          cross-check, not a replacement for reading width_hh_GeV /
+          BR_hh directly.
+      - name: H2_to_tt_open
+        formula: m_H2_GeV > 2 * m_t_pole
+        threshold_GeV: 345.0
+        note: >
+          Kinematic approximation only, using the pole mass. 2HDMC's actual
+          DecayTable::get_gamma_huu(2,3,3) treatment does not impose a hard
+          step at this value — it uses a running-mass threshold treatment
+          that gives small nonzero width below 345 GeV and a rapid rise
+          through it (see HIGH_MASS_H2_CONTRACT.md section 2 for measured
+          values). This flag is a coarse label for "is the tt channel
+          expected to matter here", not a claim that width_tt_GeV is exactly
+          zero below it or exactly the on-shell value above it. Always read
+          width_tt_GeV / BR_tt for the physical value.
+
+validation_requirements:
+  - Every point in a PHYSICAL_DECAYS_NO_HEAVY_CASCADES dataset must have all
+    four forbidden_in_no_heavy_cascade_study flags computed and stored as
+    false, not merely inferred from mHp=mA>mH2 and left unpopulated.
+  - A campaign runner must compute these flags from the same m_H2_GeV,
+    m_A_GeV, m_Hp_GeV values recorded in the point's
+    dihiggs.high_mass_point.v1 row, not from separately-tracked scan-grid
+    coordinates that could drift out of sync with the evaluator's actual
+    construction inputs.
+  - Regression tests must cover at least one deliberately-broken hierarchy
+    input (e.g. m_H2_GeV > m_A_GeV) and assert that the corresponding
+    forbidden flag evaluates true and that the campaign runner rejects the
+    point rather than emitting it silently into a PHYSICAL_DECAYS_NO_HEAVY_CASCADES
+    dataset.

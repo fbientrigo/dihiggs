@@ -1,0 +1,137 @@
+template_name: dihiggs.high_mass_h2.campaign_template.v1
+description: >
+  Resume-safe campaign specification template for the high-mass H2 point
+  factory. This is a template/schema for future campaign configs, not a
+  campaign that has been run. No production campaign or MadGraph run has
+  been launched under this template.
+schema_ref: dihiggs.high_mass_point.v1   # docs/contracts/high_mass_point_schema.yaml
+cascade_contract_ref: dihiggs.high_mass_h2.cascade_contract.v1  # docs/contracts/cascade_contract.yaml
+
+frozen_assumptions:
+  m_h_GeV: 125.13
+  twohdmc_version: "1.8.0"
+  note: See HIGH_MASS_H2_CONTRACT.md section 3 for the full Gate B freeze.
+
+campaign_id_convention: "high_mass_h2_<stage>_<variant>_<yyyymmdd>"
+
+task_key:
+  description: >
+    Every task is uniquely keyed by its immutable physical construction
+    coordinates and model variant, not by grid index or submission order.
+  fields: [m_h_GeV, m_H2_GeV, m_A_GeV, m_Hp_GeV, sin_beta_minus_alpha,
+           tan_beta, M2_GeV2, lambda6, lambda7, yukawa_type, model_variant]
+  key_formula: >
+    sha256 of the canonical CSV-encoded tuple of the fields above, in the
+    listed order, at 17-significant-digit round-trip-safe precision (same
+    convention DihiggsPointV2Evaluator already uses for point_id, extended
+    with model_variant since a Variant A and Variant B run over the same
+    physical point are two distinct tasks).
+
+experiment_classes:
+  MASS_CONTROL:
+    description: >
+      Vary (m_H2_GeV, Delta_heavy_GeV) while holding tan_beta and M2_GeV2 (or
+      lambda6) fixed wherever theory-valid. Used for controlled mass-effect
+      sensitivity analysis.
+    held_fixed: [tan_beta, M2_GeV2, lambda6, lambda7, sin_beta_minus_alpha, yukawa_type]
+    varies: [m_H2_GeV, Delta_heavy_GeV]
+  PHYSICAL_POINT_SCAN:
+    description: >
+      Allow tan_beta, M2_GeV2, lambda6 to vary as needed to locate
+      theory-valid points at each (m_H2_GeV, Delta_heavy_GeV) node.
+    varies: [m_H2_GeV, Delta_heavy_GeV, tan_beta, M2_GeV2, lambda6]
+  labeling_requirement: >
+    Never mix MASS_CONTROL and PHYSICAL_POINT_SCAN points in one plot or
+    table without an explicit experiment_class label column.
+
+model_variants: [FACTORIZED_G_ONLY, PHYSICAL_DECAYS_NO_HEAVY_CASCADES]
+
+coordinate_system:
+  primary: [m_H2_GeV, Delta_heavy_GeV]
+  derived: m_A_GeV = m_Hp_GeV = m_H2_GeV + Delta_heavy_GeV
+  stored_per_point: [m_H2_GeV, Delta_heavy_GeV, m_A_GeV, m_Hp_GeV]
+  rationale: >
+    A rectangular (m_H2, m_A) grid admits invalid-hierarchy points
+    (m_A <= m_H2); (m_H2, Delta_heavy) with Delta_heavy > 0 cannot.
+
+stages:
+  - id: stage_0
+    label: reproduce_existing_150gev_anchor
+    m_H2_GeV: [150.0]
+    Delta_heavy_GeV: [300.0]
+    experiment_class: MASS_CONTROL
+    status: executed_as_pilot_point_P0
+  - id: stage_1
+    label: controlled_pilot_130_300gev
+    m_H2_GeV_range: [130.0, 300.0]
+    Delta_heavy_GeV: [150.0, 300.0, 500.0]
+    experiment_class: MASS_CONTROL
+    status: not_launched
+    exact_node_values: deferred_pending_stage_0_and_1_theory_validity_pilot
+  - id: stage_2
+    label: cross_tt_and_hh_thresholds_deliberately
+    thresholds_GeV: {hh: 250.26, tt: 345.0}
+    m_H2_GeV: bracket_each_threshold_with_at_least_3_nodes_below_and_above
+    experiment_class: MASS_CONTROL
+    status: partially_covered_by_pilot_points_P1-P4
+  - id: stage_3
+    label: mid_mass_300_500gev
+    m_H2_GeV_range: [300.0, 500.0]
+    experiment_class: [MASS_CONTROL, PHYSICAL_POINT_SCAN]
+    status: not_launched
+  - id: stage_4
+    label: high_mass_500_800gev
+    m_H2_GeV_range: [500.0, 800.0]
+    experiment_class: [MASS_CONTROL, PHYSICAL_POINT_SCAN]
+    status: not_launched
+  - id: heavy_state_scale
+    label: progressively_extend_heavy_scale_toward_2000gev
+    Delta_heavy_GeV_range: [150.0, 1700.0]
+    note: mA = mHp extended toward 2000 GeV as m_H2 increases across stages 1-4
+    status: not_launched
+
+runner_contract:
+  task_status_values: [PENDING, RUNNING, COMPLETE, FAILED]
+  status_transition: atomic
+  atomicity_mechanism: >
+    write-temp-file-then-rename per task status file, matching the pattern
+    DihiggsPointV2Evaluator itself already uses for its output CSV
+    (writes to "<output>.tmp" then os.rename to the final path).
+  per_task_artifacts:
+    - status_file: "<campaign_id>/<task_key>/status.json"
+    - log_file: "<campaign_id>/<task_key>/run.log"
+    - manifest_file: "<campaign_id>/<task_key>/manifest.json"
+    - point_file: "<campaign_id>/<task_key>/point.csv"   # dihiggs.point.v2 row(s)
+  manifest_required_fields:
+    - task_key
+    - campaign_id
+    - model_variant
+    - experiment_class
+    - construction_coordinates   # the task_key fields, human-readable
+    - evaluator_cli_argv
+    - producer_commit
+    - producer_dirty
+    - seed   # required only for stochastic stages; null otherwise, never omitted
+    - started_at_utc
+    - finished_at_utc
+    - status
+  resume_semantics: >
+    On restart, a task already COMPLETE with a manifest whose
+    evaluator_cli_argv and producer_commit match the current campaign config
+    is skipped without re-execution. A task whose stored argv/commit differ
+    from the current config is treated as FAILED (stale) and re-queued, never
+    silently reused. A task RUNNING with no live worker holding its lock past
+    a configurable timeout is treated as FAILED and re-queued.
+  worker_bound: >
+    A configurable max_workers caps concurrent RUNNING tasks; this template
+    does not itself set that value, and no campaign under this template has
+    been run with workers > 1 in this task (see COMPUTE_SCALE_PLAN.md
+    section on reproducibility — DihiggsPointV2Evaluator is single-process
+    per invocation, so "workers=N" concurrency is campaign-runner-level
+    parallel invocation, not in-process threading).
+
+not_launched_notice: >
+  No stage in this template has been executed as a production campaign. Only
+  the seven bounded pilot points in docs/pilots/high_mass_h2_v1/ have been
+  run, corresponding to stage_0 and a subset of stage_2's threshold-crossing
+  requirement plus one stage_4-adjacent high point (m_H2=800 GeV).

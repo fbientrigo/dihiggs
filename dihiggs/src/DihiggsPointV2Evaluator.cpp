@@ -51,8 +51,8 @@ struct Result {
     double stability_ok = nan(), triple_ok = nan(), theory_ok = nan();
     double experimental_evaluated = 0.0, experimental_ok = nan();
     double g_hH2H2_GeV = nan();
-    std::array<double, 9> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
-    std::array<double, 9> brs{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
+    std::array<double, 10> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
+    std::array<double, 10> brs{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     double total_width = nan(), width_unaccounted = nan(), width_ok = nan(), ctau_mm = nan();
 };
 
@@ -195,8 +195,8 @@ Result evaluate(const Config& c, double mH, double M2) {
 
     DecayTable decays(model);
     r.widths = {{decays.get_gamma_hdd(2, 3, 3), decays.get_gamma_huu(2, 2, 2),
-                 decays.get_gamma_hll(2, 3, 3), decays.get_gamma_hvv(2, 3),
-                 decays.get_gamma_hvv(2, 2), decays.get_gamma_hgaga(2),
+                 decays.get_gamma_huu(2, 3, 3), decays.get_gamma_hll(2, 3, 3),
+                 decays.get_gamma_hvv(2, 3), decays.get_gamma_hvv(2, 2), decays.get_gamma_hgaga(2),
                  decays.get_gamma_hZga(2), decays.get_gamma_hgg(2), decays.get_gamma_hhh(2, 1, 1)}};
     r.total_width = decays.get_gammatot_h(2);
     r.width_ok = std::isfinite(r.total_width) && r.total_width > 0.0 ? 1.0 : 0.0;
@@ -223,8 +223,8 @@ void header(std::ostream& out) {
         << "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
         << "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
         << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,"
-        << "width_bb_GeV,width_cc_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,"
-        << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tautau,br_WW,br_ZZ,"
+        << "width_bb_GeV,width_cc_GeV,width_tt_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,"
+        << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tt,br_tautau,br_WW,br_ZZ,"
         << "br_gammagamma,br_Zgamma,br_gg,br_hh,width_ok,ctau_mm\n";
 }
 

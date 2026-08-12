@@ -1,0 +1,242 @@
+schema_name: dihiggs.high_mass_point.v1
+status: draft_frozen_for_pilot
+description: >
+  Versioned handoff schema for high-mass H2 2HDM points. This is a thin,
+  purely additive layer on top of the canonical dihiggs.point.v2 evaluator
+  output (see docs/contracts/canonical_evaluators_v2.md); it never rederives
+  a value dihiggs.point.v2 already owns. Every field below with
+  source: dihiggs.point.v2 is copied verbatim (same value, same units) from
+  the evaluator's CSV row that produced the point. Fields with
+  source: derived are computed once, deterministically, from those same
+  evaluator fields, and are recomputed (never re-measured) on replay.
+upstream_schema: dihiggs.point.v2
+not_owned_by_this_schema:
+  - MadGraph cross sections (sigma_production_fb and similar): downstream
+    enrichment only, never emitted by the canonical calculator or this
+    schema. See HIGH_MASS_H2_CONTRACT.md section 8.
+  - HiggsBounds/HiggsSignals experimental_ok: remains nan until a
+    deterministic dihiggs_boundary handoff enriches it.
+
+fields:
+  # --- identity ---
+  - name: schema_version
+    type: string
+    const: dihiggs.high_mass_point.v1
+  - name: campaign_id
+    type: string
+    source: dihiggs.point.v2
+  - name: point_id
+    type: string
+    source: dihiggs.point.v2
+    note: >
+      Hash of physical construction coordinates only (mh, mH, mA, mHp,
+      sin_ba, tan_beta, M2, lambda6, lambda7, yukawa_type). Independent of
+      campaign_id/run_id and of model_variant. Two points that differ only
+      in model_variant share a point_id by design: model_variant describes
+      what downstream does with the point, not the point itself.
+  - name: model_variant
+    type: string
+    enum: [FACTORIZED_G_ONLY, PHYSICAL_DECAYS_NO_HEAVY_CASCADES]
+    source: campaign_config
+    required: true
+    note: Every point carries exactly one variant. Never inferred.
+
+  # --- masses (physical coordinates) ---
+  - name: m_h_GeV
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: mh_input_GeV
+  - name: m_H2_GeV
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: mH_input_GeV
+  - name: m_A_GeV
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: mA_input_GeV
+  - name: m_Hp_GeV
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: mHp_input_GeV
+  - name: Delta_heavy_GeV
+    type: float
+    source: derived
+    formula: m_A_GeV - m_H2_GeV
+    invariant: "abs(m_A_GeV - m_Hp_GeV) < 1e-9 (mA = mHp is a campaign-tooling contract, not an evaluator-enforced invariant; see HIGH_MASS_H2_CONTRACT.md section 3)"
+
+  # --- other model coordinates ---
+  - name: sin_beta_minus_alpha
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: sin_beta_minus_alpha_input
+  - name: tan_beta
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: tan_beta_input
+  - name: M2_GeV2
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: M2_input_GeV2
+  - name: m12_sq_GeV2
+    type: float
+    source: dihiggs.point.v2
+    evaluator_field: m12_sq_input_GeV2
+  - name: lambda1..lambda7
+    type: float[7]
+    source: dihiggs.point.v2
+    evaluator_field: lambda{1..7}_reconstructed
+    note: >
+      Reconstructed (post-set_param_phys), never the raw input lambda6/7;
+      lambda1-5 have no independent input representation in the physical
+      basis.
+  - name: yukawa_type
+    type: int
+    enum: [1, 2, 3, 4]
+    source: dihiggs.point.v2
+    evaluator_field: yukawa_type_installed
+
+  # --- production coupling ---
+  - name: g_hH2H2_GeV
+    type: float
+    source: dihiggs.point.v2
+    note: >
+      Owned exclusively by the canonical evaluator. Downstream repositories
+      must not rederive this value from lambda_i by hand.
+
+  # --- explicit partial widths (GeV) ---
+  - name: width_bb
+  - name: width_cc
+  - name: width_tt
+  - name: width_tautau
+  - name: width_WW
+  - name: width_ZZ
+  - name: width_gg
+  - name: width_gammagamma
+  - name: width_Zgamma
+  - name: width_hh
+  - name: total_width
+  - name: width_unaccounted
+    _group_note: >
+      All eleven of the above: type float, source dihiggs.point.v2,
+      evaluator_field width_<x>_GeV / total_width_GeV / width_unaccounted_GeV.
+      width_tt was added by Gate A (see HIGH_MASS_H2_CONTRACT.md section 2);
+      it must never be folded back into width_unaccounted.
+
+  # --- branching ratios ---
+  - name: BR_bb
+  - name: BR_cc
+  - name: BR_tt
+  - name: BR_tautau
+  - name: BR_WW
+  - name: BR_ZZ
+  - name: BR_gg
+  - name: BR_gammagamma
+  - name: BR_Zgamma
+  - name: BR_hh
+    _group_note: >
+      All ten: type float, source dihiggs.point.v2, evaluator_field br_<x>.
+      sum(BR_*) + width_unaccounted/total_width == 1 to numerical tolerance.
+
+  # --- lifetime: physical vs response, never identified ---
+  - name: ctau_physical_mm
+    type: float
+    source: derived
+    formula: hbar_c_GeV_mm / total_width
+    hbar_c_GeV_mm: 1.973269804e-13
+    note: >
+      Equal to the evaluator's ctau_mm field. Renamed here (not merely
+      aliased) to force every consumer to write ctau_physical_mm explicitly
+      and never reuse a bare "ctau_mm" name that could be confused with a
+      Variant-A response-lifetime scan value.
+  - name: ctau_response_mm
+    type: float
+    source: campaign_config
+    required_for: [FACTORIZED_G_ONLY]
+    forbidden_for: [PHYSICAL_DECAYS_NO_HEAVY_CASCADES]
+    note: >
+      Independently scanned detector-response lifetime for Variant A. Must
+      be absent (null), not zero or equal to ctau_physical_mm by
+      coincidence, for Variant B points. A validator must reject any record
+      where ctau_response_mm == ctau_physical_mm bit-for-bit unless the
+      campaign config explicitly documents that coincidence as intentional.
+
+  # --- theory / construction flags ---
+  - name: construction_ok
+  - name: numerical_ok
+  - name: positivity_ok
+  - name: unitarity_ok
+  - name: perturbativity_ok
+  - name: stability_ok
+  - name: theory_ok
+  - name: rejection_stage
+  - name: rejection_reason
+    _group_note: >
+      All nine: source dihiggs.point.v2 (evaluator_field names:
+      construction_ok, numerical_ok, positivity_reported_ok, unitarity_ok,
+      perturbativity_ok, stability_reported_ok, theory_ok_v1,
+      rejection_stage, rejection_reason). Rejected points are retained, not
+      dropped. experimental_ok remains nan until dihiggs_boundary enrichment
+      (out of scope here).
+
+  # --- cascade-state flags (see cascade_contract.yaml) ---
+  - name: H2_to_AZ_open
+  - name: H2_to_HpW_open
+  - name: H2_to_AA_open
+  - name: H2_to_HpHm_open
+  - name: H2_to_hh_open
+  - name: H2_to_tt_open
+    _group_note: >
+      All six: type bool, source derived, defined in
+      docs/contracts/cascade_contract.yaml. Computed for every point
+      regardless of model_variant. The first four are forbidden (must be
+      false) for a valid PHYSICAL_DECAYS_NO_HEAVY_CASCADES point; the last
+      two are physical and must not be treated as forbidden.
+
+  # --- provenance ---
+  - name: producer
+    const: DihiggsPointV2Evaluator
+  - name: producer_commit
+    type: string
+    source: dihiggs.point.v2
+  - name: producer_dirty
+    type: string
+    source: dihiggs.point.v2
+  - name: twohdmc_version
+    type: string
+    const: "1.8.0"
+    note: Vendored, not a submodule; see HIGH_MASS_H2_CONTRACT.md section 3.
+  - name: config_hash
+    type: string
+    source: derived
+    formula: sha256 of the campaign config file that generated this point's task
+  - name: input_hash
+    type: string
+    source: derived
+    formula: sha256 of the exact CLI argument vector passed to the evaluator
+
+invariants:
+  - name: hierarchy
+    check: m_h_GeV < m_H2_GeV < m_A_GeV
+    and: m_A_GeV == m_Hp_GeV
+    applies_to: [FACTORIZED_G_ONLY, PHYSICAL_DECAYS_NO_HEAVY_CASCADES]
+  - name: width_closure
+    check: >
+      abs((width_bb + width_cc + width_tt + width_tautau + width_WW +
+      width_ZZ + width_gg + width_gammagamma + width_Zgamma + width_hh +
+      width_unaccounted) - total_width) <= 1e-9 * total_width
+    skip_if: total_width is nan
+  - name: ctau_consistency
+    check: abs(ctau_physical_mm - 1.973269804e-13 / total_width) <= 1e-9 * ctau_physical_mm
+    skip_if: total_width is nan or total_width <= 0
+  - name: no_forbidden_cascade_for_variant_b
+    check: >
+      model_variant != PHYSICAL_DECAYS_NO_HEAVY_CASCADES or
+      (not H2_to_AZ_open and not H2_to_HpW_open and not H2_to_AA_open and
+      not H2_to_HpHm_open)
+    on_violation: fail_closed
+  - name: response_ctau_never_identified
+    check: model_variant != FACTORIZED_G_ONLY or ctau_response_mm is not null
+    on_violation: reject_record
+  - name: variant_b_forbids_response_ctau
+    check: model_variant != PHYSICAL_DECAYS_NO_HEAVY_CASCADES or ctau_response_mm is null
+    on_violation: reject_record
