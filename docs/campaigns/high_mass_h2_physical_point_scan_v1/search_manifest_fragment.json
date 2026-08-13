@@ -1,0 +1,99 @@
+{
+  "search_script": "scripts/high_mass_physical_point_search.py",
+  "producer_commit": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+  "producer_dirty": "yes",
+  "evaluator_binary": "dihiggs/app/DihiggsPointV2Evaluator",
+  "regions": [
+    {
+      "label": "R150_anchor",
+      "m_H2_GeV": 150.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 450.0
+    },
+    {
+      "label": "R200_below_hh",
+      "m_H2_GeV": 200.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 500.0
+    },
+    {
+      "label": "R250_near_hh_threshold",
+      "m_H2_GeV": 250.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 550.0
+    },
+    {
+      "label": "R300_above_hh",
+      "m_H2_GeV": 300.0,
+      "Delta_heavy_GeV": 500.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R350_near_tt_threshold",
+      "m_H2_GeV": 350.0,
+      "Delta_heavy_GeV": 450.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R400_above_tt",
+      "m_H2_GeV": 400.0,
+      "Delta_heavy_GeV": 400.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R500",
+      "m_H2_GeV": 500.0,
+      "Delta_heavy_GeV": 500.0,
+      "m_A_GeV": 1000.0
+    },
+    {
+      "label": "R600",
+      "m_H2_GeV": 600.0,
+      "Delta_heavy_GeV": 600.0,
+      "m_A_GeV": 1200.0
+    },
+    {
+      "label": "R800_near2000",
+      "m_H2_GeV": 800.0,
+      "Delta_heavy_GeV": 1200.0,
+      "m_A_GeV": 2000.0
+    }
+  ],
+  "search_grid": {
+    "tan_beta": [
+      2.0,
+      5.0,
+      10.0,
+      30.0,
+      100.0,
+      300.0,
+      1000.0,
+      10000.0,
+      100000.0,
+      300000.0
+    ],
+    "sin_beta_minus_alpha": [
+      1.0,
+      0.999,
+      0.995
+    ],
+    "lambda6": [
+      0.0,
+      1e-10,
+      0.1,
+      -0.1
+    ],
+    "lambda7_fixed": 0.0,
+    "M2_fraction_of_mA_squared_range": [
+      -1.0,
+      3.0
+    ],
+    "M2_grid_points": 51,
+    "yukawa_type_fixed": 1
+  },
+  "total_cli_invocations": 1080,
+  "total_attempted_points": 55080,
+  "total_accepted_points": 208,
+  "wall_time_seconds": 458.9,
+  "config_hash_sha256": "6b5edc0e0aa27733acf7d8e797eb82233f3869726676477be9170358f8811212"
+}

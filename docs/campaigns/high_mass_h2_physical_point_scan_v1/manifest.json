@@ -1,0 +1,136 @@
+{
+  "manifest_schema": "dihiggs.high_mass_h2.worker_a_manifest.v1",
+  "mission": "Find theory-valid (and where possible HB/HS-valid) high-mass H2 2HDM points",
+  "worktree": "/home/fabian/atlas_dihiggs/dihiggs-point-search",
+  "worktree_git_head": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+  "worktree_git_dirty": true,
+  "evaluator_binary": "dihiggs/app/DihiggsPointV2Evaluator",
+  "evaluator_producer_commit": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+  "evaluator_producer_dirty": "yes",
+  "search_script": "scripts/high_mass_physical_point_search.py",
+  "search_config_hash_sha256": "6b5edc0e0aa27733acf7d8e797eb82233f3869726676477be9170358f8811212",
+  "search_regions": [
+    {
+      "label": "R150_anchor",
+      "m_H2_GeV": 150.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 450.0
+    },
+    {
+      "label": "R200_below_hh",
+      "m_H2_GeV": 200.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 500.0
+    },
+    {
+      "label": "R250_near_hh_threshold",
+      "m_H2_GeV": 250.0,
+      "Delta_heavy_GeV": 300.0,
+      "m_A_GeV": 550.0
+    },
+    {
+      "label": "R300_above_hh",
+      "m_H2_GeV": 300.0,
+      "Delta_heavy_GeV": 500.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R350_near_tt_threshold",
+      "m_H2_GeV": 350.0,
+      "Delta_heavy_GeV": 450.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R400_above_tt",
+      "m_H2_GeV": 400.0,
+      "Delta_heavy_GeV": 400.0,
+      "m_A_GeV": 800.0
+    },
+    {
+      "label": "R500",
+      "m_H2_GeV": 500.0,
+      "Delta_heavy_GeV": 500.0,
+      "m_A_GeV": 1000.0
+    },
+    {
+      "label": "R600",
+      "m_H2_GeV": 600.0,
+      "Delta_heavy_GeV": 600.0,
+      "m_A_GeV": 1200.0
+    },
+    {
+      "label": "R800_near2000",
+      "m_H2_GeV": 800.0,
+      "Delta_heavy_GeV": 1200.0,
+      "m_A_GeV": 2000.0
+    }
+  ],
+  "search_grid": {
+    "tan_beta": [
+      2.0,
+      5.0,
+      10.0,
+      30.0,
+      100.0,
+      300.0,
+      1000.0,
+      10000.0,
+      100000.0,
+      300000.0
+    ],
+    "sin_beta_minus_alpha": [
+      1.0,
+      0.999,
+      0.995
+    ],
+    "lambda6": [
+      0.0,
+      1e-10,
+      0.1,
+      -0.1
+    ],
+    "lambda7_fixed": 0.0,
+    "M2_fraction_of_mA_squared_range": [
+      -1.0,
+      3.0
+    ],
+    "M2_grid_points": 51,
+    "yukawa_type_fixed": 1
+  },
+  "total_cli_invocations": 1080,
+  "total_attempted_points": 55080,
+  "total_accepted_theory_valid_points": 208,
+  "search_wall_time_seconds": 458.9,
+  "classification_counts": {
+    "HBHS_BLOCKED": 208
+  },
+  "accepted_points_by_mass_region": {
+    "R150_anchor": 77,
+    "R200_below_hh": 62,
+    "R250_near_hh_threshold": 69
+  },
+  "hbhs_enrichment": {
+    "attempted": true,
+    "outcome": "HBHS_BLOCKED for all points",
+    "reason": "dihiggs_boundary's only tested, working HB/HS-linked producer (src/evaluate_point.cpp, wrapped by python/dhb/enrich.py + runner.HbhsRunner) hard-codes mh=125.09 GeV (constexpr kMh in evaluate_point.cpp; confirmed in docs/evaluate_point_contract.md and tests/test_golden_evaluate_point.py::test_g07_...). HIGH_MASS_H2_CONTRACT.md section 3 explicitly freezes mh=125.13 for this campaign and explicitly forbids mixing 125.09 results into any high-mass campaign artifact. evaluate_point also hard-codes sin(beta-alpha)=1.0 exactly (kSinBa) and only accepts a real M (so M2=M*M>=0), which does not cover every point in this campaign's search grid (sin_ba in {1.0,0.999,0.995}, M2 allowed negative). Bridging this would require either modifying dihiggs_boundary (explicitly out of scope, read-only access) or writing a new C++ program duplicating evaluate_point.cpp's 2HDMC effective-coupling extraction (get_coupling_hdd/huu/hll for h1/h2/h3 normalized against a separately constructed SM-like reference model, plus charged-Higgs kappa_t/kappa_b) with mh=125.13 instead -- a nontrivial reimplementation, not a small conversion step, and out of this task's time-box. Per the mission's explicit allowance, this is reported as an unrelated operational/schema blocker rather than blocking the mission; every theory-valid point is classified HBHS_BLOCKED, not dropped.",
+    "files_read_before_concluding_blocked": [
+      "dihiggs_boundary/python/dhb/runner.py",
+      "dihiggs_boundary/python/dhb/enrich.py",
+      "dihiggs_boundary/python/dhb/adapter.py",
+      "dihiggs_boundary/python/dhb/schema.py",
+      "dihiggs_boundary/src/evaluate_point.cpp",
+      "dihiggs_boundary/docs/evaluate_point_contract.md",
+      "dihiggs_boundary/tests/test_golden_evaluate_point.py",
+      "dihiggs_boundary/README.md"
+    ]
+  },
+  "outputs": {
+    "high_mass_valid_points_csv": "high_mass_valid_points.csv",
+    "high_mass_attempted_points_csv": "high_mass_attempted_points.csv",
+    "rejection_summary_csv": "rejection_summary.csv",
+    "mass_validity_map_png": "mass_validity_map.png",
+    "mass_validity_map_pdf": "mass_validity_map.pdf",
+    "report_md": "HIGH_MASS_VALID_POINT_REPORT.md",
+    "checksums": "checksums.sha256"
+  }
+}
