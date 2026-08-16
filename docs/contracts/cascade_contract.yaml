@@ -13,7 +13,9 @@ constants_GeV:
   m_W: 80.36951   # 2HDMC 1.8.0 SM default (SM::MW)
   m_Z: 91.15349   # 2HDMC 1.8.0 SM default (SM::MZ)
   m_t_pole: 172.5 # 2HDMC 1.8.0 SM default (SM::mt_p)
-  m_h: 125.13     # frozen for this campaign; see HIGH_MASS_H2_CONTRACT.md section 3
+  m_h: 125.20     # canonical convention; conventions/physics_conventions.yaml
+                  # (sm_like_higgs.m_h_GeV). Was 125.13 -- see HIGH_MASS_H2_CONTRACT.md
+                  # section 3 for the superseded v1 freeze.
 
 flag_groups:
   forbidden_in_no_heavy_cascade_study:
@@ -53,7 +55,7 @@ flag_groups:
     flags:
       - name: H2_to_hh_open
         formula: m_H2_GeV > 2 * m_h
-        threshold_GeV: 250.26
+        threshold_GeV: 250.40   # 2 * m_h at the canonical convention (was 250.26 at m_h=125.13)
         note: >
           Kinematic approximation only. The evaluator's actual
           width_hh_GeV (from DecayTable::get_gamma_hhh(2,1,1)) is the

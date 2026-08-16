@@ -29,8 +29,8 @@ EXPECTED_VERSIONS = {
     "HiggsBounds_dataset": "v1.7",
     "HiggsSignals_dataset": "v1.1",
 }
-PINNED_CONVENTIONS_MD5 = "a2fea4c862d3b678334fd07a396f26ba"
-CONVENTIONS_SCHEMA_VERSION = "physics_conventions_v1"
+PINNED_CONVENTIONS_MD5 = "5a2e880a7c36a6aecf2a99e18cab4d44"
+CONVENTIONS_SCHEMA_VERSION = "physics_conventions_v2"
 
 
 def _load_manifest():

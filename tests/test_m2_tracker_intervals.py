@@ -48,7 +48,7 @@ def test_refined_tracker_bounds_match_dense_canonical_grid_in_pilot_domain(tmp_p
     points, intervals = tmp_path / "points.csv", tmp_path / "intervals.csv"
     env = {**os.environ, "OMP_NUM_THREADS": "1"}
     common = [
-        "--mh=125.13", "--mphi-min=130", "--mphi-max=130", "--mphi-step=1",
+        "--mh=125.20", "--mphi-min=130", "--mphi-max=130", "--mphi-step=1",
         "--ma=300", "--mhp=300", "--sin-ba=0.999", "--tan-beta=50",
         "--lam6=0.1", "--lam7=0", "--m2-min=15000", "--m2-max=18000",
         "--seed-M2-center=16500", "--seed-M2-halfwidth=1500", "--seed-n-M2=61",
@@ -62,7 +62,7 @@ def test_refined_tracker_bounds_match_dense_canonical_grid_in_pilot_domain(tmp_p
 
     dense = tmp_path / "dense.csv"
     subprocess.run([
-        str(producer), "--campaign-id", "tracker-test", "--run-id", "dense", "--mh", "125.13",
+        str(producer), "--campaign-id", "tracker-test", "--run-id", "dense", "--mh", "125.20",
         "--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "300",
         "--mHp", "300", "--yukawa-type", "1", "--sin-ba", "0.999", "--tan-beta", "50",
         "--M2-min", "15000", "--M2-max", "18000", "--n-M2", "301", "--lambda6", "0.1",
@@ -81,7 +81,7 @@ def test_tracker_local_dense_fallback_recovers_pilot_band(tmp_path):
     if not tracker.is_file():
         pytest.skip("build tracker first")
     completed = subprocess.run([
-        str(tracker), "--mh=125.13", "--mphi-min=130", "--mphi-max=130", "--mphi-step=1",
+        str(tracker), "--mh=125.20", "--mphi-min=130", "--mphi-max=130", "--mphi-step=1",
         "--ma=300", "--mhp=300", "--sin-ba=0.999", "--tan-beta=50", "--lam6=0.1",
         "--lam7=0", "--m2-min=15000", "--m2-max=18000", "--seed-M2-center=15050",
         "--seed-M2-halfwidth=50", "--seed-n-M2=5", "--fallback-dense-count=301",

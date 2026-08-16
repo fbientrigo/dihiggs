@@ -12,12 +12,40 @@
 # per-repo tests pin the values so an accidental edit fails CI. (Collapsing the
 # three copies into one shared submodule is tracked as Phase D in the
 # inter-repo assessment.)
-schema_version: physics_conventions_v1
+schema_version: physics_conventions_v2
 
 # c*tau[mm] = hbar_c_gev_mm / Gamma[GeV]
 hbar_c_gev_mm: 1.973269804e-13
 # c*tau[mm] = c_mm_per_ns * tau[ns]
 c_mm_per_ns: 299.792458
+
+# The SM-like CP-even scalar mass used by ACTIVE physical-point production.
+#
+# One value, one owner. Downstream repos must read `m_h_GeV` from the canonical
+# point (column `m_h_GeV` / `mh_input_GeV`) or from this file -- they must not
+# carry their own default. Historical and frozen artifacts keep the value they
+# were produced with and are labelled historical; see `supersedes` below.
+#
+# The DECIMAL STRING is authoritative. The float64 repr of 125.20 is
+# 1.25200000000000003e+02, which is not byte-equal to the 1.25200000000000000e+02
+# form required by UFO `parameters.py` and SLHA `Block MASS` entry 25. Producers
+# that emit cards must format from the string via decimal.Decimal, not float.
+sm_like_higgs:
+  m_h_GeV: "125.20"
+  source: PDG 2026 Higgs listing
+  source_url: https://pdg.lbl.gov/encoder_listings/s126.pdf
+  adopted_utc: "2026-08-15"
+  applies_to: active physical-point production only
+  supersedes:
+    - value: "125.13"
+      status: historical
+      note: high-mass campaign v1, 150 GeV benchmark chain, point-v2 verification v1
+    - value: "125.09"
+      status: historical
+      note: dihiggs_boundary evaluate_point legacy 6-column input contract
+    - value: "125.0"
+      status: legacy
+      note: PhysLam1Scan / autoresearch replay-only binaries; upstream UFO default
 
 # Internal neutral-scalar naming used across the CSV contracts and column
 # names (eff_<hk>_*, br_<hk>_*, total_width_<hk>, mass columns).

@@ -16,6 +16,9 @@ import os
 # Pinned fallback (must equal conventions/physics_conventions.yaml).
 _HBAR_C_GEV_MM_PINNED = 1.973269804e-13  # c*tau[mm] = hbar*c / Gamma[GeV]
 _C_MM_PER_NS_PINNED = 299.792458  # c*tau[mm] = C_MM_PER_NS * tau[ns]
+# Decimal string, not float: the float64 repr of 125.20 is 1.25200000000000003e+02,
+# which is not byte-equal to the 1.25200000000000000e+02 form SLHA/UFO cards need.
+_M_H_GEV_TEXT_PINNED = "125.20"
 
 # mlpython/lake_pipeline/physics_conventions.py -> repo root is three levels up.
 _REPO_ROOT = os.path.dirname(
@@ -40,6 +43,14 @@ _CONV = _load()
 
 HBAR_C_GEV_MM = float(_CONV.get("hbar_c_gev_mm", _HBAR_C_GEV_MM_PINNED))
 C_MM_PER_NS = float(_CONV.get("c_mm_per_ns", _C_MM_PER_NS_PINNED))
+
+# Canonical SM-like Higgs mass for ACTIVE physical-point production.
+# Prefer reading m_h_GeV off the point itself; use this only where no point is
+# in hand (campaign defaults, card-writer fallbacks).
+M_H_GEV_TEXT = str(
+    (_CONV.get("sm_like_higgs") or {}).get("m_h_GeV", _M_H_GEV_TEXT_PINNED)
+)
+M_H_GEV = float(M_H_GEV_TEXT)
 
 
 def ctau_mm_from_width_gev(total_width_gev):

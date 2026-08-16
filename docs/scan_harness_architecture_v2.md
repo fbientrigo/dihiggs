@@ -67,7 +67,7 @@ Each engine implements the `EngineAdapter` protocol:
 ### M2Engine (DihiggsPointV2Evaluator)
 
 ```
-./DihiggsPointV2Evaluator --campaign-id ID --run-id ID --mh 125.13 \
+./DihiggsPointV2Evaluator --campaign-id ID --run-id ID --mh 125.20 \
   --mH-min MIN --mH-max MAX --n-mH N --mA MASS --mHp MASS --yukawa-type 1 \
   --sin-ba SBA --tan-beta TB --M2-min MIN --M2-max MAX --n-M2 N \
   --lambda6 L6 --lambda7 L7 --output output.csv

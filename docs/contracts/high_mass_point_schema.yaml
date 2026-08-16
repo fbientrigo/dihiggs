@@ -46,6 +46,15 @@ fields:
     type: float
     source: dihiggs.point.v2
     evaluator_field: mh_input_GeV
+    representation: decimal_string
+    convention_ref: conventions/physics_conventions.yaml#sm_like_higgs.m_h_GeV
+    note: >
+      Copied verbatim from the evaluator; the schema declares no value. Active
+      production uses the canonical convention (125.20). Points produced under
+      a superseded convention (125.13, 125.09) remain valid and must be
+      labelled historical rather than reinterpreted. Serialize as a decimal
+      string: the float64 repr of 125.20 is 1.25200000000000003e+02, which is
+      not byte-equal to the 1.25200000000000000e+02 form UFO/SLHA cards need.
   - name: m_H2_GeV
     type: float
     source: dihiggs.point.v2

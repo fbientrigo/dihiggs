@@ -8,9 +8,12 @@ schema_ref: dihiggs.high_mass_point.v1   # docs/contracts/high_mass_point_schema
 cascade_contract_ref: dihiggs.high_mass_h2.cascade_contract.v1  # docs/contracts/cascade_contract.yaml
 
 frozen_assumptions:
-  m_h_GeV: 125.13
+  m_h_GeV: "125.20"   # decimal string; conventions/physics_conventions.yaml
   twohdmc_version: "1.8.0"
-  note: See HIGH_MASS_H2_CONTRACT.md section 3 for the full Gate B freeze.
+  note: >
+    m_h follows the canonical convention (sm_like_higgs.m_h_GeV). Campaigns
+    frozen at m_h=125.13 are historical and must say so explicitly; see
+    HIGH_MASS_H2_CONTRACT.md section 3.
 
 campaign_id_convention: "high_mass_h2_<stage>_<variant>_<yyyymmdd>"
 
@@ -70,7 +73,7 @@ stages:
     exact_node_values: deferred_pending_stage_0_and_1_theory_validity_pilot
   - id: stage_2
     label: cross_tt_and_hh_thresholds_deliberately
-    thresholds_GeV: {hh: 250.26, tt: 345.0}
+    thresholds_GeV: {hh: 250.40, tt: 345.0}   # hh = 2 * m_h (was 250.26 at m_h=125.13)
     m_H2_GeV: bracket_each_threshold_with_at_least_3_nodes_below_and_above
     experiment_class: MASS_CONTROL
     status: partially_covered_by_pilot_points_P1-P4

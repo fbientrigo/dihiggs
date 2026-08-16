@@ -20,7 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / "dihiggs/app/DihiggsPointV2Evaluator"
 PILOT_SCRIPT = ROOT / "scripts/run_high_mass_h2_pilot.py"
 
-M_H = 125.13
+# Canonical convention; mirrors scripts/run_high_mass_h2_pilot.py and
+# conventions/physics_conventions.yaml (sm_like_higgs.m_h_GeV).
+M_H = 125.20
 M_W = 80.36951
 M_Z = 91.15349
 M_T_POLE = 172.5

@@ -16,11 +16,11 @@ OUTPUT = OUT / "lambda1_v2_pilot.csv"
 REPORT = ROOT / "docs/verification/lambda1_v2_yukawa_fix_v1"
 HEADER = "point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,tan_beta,lambda1_target,lambda6_input,lambda7_input"
 ROWS = [
-    "L01,125.13,130,300,300,0.999,50,0.1,0.1,0",
-    "L05,125.13,130,300,300,0.999,50,20,0.1,0",
+    "L01,125.20,130,300,300,0.999,50,0.1,0.1,0",
+    "L05,125.20,130,300,300,0.999,50,20,0.1,0",
     "L06,125.0,200,500,500,1,10000,1.0,1e-10,0",
-    "ordering,125.13,125.12999999999999,300,300,0.999,50,0.1,0.1,0",
-    "construction,125.13,130,-1,300,0.999,50,0.1,0.1,0",
+    "ordering,125.20,125.19999999999999,300,300,0.999,50,0.1,0.1,0",
+    "construction,125.20,130,-1,300,0.999,50,0.1,0.1,0",
 ]
 
 

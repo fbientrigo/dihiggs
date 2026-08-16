@@ -21,7 +21,11 @@ POINTS_CSV = OUT_DIR / "pilot_points.csv"
 VALIDATION_JSON = OUT_DIR / "pilot_validation.json"
 
 HBAR_C_GEV_MM = 1.973269804e-13
-M_H = 125.13
+# Canonical SM-like Higgs mass; see conventions/physics_conventions.yaml
+# (sm_like_higgs.m_h_GeV). Drives --mh and the H2->hh threshold 2*M_H.
+M_H = 125.20
+# Superseded convention, retained ONLY for the historical 150 GeV anchor.
+M_H_HISTORICAL_ANCHOR = 125.13
 M_W = 80.36951
 M_Z = 91.15349
 M_T_POLE = 172.5
@@ -31,6 +35,18 @@ WIDTH_FIELDS = (
     "width_WW_GeV", "width_ZZ_GeV", "width_gammagamma_GeV", "width_Zgamma_GeV",
     "width_gg_GeV", "width_hh_GeV",
 )
+
+# P0_anchor_150 is the HISTORICAL validated 150 GeV benchmark
+# (H2scan_mH150_tb300000). It is pinned to the superseded convention
+# M_H_HISTORICAL_ANCHOR so its frozen total_width/g_hH2H2/ctau/br_bb remain an
+# exact regression; the Gate A check "anchor_150_unaffected_by_tt_addition"
+# compares against those frozen digits. Every other pilot point uses the
+# canonical M_H. Do not "fix" this by moving the anchor to 125.20 -- that
+# reinterprets a historical benchmark as a newly calculated point.
+# See docs/HIGH_MASS_H2_CONTRACT.md, Decision v1 (superseded) / v2 (active).
+# "P0_repeat" is the reproducibility re-run of the same anchor point and must
+# therefore use the same (historical) mh, or its point_id will not match.
+ANCHOR_PILOT_NAMES = frozenset({"P0_anchor_150", "P0_repeat"})
 
 # (name, mH2, Delta_heavy, sin_ba, tan_beta, M2, lambda6, lambda7, model_variant)
 PILOTS = [
@@ -53,11 +69,16 @@ PILOTS = [
 ]
 
 
+def point_mh(name):
+    """mh for a pilot point: canonical, except the historical anchor."""
+    return M_H_HISTORICAL_ANCHOR if name in ANCHOR_PILOT_NAMES else M_H
+
+
 def run_point(name, mH2, mA, sba, tb, M2, l6, l7):
     output = OUT_DIR / f"_raw_{name}.csv"
     command = [
         str(BINARY), "--campaign-id", "high_mass_h2_pilot_v1", "--run-id", name,
-        "--mh", repr(M_H), "--mH-min", repr(mH2), "--mH-max", repr(mH2), "--n-mH", "1",
+        "--mh", repr(point_mh(name)), "--mH-min", repr(mH2), "--mH-max", repr(mH2), "--n-mH", "1",
         "--mA", repr(mA), "--mHp", repr(mA), "--yukawa-type", "1",
         "--sin-ba", repr(sba), "--tan-beta", repr(tb),
         "--M2-min", repr(M2), "--M2-max", repr(M2), "--n-M2", "1",
@@ -73,13 +94,16 @@ def run_point(name, mH2, mA, sba, tb, M2, l6, l7):
     return row
 
 
-def cascade_flags(mH2, mA, mHp):
+def cascade_flags(mH2, mA, mHp, mh):
     return {
         "H2_to_AZ_open": mH2 > mA + M_Z,
         "H2_to_HpW_open": mH2 > mHp + M_W,
         "H2_to_AA_open": mH2 > 2 * mA,
         "H2_to_HpHm_open": mH2 > 2 * mHp,
-        "H2_to_hh_open": mH2 > 2 * M_H,
+        # Per docs/contracts/cascade_contract.yaml the flag must come from the
+        # point's OWN mh, not a module constant -- the historical anchor runs
+        # at the superseded convention and keeps its 2*125.13 threshold.
+        "H2_to_hh_open": mH2 > 2 * mh,
         "H2_to_tt_open": mH2 > 2 * M_T_POLE,
     }
 
@@ -102,7 +126,7 @@ def validate_point(name, row, mH2, mA, model_variant):
         checks["hierarchy_mA_eq_mHp"] = float(row["mA_input_GeV"]) == float(row["mHp_input_GeV"])
         checks["g_hH2H2_finite_nonneg"] = finite(row, "g_hH2H2_GeV") and float(row["g_hH2H2_GeV"]) >= 0.0
 
-        flags = cascade_flags(mH2, mA, mHp)
+        flags = cascade_flags(mH2, mA, mHp, float(row["mh_input_GeV"]))
         forbidden = ["H2_to_AZ_open", "H2_to_HpW_open", "H2_to_AA_open", "H2_to_HpHm_open"]
         if model_variant == "PHYSICAL_DECAYS_NO_HEAVY_CASCADES":
             checks["no_forbidden_cascade_open"] = not any(flags[f] for f in forbidden)

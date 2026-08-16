@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / "dihiggs/app/DihiggsPointV2Evaluator"
 OUT = ROOT / "docs/pilots/dihiggs_point_v2_v1"
 REPORT = ROOT / "docs/verification/dihiggs_point_v2_verification_v1"
-BASE = ["--campaign-id", "point-v2-engineering-pilot", "--mh", "125.13", "--yukawa-type", "1"]
+BASE = ["--campaign-id", "point-v2-engineering-pilot", "--mh", "125.20", "--yukawa-type", "1"]
 CASES = {
     "L01_accepted_anchor": ["--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "300", "--mHp", "300", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16721.68154468371", "--M2-max", "16721.68154468371", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0"],
     "L05_theory_rejected_anchor": ["--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "300", "--mHp", "300", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16239.109978356435", "--M2-max", "16239.109978356435", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0"],
     "L06_llp_anchor": ["--mH-min", "200", "--mH-max", "200", "--n-mH", "1", "--mA", "500", "--mHp", "500", "--sin-ba", "1", "--tan-beta", "10000", "--M2-min", "39999.9995713761", "--M2-max", "39999.9995713761", "--n-M2", "1", "--lambda6", "1e-10", "--lambda7", "0"],
-    "ordering_boundary": ["--mH-min", repr(math.nextafter(125.13, -math.inf)), "--mH-max", "125.13", "--n-mH", "2", "--mA", "300", "--mHp", "300", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16721.68154468371", "--M2-max", "16721.68154468371", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0"],
+    "ordering_boundary": ["--mH-min", repr(math.nextafter(125.20, -math.inf)), "--mH-max", "125.20", "--n-mH", "2", "--mA", "300", "--mHp", "300", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16721.68154468371", "--M2-max", "16721.68154468371", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0"],
     "construction_failure": ["--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "-1", "--mHp", "300", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16721.68154468371", "--M2-max", "16721.68154468371", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0"],
 }
 
@@ -65,7 +65,7 @@ def main() -> None:
         "baseline_commit": "cbb5079c8ecc012395a525ccd1dd54f8481d5be9",
         "successor_commit": implementation_commit,
         "producer_schema": "dihiggs.point.v2",
-        "mh_convention_GeV": 125.13,
+        "mh_convention_GeV": 125.20,
         "mh_source": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
         "scope": "bounded engineering pilot; no campaign-level scientific conclusion",
         "verification_commands": [
@@ -132,7 +132,8 @@ def main() -> None:
         "Status: canonical core and bounded engineering pilot verified; production experimental gates are not integrated.", "",
         "- Baseline: `cbb5079c8ecc012395a525ccd1dd54f8481d5be9` (PR #58 final head)",
         f"- Verified implementation commit: `{implementation_commit}`", "- Schema: `dihiggs.point.v2`",
-        "- Higgs mass: 125.13 GeV ([PDG 2026 listing](https://pdg.lbl.gov/encoder_listings/s126.pdf))",
+        "- Higgs mass: 125.20 GeV ([PDG 2026 listing](https://pdg.lbl.gov/encoder_listings/s126.pdf)); "
+        "canonical convention, see conventions/physics_conventions.yaml",
         "- Scope: engineering validation only; no campaign-level scientific conclusion", "",
         "## Pilot results", "",
         "| Case | Rows | construction_ok | theory_ok_v1 | SHA-256 |", "|---|---:|---|---|---|",

@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from dihiggs.app.orchestrator import conventions
 from dihiggs.app.orchestrator.grid import ScanGrid, grid_signature
 from dihiggs.app.orchestrator.io_utils import (
     detect_git_info,
@@ -108,13 +109,15 @@ def write_initial_manifest(
         "summary": {},  # filled by update_manifest_summary()
     }
     if engine_name == "m2":
+        effective_mass_convention = conventions.mass_convention_block(fixed.mh)
+        # Keep the engine's canonical block and the run's effective block in
+        # sync: axis_metadata() is built without access to `fixed`, so an
+        # explicit --mh would otherwise leave it advertising the canonical value.
+        if isinstance(axis_metadata, dict) and "mass_convention" in axis_metadata:
+            axis_metadata["mass_convention"] = effective_mass_convention
         manifest.update({
             "point_schema_version": "dihiggs.point.v2",
-            "mass_convention": {
-                "mh_GeV": 125.13 if fixed.mh is None else fixed.mh,
-                "source": "PDG 2026 Higgs listing",
-                "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
-            },
+            "mass_convention": effective_mass_convention,
             "twohdmc_provenance": {
                 "api": "THDM::set_param_phys",
                 "repository_commit": git.get("commit", "unknown"),

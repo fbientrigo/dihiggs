@@ -23,7 +23,7 @@ from dihiggs.app.orchestrator.lambda1_v2 import (
 
 def rows() -> list[dict[str, str]]:
     return cartesian_rows(
-        fixed=Lambda1Fixed(125.13, 300.0, 310.0, 0.995, 0.1, 0.0),
+        fixed=Lambda1Fixed(125.20, 300.0, 310.0, 0.995, 0.1, 0.0),
         mH_values=[130.0, 290.0], lambda1_values=[0.0, 12.0],
         tan_beta_values=[50.0],
     )
@@ -36,11 +36,11 @@ def test_exact_header_cartesian_order_and_stable_ids(tmp_path: Path) -> None:
     assert [row["mH_gev"] for row in generated] == ["130", "130", "290", "290"]
     assert [row["lambda1_target"] for row in generated] == ["0", "12", "0", "12"]
     assert generated == cartesian_rows(
-        fixed=Lambda1Fixed(125.13, 300.0, 310.0, 0.995, 0.1, 0.0),
+        fixed=Lambda1Fixed(125.20, 300.0, 310.0, 0.995, 0.1, 0.0),
         mH_values=[130.0, 290.0], lambda1_values=[0.0, 12.0], tan_beta_values=[50.0],
     )
     assert generated[0]["point_id"] == stable_point_id(
-        (125.13, 130.0, 300.0, 310.0, 0.995, 50.0, 0.0, 0.1, 0.0)
+        (125.20, 130.0, 300.0, 310.0, 0.995, 50.0, 0.0, 0.1, 0.0)
     )
     input_csv = tmp_path / "input.csv"
     write_input_csv(input_csv, generated)
