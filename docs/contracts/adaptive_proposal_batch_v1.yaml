@@ -1,0 +1,156 @@
+schema_name: dihiggs.adaptive_proposal_batch.v1
+status: frozen_for_pilot
+description: >
+  Versioned input contract for the thin proposal-batch handoff
+  (dihiggs/app/orchestrator/proposal_batch.py, GitHub issue #72). One CSV row
+  = one attempted physical point, submitted verbatim to the canonical
+  DihiggsPointV2Evaluator (docs/contracts/canonical_evaluators_v2.md). This
+  file defines the input contract only; the output attempt envelope
+  (dihiggs.adaptive_attempt.v1) and provenance manifest are documented in
+  proposal_batch.py's module docstring, not here.
+producer_note: >
+  This contract carries no search-policy semantics: no weights, priors,
+  scores, acceptance thresholds, exploration/exploitation state, or budget.
+  Those belong exclusively to the external search repository
+  (dihiggs_boundary), never here. See "Ownership boundary" in issue #72.
+
+conventions:
+  units: >
+    Masses in GeV, M2/m12_sq in GeV^2, matching
+    docs/contracts/canonical_evaluators_v2.md exactly. No unit conversion is
+    performed anywhere in the wrapper.
+  row_identity: >
+    One proposal row = one attempted physical point = one
+    DihiggsPointV2Evaluator subprocess invocation (--n-mH 1 --n-M2 1,
+    --mH-min == --mH-max, --M2-min == --M2-max). Row order is preserved
+    end to end from proposals.csv into attempts.csv.
+  no_hidden_defaults: >
+    Every canonical physics coordinate below is a required column with no
+    default. The single documented exception is mh_GeV (see below); nothing
+    else may be omitted, inferred, or silently substituted.
+  malformed_rows: >
+    A row that fails contract validation (unparseable field, missing
+    required column, unsupported yukawa_type, mh_GeV mismatch, duplicate
+    proposal_id) is never dropped. It is emitted as attempt_status=MALFORMED
+    in attempts.csv with a machine-readable attempt_reason and is never sent
+    to the evaluator subprocess.
+  not_this_contracts_job: >
+    Physical validity of a proposal (tan_beta > 0, |sin_ba| <= 1, mh < mH,
+    non-descending grid bounds, ...) is NOT checked here. Those are 2HDM
+    theory predicates owned exclusively by DihiggsPointV2Evaluator /
+    THDM::set_param_phys. A row that is well-formed by this contract but
+    physically invalid reaches the evaluator, which rejects it on its own
+    terms (construction_ok=0, or a nonzero exit for CLI-level physics
+    guards such as invalid_physics_input) and that rejection is recorded
+    as attempt_status=EVALUATED or EVALUATOR_ERROR, never re-derived here.
+
+fields:
+  # --- proposal metadata: external-search identity, not physics ---
+  - name: proposal_id
+    type: string
+    category: proposal_metadata
+    required: true
+    note: >
+      External-search identity for this attempted point. Not a replacement
+      for the canonical dihiggs.point.v2 point_id (a hash of the physical
+      construction coordinates), which is independent of proposal_id and
+      appears alongside it in the output attempt row. Must be non-empty and
+      unique within the batch; a duplicate proposal_id is a contract
+      violation for every row that shares it (none of those rows are
+      evaluated). Passed to the evaluator as --run-id, so it inherits the
+      evaluator's own restriction of containing no comma.
+
+  # --- canonical physics inputs: verbatim DihiggsPointV2Evaluator coordinates ---
+  - name: mH_GeV
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --mH-min / --mH-max (both set to this value, --n-mH 1)
+    note: The heavy CP-even scalar H2 mass. Scan/proposal coordinate.
+  - name: mA_GeV
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --mA
+    note: >
+      CP-odd scalar mass. This contract does not enforce mA == mHp; that is
+      a campaign-tooling convention (docs/HIGH_MASS_H2_CONTRACT.md), not an
+      evaluator or wrapper invariant.
+  - name: mHp_GeV
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --mHp
+  - name: M2_GeV2
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --M2-min / --M2-max (both set to this value, --n-M2 1)
+    note: >
+      Soft-breaking scale M^2 = m12_sq / (sin(beta)*cos(beta)); see
+      docs/contracts/canonical_evaluators_v2.md for the exact convention.
+  - name: tan_beta
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --tan-beta
+  - name: lambda6
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --lambda6
+  - name: lambda7
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --lambda7
+  - name: sin_beta_minus_alpha
+    type: float
+    category: canonical_physics_input
+    required: true
+    evaluator_flag: --sin-ba
+    note: Issue #72's shorthand "sba" is this field; no runtime alias exists.
+  - name: yukawa_type
+    type: int
+    category: canonical_physics_input
+    required: true
+    enum: [1, 2, 3, 4]
+    evaluator_flag: --yukawa-type
+    note: >
+      Membership in {1,2,3,4} is checked by this contract (a formatting-level
+      concern: DihiggsPointV2Evaluator only accepts an int and
+      dihiggs::supported_yukawa_type restricts it to this range). This is the
+      one physics-adjacent check the wrapper performs, and it duplicates a
+      pure range check already present in dihiggs/include/YukawaType.hpp,
+      not a theory predicate.
+
+  # --- the one documented exception to no_hidden_defaults ---
+  - name: mh_GeV
+    type: float
+    category: canonical_physics_input
+    required: false
+    evaluator_flag: --mh
+    default_when_absent: 125.13
+    default_source: >
+      docs/HIGH_MASS_H2_CONTRACT.md ("Frozen at 125.13 GeV" for the current
+      high-mass H2 campaign), matching the canonical dihiggs.point.v2
+      default recorded in
+      docs/verification/dihiggs_point_v2_verification_v1.json
+      (mh_convention_GeV: 125.13).
+    note: >
+      m_h is a campaign/run-level physics convention, not a per-proposal
+      adaptive-search coordinate. If the column is present, its value MUST
+      equal the pinned convention exactly (bit-identical as an IEEE double);
+      any other value is a contract violation
+      (mh_convention_mismatch:<value>), never silently accepted or
+      overridden. There is no CLI flag on the wrapper that can change this
+      pin; changing the convention requires editing this contract and
+      docs/HIGH_MASS_H2_CONTRACT.md together.
+
+not_supported_in_v1:
+  - Per-row campaign_id/run_id (the wrapper assigns these at the batch level;
+    proposal_id is the only per-row identity field).
+  - Any acceptance/priority/weight/score column.
+  - Batched (non-degenerate) grids per proposal row; this contract is
+    point-at-a-time only. Use the underlying DihiggsPointV2Evaluator CLI
+    directly for a rectangular grid.
