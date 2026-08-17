@@ -19,11 +19,14 @@ def test_conventions_file_present():
 def test_pinned_values():
     assert physics_conventions.HBAR_C_GEV_MM == 1.973269804e-13
     assert physics_conventions.C_MM_PER_NS == 299.792458
+    assert physics_conventions.M_H_GEV_TEXT == "125.20"
+    assert physics_conventions.M_H_GEV == 125.20
 
 
 def test_loaded_matches_pinned_fallback():
     assert physics_conventions.HBAR_C_GEV_MM == physics_conventions._HBAR_C_GEV_MM_PINNED
     assert physics_conventions.C_MM_PER_NS == physics_conventions._C_MM_PER_NS_PINNED
+    assert physics_conventions.M_H_GEV_TEXT == physics_conventions._M_H_GEV_TEXT_PINNED
 
 
 def test_loaded_matches_conventions_yaml():
@@ -32,6 +35,8 @@ def test_loaded_matches_conventions_yaml():
         conv = yaml.safe_load(fh)
     assert physics_conventions.HBAR_C_GEV_MM == float(conv["hbar_c_gev_mm"])
     assert physics_conventions.C_MM_PER_NS == float(conv["c_mm_per_ns"])
+    assert physics_conventions.M_H_GEV_TEXT == str(conv["sm_like_higgs"]["m_h_GeV"])
+    assert physics_conventions.M_H_GEV == float(conv["sm_like_higgs"]["m_h_GeV"])
 
 
 def test_ctau_helper():

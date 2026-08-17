@@ -32,7 +32,7 @@ class M2Engine:
         self, executable: Path, grid: ScanGrid, fixed: FixedParams, output_csv: Path
     ) -> List[str]:
         value = lambda number: format(number, ".17g")
-        mh = 125.13 if fixed.mh is None else fixed.mh
+        mh = 125.20 if fixed.mh is None else fixed.mh
         mHp = fixed.mA if fixed.mHp is None else fixed.mHp
         yukawa_type = 1 if fixed.yukawa_type is None else fixed.yukawa_type
         if yukawa_type not in (1, 2, 3, 4):
@@ -68,7 +68,7 @@ class M2Engine:
             "axis_label": "M2",
             "axis_description": "M2 = m12_sq / (sin(beta) * cos(beta)).",
             "mass_convention": {
-                "mh_GeV": 125.13,
+                "mh_GeV": 125.20,
                 "source": "PDG 2026 Higgs listing",
                 "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
             },

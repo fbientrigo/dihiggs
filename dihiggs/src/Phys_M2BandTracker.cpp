@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     double step_mphi = get_arg(args, "mphi-step", 1.0);
     
     double mA = get_arg(args, "ma", 500.0);
-    double mh = get_arg(args, "mh", 125.13);
+    double mh = get_arg(args, "mh", 125.20);
     double mHp = get_arg(args, "mhp", mA);
     double sin_ba = get_arg(args, "sin-ba", 1.0);
     double tan_beta = get_arg(args, "tan-beta", 50.0);

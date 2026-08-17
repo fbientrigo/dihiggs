@@ -1,7 +1,7 @@
 {
   "report_schema": "dihiggs.adaptive_proposal_batch.smoke_report.v1",
-  "generated_utc": "2026-08-17T00:40:13+00:00",
-  "repository_commit": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+  "generated_utc": "2026-08-17T04:11:45+00:00",
+  "repository_commit": "8bba72615f77cf1340dae3f6d2896913462b9f89",
   "regeneration_command": "python scripts/run_adaptive_proposal_smoke.py",
   "input_proposals": [
     {
@@ -43,11 +43,11 @@
   ],
   "frozen_anchor_reference": {
     "source": "benchmarks/H2scan_mH150_tb300000_production_coupling.json",
-    "point_id": "point_c7afb83ab8127e47",
-    "g_hH2H2_GeV": 63.59142520075966,
-    "total_width_GeV": 4.56118529862185e-14,
-    "ctau_mm": 4.326221529733112,
-    "br_bb": 0.7567374858085787
+    "point_id": "point_98c841e915d3605a",
+    "g_hH2H2_GeV": 63.662593503495714,
+    "total_width_GeV": 4.561194620526552e-14,
+    "ctau_mm": 4.3262126880527685,
+    "br_bb": 0.756737070372915
   },
   "runs": [
     {
@@ -56,22 +56,22 @@
         "schema_version": "orchestrator.proposal_batch.v1",
         "proposal_contract_version": "dihiggs.adaptive_proposal_batch.v1",
         "attempt_schema_version": "dihiggs.adaptive_attempt.v1",
-        "created_utc": "2026-08-17T00:40:13+00:00",
+        "created_utc": "2026-08-17T04:11:44+00:00",
         "campaign_id": "adaptive_proposal_smoke_v1",
         "run_name": "run1",
         "producer": "DihiggsPointV2Evaluator",
         "wrapper": "dihiggs.app.orchestrator.proposal_batch",
-        "input_csv": "/tmp/adaptive_proposal_smoke_u0l4xtqq/run1/out/campaign=adaptive_proposal_smoke_v1/run1/proposals.csv",
-        "attempts_csv": "/tmp/adaptive_proposal_smoke_u0l4xtqq/run1/out/campaign=adaptive_proposal_smoke_v1/run1/attempts.csv",
+        "input_csv": "/tmp/adaptive_proposal_smoke_t7k5mlx5/run1/out/campaign=adaptive_proposal_smoke_v1/run1/proposals.csv",
+        "attempts_csv": "/tmp/adaptive_proposal_smoke_t7k5mlx5/run1/out/campaign=adaptive_proposal_smoke_v1/run1/attempts.csv",
         "input_sha256": "bd6ef666d9872534af925512ac93984032f7a9850b77f70a91a6574ed7094c6d",
-        "repository_commit": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+        "repository_commit": "8bba72615f77cf1340dae3f6d2896913462b9f89",
         "repository_dirty": "yes",
         "evaluator_executable": "/home/fabian/atlas_dihiggs/dihiggs/dihiggs/app/DihiggsPointV2Evaluator",
         "evaluator_executable_sha256": "a6153efd4ddc0712094163e85306214e5e6ec4cb32b0872c5fc89afef529cce2",
         "evaluator_source_sha256": "8164477e8c8f471d6f05abd833d4e21e433bf84e8aa9daed9de5333aca5054b5",
         "twohdmc_provenance": "05a6217a949ff947abec2c43cac04f6ba340be8b",
-        "mh_GeV_pin": 125.13,
-        "mh_GeV_pin_source": "docs/HIGH_MASS_H2_CONTRACT.md: m_h frozen at 125.13 GeV",
+        "mh_GeV_pin": 125.2,
+        "mh_GeV_pin_source": "docs/HIGH_MASS_H2_CONTRACT.md: Active project convention m_h = 125.20 GeV",
         "status": "complete",
         "requested_row_count": 3,
         "canonical_columns": [
@@ -145,7 +145,7 @@
           "width_ok",
           "ctau_mm"
         ],
-        "output_sha256": "c7df2520f9076e613c5ef7aac6c370571c0653460727a59f778bf33e31268bef",
+        "output_sha256": "07b96b0bdee1e9faffa0d6c8a75a125792224268f81e53f8ba1197c09d8b3a55",
         "counts": {
           "attempted": 3,
           "malformed": 0,
@@ -160,41 +160,41 @@
         {
           "proposal_id": "A_frozen_H2scan_mH150_tb300000",
           "attempt_status": "EVALUATED",
-          "point_id": "point_c7afb83ab8127e47",
+          "point_id": "point_98c841e915d3605a",
           "construction_ok": "1",
           "theory_ok_v1": "1.00000000000000000e+00",
           "rejection_stage": "accepted",
           "rejection_reason": "none",
-          "g_hH2H2_GeV": "6.35914252007596588e+01",
-          "total_width_GeV": "4.56118529862185007e-14",
-          "ctau_mm": "4.32622152973311191e+00",
-          "br_bb": "7.56737485808578692e-01"
+          "g_hH2H2_GeV": "6.36625935034957138e+01",
+          "total_width_GeV": "4.56119462052655178e-14",
+          "ctau_mm": "4.32621268805276848e+00",
+          "br_bb": "7.56737070372915044e-01"
         },
         {
           "proposal_id": "B_arbitrary_mH160_perturbation",
           "attempt_status": "EVALUATED",
-          "point_id": "point_c320ac8a68b5b02a",
+          "point_id": "point_ee1177fb3f273bf7",
           "construction_ok": "1",
           "theory_ok_v1": "0.00000000000000000e+00",
           "rejection_stage": "unitarity",
           "rejection_reason": "check_unitarity_false",
-          "g_hH2H2_GeV": "8.87720996805044251e+01",
-          "total_width_GeV": "3.53104875880720648e-01",
-          "ctau_mm": "5.58833915583361565e-13",
-          "br_bb": "1.03077160011130746e-13"
+          "g_hH2H2_GeV": "8.88432679832402528e+01",
+          "total_width_GeV": "3.53106678916191186e-01",
+          "ctau_mm": "5.58831062062224516e-13",
+          "br_bb": "1.03076769222122691e-13"
         },
         {
           "proposal_id": "C_theory_rejected_L05_anchor",
           "attempt_status": "EVALUATED",
-          "point_id": "point_a34391c55ea7a313",
+          "point_id": "point_67404db2def7a3e6",
           "construction_ok": "1",
           "theory_ok_v1": "0.00000000000000000e+00",
           "rejection_stage": "unitarity",
           "rejection_reason": "check_unitarity_false",
-          "g_hH2H2_GeV": "6.38231199980158266e+01",
-          "total_width_GeV": "5.43236078868983753e-06",
-          "ctau_mm": "3.63243510649797596e-08",
-          "br_bb": "3.10957724521939705e-01"
+          "g_hH2H2_GeV": "6.37352170599926069e+01",
+          "total_width_GeV": "5.43236078869609456e-06",
+          "ctau_mm": "3.63243510649379241e-08",
+          "br_bb": "3.10957724521616075e-01"
         }
       ]
     },
@@ -204,22 +204,22 @@
         "schema_version": "orchestrator.proposal_batch.v1",
         "proposal_contract_version": "dihiggs.adaptive_proposal_batch.v1",
         "attempt_schema_version": "dihiggs.adaptive_attempt.v1",
-        "created_utc": "2026-08-17T00:40:13+00:00",
+        "created_utc": "2026-08-17T04:11:44+00:00",
         "campaign_id": "adaptive_proposal_smoke_v1",
         "run_name": "run2",
         "producer": "DihiggsPointV2Evaluator",
         "wrapper": "dihiggs.app.orchestrator.proposal_batch",
-        "input_csv": "/tmp/adaptive_proposal_smoke_u0l4xtqq/run2/out/campaign=adaptive_proposal_smoke_v1/run2/proposals.csv",
-        "attempts_csv": "/tmp/adaptive_proposal_smoke_u0l4xtqq/run2/out/campaign=adaptive_proposal_smoke_v1/run2/attempts.csv",
+        "input_csv": "/tmp/adaptive_proposal_smoke_t7k5mlx5/run2/out/campaign=adaptive_proposal_smoke_v1/run2/proposals.csv",
+        "attempts_csv": "/tmp/adaptive_proposal_smoke_t7k5mlx5/run2/out/campaign=adaptive_proposal_smoke_v1/run2/attempts.csv",
         "input_sha256": "bd6ef666d9872534af925512ac93984032f7a9850b77f70a91a6574ed7094c6d",
-        "repository_commit": "2264ffe1b8d8f59bec69341d6aa1a917396ccb2b",
+        "repository_commit": "8bba72615f77cf1340dae3f6d2896913462b9f89",
         "repository_dirty": "yes",
         "evaluator_executable": "/home/fabian/atlas_dihiggs/dihiggs/dihiggs/app/DihiggsPointV2Evaluator",
         "evaluator_executable_sha256": "a6153efd4ddc0712094163e85306214e5e6ec4cb32b0872c5fc89afef529cce2",
         "evaluator_source_sha256": "8164477e8c8f471d6f05abd833d4e21e433bf84e8aa9daed9de5333aca5054b5",
         "twohdmc_provenance": "05a6217a949ff947abec2c43cac04f6ba340be8b",
-        "mh_GeV_pin": 125.13,
-        "mh_GeV_pin_source": "docs/HIGH_MASS_H2_CONTRACT.md: m_h frozen at 125.13 GeV",
+        "mh_GeV_pin": 125.2,
+        "mh_GeV_pin_source": "docs/HIGH_MASS_H2_CONTRACT.md: Active project convention m_h = 125.20 GeV",
         "status": "complete",
         "requested_row_count": 3,
         "canonical_columns": [
@@ -293,7 +293,7 @@
           "width_ok",
           "ctau_mm"
         ],
-        "output_sha256": "c7df2520f9076e613c5ef7aac6c370571c0653460727a59f778bf33e31268bef",
+        "output_sha256": "07b96b0bdee1e9faffa0d6c8a75a125792224268f81e53f8ba1197c09d8b3a55",
         "counts": {
           "attempted": 3,
           "malformed": 0,
@@ -308,41 +308,41 @@
         {
           "proposal_id": "A_frozen_H2scan_mH150_tb300000",
           "attempt_status": "EVALUATED",
-          "point_id": "point_c7afb83ab8127e47",
+          "point_id": "point_98c841e915d3605a",
           "construction_ok": "1",
           "theory_ok_v1": "1.00000000000000000e+00",
           "rejection_stage": "accepted",
           "rejection_reason": "none",
-          "g_hH2H2_GeV": "6.35914252007596588e+01",
-          "total_width_GeV": "4.56118529862185007e-14",
-          "ctau_mm": "4.32622152973311191e+00",
-          "br_bb": "7.56737485808578692e-01"
+          "g_hH2H2_GeV": "6.36625935034957138e+01",
+          "total_width_GeV": "4.56119462052655178e-14",
+          "ctau_mm": "4.32621268805276848e+00",
+          "br_bb": "7.56737070372915044e-01"
         },
         {
           "proposal_id": "B_arbitrary_mH160_perturbation",
           "attempt_status": "EVALUATED",
-          "point_id": "point_c320ac8a68b5b02a",
+          "point_id": "point_ee1177fb3f273bf7",
           "construction_ok": "1",
           "theory_ok_v1": "0.00000000000000000e+00",
           "rejection_stage": "unitarity",
           "rejection_reason": "check_unitarity_false",
-          "g_hH2H2_GeV": "8.87720996805044251e+01",
-          "total_width_GeV": "3.53104875880720648e-01",
-          "ctau_mm": "5.58833915583361565e-13",
-          "br_bb": "1.03077160011130746e-13"
+          "g_hH2H2_GeV": "8.88432679832402528e+01",
+          "total_width_GeV": "3.53106678916191186e-01",
+          "ctau_mm": "5.58831062062224516e-13",
+          "br_bb": "1.03076769222122691e-13"
         },
         {
           "proposal_id": "C_theory_rejected_L05_anchor",
           "attempt_status": "EVALUATED",
-          "point_id": "point_a34391c55ea7a313",
+          "point_id": "point_67404db2def7a3e6",
           "construction_ok": "1",
           "theory_ok_v1": "0.00000000000000000e+00",
           "rejection_stage": "unitarity",
           "rejection_reason": "check_unitarity_false",
-          "g_hH2H2_GeV": "6.38231199980158266e+01",
-          "total_width_GeV": "5.43236078868983753e-06",
-          "ctau_mm": "3.63243510649797596e-08",
-          "br_bb": "3.10957724521939705e-01"
+          "g_hH2H2_GeV": "6.37352170599926069e+01",
+          "total_width_GeV": "5.43236078869609456e-06",
+          "ctau_mm": "3.63243510649379241e-08",
+          "br_bb": "3.10957724521616075e-01"
         }
       ]
     }

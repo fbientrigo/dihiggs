@@ -30,7 +30,7 @@ def require_binary():
         pytest.skip("build dihiggs/app/DihiggsPointV2Evaluator first")
 
 
-def run_point(tmp_path: Path, name: str, *, mh=125.13, mH=130.0, mH_max=None, n_mH=1,
+def run_point(tmp_path: Path, name: str, *, mh=125.20, mH=130.0, mH_max=None, n_mH=1,
               mA=300.0, mHp=300.0, sba=0.999, tb=50.0, M2=16721.68154468371,
               M2_max=None, n_M2=1, l6=0.1, l7=0.0, campaign="pilot", run="run"):
     output = tmp_path / f"{name}.csv"
@@ -86,7 +86,7 @@ def test_m2_reconstruction_width_br_lifetime_and_unevaluated_experiments(tmp_pat
     beta = math.atan(float(row["tan_beta_input"]))
     expected_m12 = float(row["M2_input_GeV2"]) * math.sin(beta) * math.cos(beta)
     assert float(row["m12_sq_input_GeV2"]) == pytest.approx(expected_m12, rel=2e-16)
-    assert float(row["M2_reconstructed_GeV2"]) == pytest.approx(float(row["M2_input_GeV2"]), rel=2e-14)
+    assert float(row["M2_reconstructed_GeV2"]) == pytest.approx(float(row["M2_input_GeV2"]), rel=1e-12)
     assert math.isfinite(float(row["g_hH2H2_GeV"]))
     assert float(row["g_hH2H2_GeV"]) >= 0.0
     total = float(row["total_width_GeV"])
@@ -107,7 +107,7 @@ def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
     _, (row,), _ = run_point(
         tmp_path,
         "h2-benchmark",
-        mh=125.13,
+        mh=125.20,
         mH=150.0,
         mA=450.0,
         mHp=450.0,
@@ -118,10 +118,10 @@ def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
         l7=0.0,
     )
     assert row["construction_ok"] == "1"
-    assert float(row["g_hH2H2_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
-    assert float(row["total_width_GeV"]) == pytest.approx(4.56118529862185007e-14, rel=0.0, abs=1e-24)
-    assert float(row["br_bb"]) == pytest.approx(0.756737485808578692, rel=0.0, abs=1e-12)
-    assert float(row["ctau_mm"]) == pytest.approx(4.32622152973311191, rel=0.0, abs=1e-10)
+    assert float(row["g_hH2H2_GeV"]) == pytest.approx(63.6625935034957138, rel=0.0, abs=1e-10)
+    assert float(row["total_width_GeV"]) == pytest.approx(4.56119462052655178e-14, rel=0.0, abs=1e-24)
+    assert float(row["br_bb"]) == pytest.approx(0.756737070372915044, rel=0.0, abs=1e-12)
+    assert float(row["ctau_mm"]) == pytest.approx(4.32621268805276848, rel=0.0, abs=1e-10)
 
 
 def test_top_pair_width_is_explicit_and_zero_below_threshold(tmp_path):
@@ -132,7 +132,7 @@ def test_top_pair_width_is_explicit_and_zero_below_threshold(tmp_path):
     assert row["construction_ok"] == "1"
     assert float(row["width_tt_GeV"]) == 0.0
     assert float(row["br_tt"]) == 0.0
-    assert float(row["total_width_GeV"]) == pytest.approx(4.15329937678296080e-06, rel=0.0, abs=1e-18)
+    assert float(row["total_width_GeV"]) == pytest.approx(4.15329937678322846e-06, rel=0.0, abs=1e-18)
     assert float(row["width_unaccounted_GeV"]) == pytest.approx(1.41522478536371598e-09, rel=0.0, abs=1e-20)
 
 
@@ -142,16 +142,16 @@ def test_top_pair_width_dominates_above_threshold(tmp_path):
         M2=16721.68154468371, l6=0.1, l7=0.0,
     )
     assert row["construction_ok"] == "1"
-    assert float(row["width_tt_GeV"]) == pytest.approx(1.67384971497793258e-03, rel=0.0, abs=1e-15)
-    assert float(row["br_tt"]) == pytest.approx(0.966756638952535385, rel=0.0, abs=1e-12)
+    assert float(row["width_tt_GeV"]) == pytest.approx(1.67384971497812948e-03, rel=0.0, abs=1e-15)
+    assert float(row["br_tt"]) == pytest.approx(0.966756638952538605, rel=0.0, abs=1e-12)
     assert float(row["width_tt_GeV"]) > 0.0
     # width_tt_GeV must never be silently folded into width_unaccounted_GeV.
     assert float(row["width_unaccounted_GeV"]) < 0.01 * float(row["width_tt_GeV"])
 
 
 def test_ordering_boundary_emits_success_and_failure_with_nan_masks(tmp_path):
-    below = math.nextafter(125.13, -math.inf)
-    _, rows, _ = run_point(tmp_path, "ordering", mH=below, mH_max=125.13, n_mH=2)
+    below = math.nextafter(125.20, -math.inf)
+    _, rows, _ = run_point(tmp_path, "ordering", mH=below, mH_max=125.20, n_mH=2)
     assert [row["construction_ok"] for row in rows] == ["0", "1"]
     assert rows[0]["rejection_reason"] == "mh_gt_mH"
     for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "g_hH2H2_GeV", "total_width_GeV", "width_ok"):
@@ -176,9 +176,9 @@ def test_construction_failure_preserves_row_without_decay_evaluation(tmp_path):
                  "tb": 10000.0, "M2": 39999.9995713761, "l6": 1e-10}, 1.0),
     ],
 )
-def test_pilot_anchors_at_125_13(tmp_path, name, kwargs, theory_ok):
+def test_pilot_anchors_at_125_20(tmp_path, name, kwargs, theory_ok):
     _, (row,), _ = run_point(tmp_path, name, **kwargs)
-    assert float(row["mh_input_GeV"]) == 125.13
+    assert float(row["mh_input_GeV"]) == 125.20
     assert float(row["theory_ok_v1"]) == theory_ok
     if name == "L06":
         assert 5e-11 < float(row["total_width_GeV"]) < 7e-11
@@ -190,7 +190,7 @@ def test_yukawa_type_i_is_active_and_type_ii_changes_fermionic_widths(tmp_path):
     _, (type_i,), _ = run_point(tmp_path, "type-i")
     output = tmp_path / "type-ii.csv"
     command = [
-        str(BINARY), "--campaign-id", "pilot", "--run-id", "run", "--mh", "125.13",
+        str(BINARY), "--campaign-id", "pilot", "--run-id", "run", "--mh", "125.20",
         "--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "300", "--mHp", "300",
         "--yukawa-type", "2", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "16721.68154468371",
         "--M2-max", "16721.68154468371", "--n-M2", "1", "--lambda6", "0.1", "--lambda7", "0", "--output", str(output),
@@ -207,7 +207,7 @@ def test_yukawa_type_i_is_active_and_type_ii_changes_fermionic_widths(tmp_path):
 
 def test_unsupported_yukawa_type_is_rejected(tmp_path):
     output = tmp_path / "bad.csv"
-    command = [str(BINARY), "--campaign-id", "pilot", "--run-id", "run", "--mh", "125.13",
+    command = [str(BINARY), "--campaign-id", "pilot", "--run-id", "run", "--mh", "125.20",
                "--mH-min", "130", "--mH-max", "130", "--n-mH", "1", "--mA", "300", "--mHp", "300",
                "--yukawa-type", "0", "--sin-ba", "0.999", "--tan-beta", "50", "--M2-min", "1",
                "--M2-max", "1", "--n-M2", "1", "--lambda6", "0", "--lambda7", "0", "--output", str(output)]

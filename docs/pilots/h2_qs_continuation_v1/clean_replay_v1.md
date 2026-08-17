@@ -1,28 +1,20 @@
-# Clean replay of the Q,S continuation pilot
+# Replay of the Q,S continuation pilot under active m_h = 125.20 GeV
 
-The original pilot in [`continuation_report.json`](continuation_report.json)
-was run from dirty working trees in both `dihiggs` and `dihiggs_boundary` (that
-provenance is recorded honestly there and was not rewritten). After Task 1 and
-Task 2 were frozen into commits, the identical anchor → 175 → 200 GeV
-sequence was re-run from clean checkouts to check reproducibility:
+The Q,S continuation pilot sequence (150 → 175 → 200 GeV) has been replayed
+under the active project convention **`m_h = 125.20 GeV`**, with full report
+recorded in [`continuation_report.json`](continuation_report.json).
 
-- `dihiggs` at `ce722f70ee5965d2f4642a192d38240f953e36de` (clean, 0 dirty files)
-- `dihiggs_boundary` at `f498e4df43c2afdf0953d1c693ff2b26f9da1cb4` (clean of
-  source; only pre-existing, unrelated build-output directories under `lib/`
-  remained untracked)
+Historical evidence produced under the superseded `125.13 GeV` convention is
+preserved honestly in
+[`continuation_report_mh12513_historical.json`](continuation_report_mh12513_historical.json).
 
-Compared field-for-field between the two runs: `point_id`, every `theory`
-flag (`construction_ok`, `numerical_ok`, `theory_ok_v1`,
-`positivity_reported_ok`, `unitarity_ok`, `perturbativity_ok`,
-`stability_reported_ok`, `width_ok`, `rejection_stage`, `rejection_reason`),
-`lambda1..lambda5`, all `diagnostics` (`g_hH2H2_GeV`, `total_width_GeV`,
-`ctau_mm`, `br_bb`, `br_hh`, `br_tt`), the `qs_residuals` block, and the
-evaluator executable's sha256.
+## Replay Summary (m_h = 125.20 GeV)
 
-**Result: every compared field was byte-identical between the dirty-tree
-pilot and the clean replay**, for all three points (150, 175, 200 GeV).
+| Step | Target m_H2 | m_A = m_Hp (GeV) | M2 (GeV^2) | point_id | theory_ok_v1 | rejection_stage | c*tau (mm) | g_hH2H2 (GeV) | BR(bb) |
+|---|---:|---:|---:|---|:-:|:-:|---:|---:|---:|
+| Gate 2 (Anchor) | 150.0 | 450.000 | 22499.9999995 | `point_98c841e915d3605a` | 1 | accepted | 4.32621 | 63.6626 | 0.75674 |
+| Gate 3 | 175.0 | 458.939 | 30624.9999995 | `point_bac9d1637f23ed5e` | 1 | accepted | 3.62750 | 63.6626 | 0.71921 |
+| Gate 4 | 200.0 | 469.042 | 39999.9999995 | `point_e5ac522ac26a920b` | 1 | accepted | 3.05775 | 63.6626 | 0.67546 |
 
-This does not change the pilot's verdict
-(`DIRECT_QS_CONTINUATION_VALID_TO_200_GEV`, unchanged) — it confirms the
-result does not depend on the uncommitted state either run happened to start
-from.
+**Verdict: `DIRECT_QS_CONTINUATION_VALID_TO_200_GEV`** (VALID_TO_200).
+All three points evaluate as theory-valid on their first attempt without requiring local search or rescue.

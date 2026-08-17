@@ -83,30 +83,21 @@ position; all use name-keyed access (verified by repo-wide grep).
 | `model_family` | General 2HDM, CP-conserving, Z2-softly-broken (via `lambda6`, `lambda7`, `m12_sq`) | `THDM::set_param_phys` physical-basis parameterization |
 | Yukawa type | Type I (`yukawa_type=1`) is the default control point; Types I-IV (`1..4`, hep-ph/0504050 convention) are all supported and must be recorded per point, never assumed | `dihiggs/include/YukawaType.hpp`, `2hdmc/src/THDM.cpp:757-773` |
 | `sin(beta-alpha)` | Scan/control coordinate, not fixed; benchmark anchors use `sin_ba in {0.999, 1.0}`. Record per point; do not silently default. | CLI `--sin-ba`, required argument |
-| `m_h` | **Frozen at 125.13 GeV** for this campaign (canonical `dihiggs.point.v2` default, PDG-sourced: `https://pdg.lbl.gov/encoder_listings/s126.pdf`, per `docs/verification/dihiggs_point_v2_verification_v1.json`). The `125.09 GeV` value found in `docs/characterization_lambda1.md`, `scripts/generate_golden_lambda1.py`, and `tests/test_golden_lambda1.py` belongs to the older `lambda1`-characterization line of work and is **out of scope / not to be mixed** into this campaign. | See "Conflict resolution" below |
+| `m_h` | **Active project/high-mass convention: `m_h = 125.20 GeV`** (canonical `conventions/physics_conventions.yaml` shared ecosystem source of truth). Historical artifacts generated under earlier conventions retain their original provenance. | `conventions/physics_conventions.yaml` (`sm_like_higgs.m_h_GeV`) |
 | `lambda7` | Scan/control coordinate, not fixed; pilot anchors use `0.0` or `1e-10` (soft-scale numerical stabilization, not a physical zero). Record per point. | CLI `--lambda7` |
 | `mHp = mA` | Enforced by construction: both variants require `m_Hp = m_A`. The evaluator does not itself enforce equality (it accepts independent `--mA`/`--mHp`); campaign tooling (Section 5, `high_mass_campaign_template.yaml`) must always pass equal values, and `cascade_contract.yaml`'s fail-closed check on `H2_to_HpHm_open` / `H2_to_HpW_open` provides a second, independent guard. | Contract requirement, not a code invariant |
 | 2HDMC | Vendored source, not a submodule. Version `1.8.0` (2020-02-10) per `2hdmc/README:159`, with a local patch aliasing `check_stability` to `check_positivity` (`kStabilityAlias` in the evaluator; see `docs/contracts/canonical_evaluators_v2.md`). Provenance is this repository's own commit (evaluator output already records `producer_commit`/`producer_dirty`); there is no separate upstream 2HDMC commit hash to track. | `2hdmc/README`, `DihiggsPointV2Evaluator.cpp` |
 | SM inputs | `GF=1.16637e-5`, `MZ=91.15349`, `MW=80.36951`, `alpha_s=0.119`, `alpha_em=1/127.934`, `m_t^pole=172.5`, `m_b^pole=4.75`, `m_c^pole=1.42`, `m_tau=1.77684`, full CKM as listed in `2hdmc/src/SM.h:18-89`. These are 2HDMC 1.8.0 defaults, unmodified by this contract. | `2hdmc/src/SM.h` |
 
-### Conflict resolution: `m_h = 125.09` vs `125.13`
+### Active convention and historical provenance
 
-Both values exist in this repository's history for different purposes:
-
-- `125.09 GeV` — used by the `lambda1` scan-characterization line
-  (`docs/characterization_lambda1.md`, `scripts/generate_golden_lambda1.py`,
-  `scripts/lambda1_mh_eps_sensitivity.py`, `tests/test_golden_lambda1.py`).
-  This line of work is **not** part of the high-mass H2 point factory and is
-  left untouched.
-- `125.13 GeV` — the canonical `dihiggs.point.v2` default, already frozen and
-  verified in `docs/verification/dihiggs_point_v2_verification_v1.json`
-  (`"mh_convention_GeV": 125.13`), and used throughout every point-v2 pilot
-  anchor and regression test in this repository.
-
-**Decision for this contract: `m_h = 125.13 GeV` for every high-mass point,
-both `MASS_CONTROL` and `PHYSICAL_POINT_SCAN` classes, both study variants.**
-Do not mix `125.09` results into any high-mass campaign plot, table, or
-theory-validity pilot.
+- **Active project/high-mass convention: `m_h = 125.20 GeV`** for all maintained,
+  current-facing code, contracts, and active physical-point production.
+- **Historical provenance:** artifacts and reports produced under earlier
+  conventions (such as `125.13` in the initial high-mass campaign v1 pilot or
+  `125.09` in legacy `lambda1` scan characterization) retain their original
+  provenance honestly and are preserved as historical benchmarks. Do not mix
+  historical artifacts into active 125.20 campaign plots or tables.
 
 ## 4. Two study variants
 
@@ -220,7 +211,7 @@ anchor coordinates).
 | Pilot | m_H2 | Delta_heavy | Purpose | theory_ok | width_tt_GeV | br_hh |
 |---|---:|---:|---|:-:|---:|---:|
 | P0_anchor_150 | 150 | 300 | existing 150 GeV anchor reproduction | 1 | 0 | 0 |
-| P1_below_hh | 200 | 300 | below `hh` threshold (`2*125.13=250.26`) | 0 | 0 | 0 |
+| P1_below_hh | 200 | 300 | below `hh` threshold (`2*125.20=250.40`) | 0 | 0 | 0 |
 | P2_above_hh | 300 | 500 | above `hh` threshold | 0 | 2.35e-07 | 0.286 |
 | P3_below_tt | 330 | 470 | below `tt` threshold region | 0 | 3.22e-06 | 0.310 |
 | P4_above_tt | 400 | 400 | above `tt` threshold | 0 | 2.56e-03 | 0.318 |

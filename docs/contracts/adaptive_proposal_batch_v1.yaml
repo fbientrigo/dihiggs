@@ -130,13 +130,11 @@ fields:
     category: canonical_physics_input
     required: false
     evaluator_flag: --mh
-    default_when_absent: 125.13
+    default_when_absent: 125.20
     default_source: >
-      docs/HIGH_MASS_H2_CONTRACT.md ("Frozen at 125.13 GeV" for the current
-      high-mass H2 campaign), matching the canonical dihiggs.point.v2
-      default recorded in
-      docs/verification/dihiggs_point_v2_verification_v1.json
-      (mh_convention_GeV: 125.13).
+      docs/HIGH_MASS_H2_CONTRACT.md ("Active project convention m_h = 125.20 GeV"
+      for the high-mass H2 campaign), matching conventions/physics_conventions.yaml
+      (sm_like_higgs.m_h_GeV: "125.20").
     note: >
       m_h is a campaign/run-level physics convention, not a per-proposal
       adaptive-search coordinate. If the column is present, its value MUST

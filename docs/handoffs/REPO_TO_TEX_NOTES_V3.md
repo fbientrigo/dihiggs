@@ -33,7 +33,7 @@ not edit or authorize edits to `/home/fabi/atlas_dihiggs/paper`.
 - Lifetime output is `ctau_mm` in millimetres.
 - M² and `m12_sq` are distinct, with
   `m12_sq = M² * sin(beta) * cos(beta)`.
-- The M² producer uses explicit default `mh = 125.13 GeV` with provenance.
+- The M² producer uses explicit default `mh = 125.20 GeV` with provenance.
 - Lambda1 v2 receives `mh` explicitly in its input CSV.
 
 ## Mandatory TeX non-claims

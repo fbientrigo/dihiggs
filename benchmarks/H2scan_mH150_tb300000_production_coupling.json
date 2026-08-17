@@ -25,7 +25,7 @@
     "roundtrip_coordinate_rejected": true
   },
   "scalar_state_mapping": {
-    "2HDMC_h1": "SM-like 125.13 GeV scalar",
+    "2HDMC_h1": "SM-like 125.20 GeV scalar",
     "2HDMC_h2": "150 GeV H2 scalar",
     "native_call": "THDM::get_coupling_hhh(1, 2, 2, c)",
     "mediator_pdg": 25,
@@ -33,30 +33,30 @@
   },
   "coupling": {
     "name": "h-H2-H2",
-    "g_hH2H2_GeV": 63.5914252007596588,
+    "g_hH2H2_GeV": 63.6625935034957138,
     "two_hdmc_returned_real_GeV": 0.0,
-    "two_hdmc_returned_imag_GeV": -63.5914252007596588,
+    "two_hdmc_returned_imag_GeV": -63.6625935034957138,
     "two_hdmc_convention": "c = -i*g for the real scalar coefficient g; no factorial or symmetry rescaling",
     "ufo_GHphiphi_convention": "H h2 h2 vertex is +i*GHphiphi",
-    "converted_GHphiphi_GeV": -63.5914252007596588,
+    "converted_GHphiphi_GeV": -63.6625935034957138,
     "conversion_formula": "GHphiphi = Im(c) = -g_hH2H2_GeV",
     "source_evidence": "2hdmc/src/THDM.cpp get_coupling_hhh; output block REGH1H2H2/IMGH1H2H2"
   },
   "replay": {
-    "total_width_GeV": 4.56118529862185007e-14,
-    "ctau_mm": 4.32622152973311191,
-    "br_bb": 0.756737485808578692,
+    "total_width_GeV": 4.56119462052655178e-14,
+    "ctau_mm": 4.32621268805276848,
+    "br_bb": 0.756737070372915044,
     "evaluator_source": "benchmarks/check_H2scan_mH150_tb300000.cpp",
     "evaluator_source_sha256": "3ce43838b366702e7ebeabd2a2a122ad1311df543100bfbad985c87faae8fae9",
     "same_direct_set_param_phys_construction": true,
     "width_and_branching_replay_status": "PASS"
   },
   "ufo_width_cross_check": {
-    "ctauh2_m": 4.32622152973311191e-03,
+    "ctauh2_m": 4.32621268805276848e-03,
     "formula": "1.9732698e-16 / ctauh2_m",
-    "reproduced_width_GeV": 4.56118528937590628e-14,
+    "reproduced_width_GeV": 4.56119461127741639e-14,
     "absolute_tolerance_GeV": 1e-21,
-    "absolute_difference_GeV": 9.24594395e-23,
+    "absolute_difference_GeV": 9.24913539e-23,
     "status": "PASS"
   },
   "evaluator_source_sha256": {

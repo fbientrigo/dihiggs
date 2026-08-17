@@ -65,10 +65,10 @@ REQUIRED_COLUMNS = (
 OPTIONAL_COLUMNS = ("mh_GeV",)
 ALL_INPUT_COLUMNS = frozenset(REQUIRED_COLUMNS) | frozenset(OPTIONAL_COLUMNS)
 
-# Frozen high-mass H2 campaign convention (docs/HIGH_MASS_H2_CONTRACT.md,
-# "m_h ... Frozen at 125.13 GeV"). Never overridable from this wrapper's CLI.
-MH_CONVENTION_GEV = 125.13
-MH_CONVENTION_SOURCE = "docs/HIGH_MASS_H2_CONTRACT.md: m_h frozen at 125.13 GeV"
+# Active project convention (docs/HIGH_MASS_H2_CONTRACT.md,
+# "Active project/high-mass convention: m_h = 125.20 GeV"). Never overridable from this wrapper's CLI.
+MH_CONVENTION_GEV = 125.20
+MH_CONVENTION_SOURCE = "docs/HIGH_MASS_H2_CONTRACT.md: Active project convention m_h = 125.20 GeV"
 SUPPORTED_YUKAWA_TYPES = (1, 2, 3, 4)
 
 ATTEMPT_ENVELOPE_COLUMNS = (

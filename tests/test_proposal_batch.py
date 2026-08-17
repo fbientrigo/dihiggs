@@ -132,8 +132,8 @@ def test_three_proposals_yield_three_attempts(tmp_path, require_binary):
     assert all(a["attempt_status"] == "EVALUATED" for a in attempts)
 
     anchor = next(a for a in attempts if a["proposal_id"] == "A_anchor")
-    assert anchor["point_id"] == "point_c7afb83ab8127e47"
-    assert float(anchor["g_hH2H2_GeV"]) == pytest.approx(63.5914252007596588, abs=1e-10)
+    assert anchor["point_id"] == "point_98c841e915d3605a"
+    assert float(anchor["g_hH2H2_GeV"]) == pytest.approx(63.6625935034957138, abs=1e-10)
 
     rejected = next(a for a in attempts if a["proposal_id"] == "C_rejected")
     assert rejected["construction_ok"] == "1"

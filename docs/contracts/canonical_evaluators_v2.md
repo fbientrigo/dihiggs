@@ -64,7 +64,7 @@ m12_sq = M² * sin(beta) * cos(beta)
 ```
 
 `lambda1` is reconstructed output, never a fixed input. The default
-`mh = 125.13 GeV` is explicit in the CLI metadata and manifest provenance;
+`mh = 125.20 GeV` is explicit in the CLI metadata and manifest provenance;
 `mHp` and Yukawa type are explicit named inputs. Every attempted grid point
 gets a row, including construction failures. Experimental fields remain
 unevaluated.

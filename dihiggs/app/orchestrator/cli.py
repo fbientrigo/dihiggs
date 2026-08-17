@@ -265,8 +265,8 @@ def build_parser() -> argparse.ArgumentParser:
     # Fixed physics parameters
     p.add_argument("--mA", type=float, default=_DEFAULT_MA,
                    help="Fixed mA (CP-odd Higgs mass, also mHp) in GeV.")
-    p.add_argument("--mh", type=float, default=125.13,
-                   help="[m2] Explicit h1 mass in GeV (PDG 2026 convention).")
+    p.add_argument("--mh", type=float, default=125.20,
+                   help="[m2] Explicit h1 mass in GeV (active project convention).")
     p.add_argument("--mHp", type=float, default=None,
                    help="[m2] Explicit charged-Higgs mass in GeV; defaults to mA.")
     p.add_argument("--yukawa-type", type=int, choices=(1, 2, 3, 4), default=1,

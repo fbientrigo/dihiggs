@@ -111,7 +111,7 @@ def write_initial_manifest(
         manifest.update({
             "point_schema_version": "dihiggs.point.v2",
             "mass_convention": {
-                "mh_GeV": 125.13 if fixed.mh is None else fixed.mh,
+                "mh_GeV": 125.20 if fixed.mh is None else fixed.mh,
                 "source": "PDG 2026 Higgs listing",
                 "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
             },

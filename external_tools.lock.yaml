@@ -16,8 +16,8 @@ schema_version: external_tools_v1
 # The md5 is the cross-repo drift pin for conventions/physics_conventions.yaml.
 conventions:
   file: conventions/physics_conventions.yaml
-  schema_version: physics_conventions_v1
-  md5: a2fea4c862d3b678334fd07a396f26ba
+  schema_version: physics_conventions_v2
+  md5: 5a2e880a7c36a6aecf2a99e18cab4d44
 
 tools:
   2HDMC:
