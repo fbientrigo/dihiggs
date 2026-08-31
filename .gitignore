@@ -44,6 +44,8 @@ docs/_build/
 !docs/pilots/dihiggs_point_v2_v1/*.csv
 !docs/pilots/high_mass_h2_v1/*.csv
 !docs/campaigns/high_mass_h2_physical_point_scan_v1/*.csv
+!docs/campaigns/high_mass_h2_physical_point_scan_v2_mh12520/*.csv
+!docs/campaigns/high_mass_h2_physical_point_scan_v2_mh12520/hbhs_tiny_set/*.csv
 *.parquet
 *.pdf
 !docs/campaigns/high_mass_h2_physical_point_scan_v1/*.pdf

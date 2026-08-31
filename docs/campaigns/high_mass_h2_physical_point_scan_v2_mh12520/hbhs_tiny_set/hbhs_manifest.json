@@ -1,0 +1,26 @@
+{
+  "config": "/home/fabian/atlas_dihiggs/dihiggs_boundary/configs/theory_atlas_v0.yaml",
+  "counts": {
+    "enriched": 3,
+    "errors": 0,
+    "skipped": 0,
+    "total": 3
+  },
+  "dhb_version": "0.2.0",
+  "enriched_schema_version": "hbhs_enriched_v1",
+  "finished_at_utc": "2026-08-15T05:58:06.456605+00:00",
+  "git_commit": "ffe379bba12882b603016b086684bbdeac388d67",
+  "hb_dataset": "/home/fabian/atlas_dihiggs/dihiggs_boundary/dataset/hbdataset-v1.7",
+  "higgstools_version": "unknown",
+  "hs_chi2_sm_ref": 151.63816031773342,
+  "hs_dataset": "/home/fabian/atlas_dihiggs/dihiggs_boundary/dataset/hsdataset-v1.1",
+  "input": "/tmp/claude-1000/-home-fabian-atlas-dihiggs/c81632fa-0998-4505-aa7d-1f61ca0da4d5/scratchpad/hbhs/evaluate_point.csv",
+  "output": "/tmp/claude-1000/-home-fabian-atlas-dihiggs/c81632fa-0998-4505-aa7d-1f61ca0da4d5/scratchpad/hbhs/hbhs_enriched.csv",
+  "settings": {
+    "enabled": true,
+    "hs_delta_chi2_max": 6.18
+  },
+  "stage": "hbhs_enrichment",
+  "started_at_utc": "2026-08-15T05:58:06.373066+00:00",
+  "theory_schema_version": "evaluate_point_v1"
+}

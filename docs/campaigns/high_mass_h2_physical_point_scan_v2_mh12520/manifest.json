@@ -1,0 +1,34 @@
+{
+  "schema": "dihiggs.high_mass_h2.mh_convention_recalculation.v1",
+  "generated_utc": "2026-08-15T05:56:45.257686+00:00",
+  "campaign_id": "high_mass_h2_physical_point_scan_v2_mh12520",
+  "source_campaign": "/home/fabian/atlas_dihiggs/dihiggs-point-search/docs/campaigns/high_mass_h2_physical_point_scan_v1/high_mass_valid_points.csv",
+  "source_mh_GeV": "125.13",
+  "recalculated_mh_GeV": "125.20",
+  "mh_convention_source": "conventions/physics_conventions.yaml (sm_like_higgs.m_h_GeV)",
+  "producer": "DihiggsPointV2Evaluator",
+  "points_in": 208,
+  "points_out": 208,
+  "point_ids_changed": 208,
+  "flag_flip_counts": {
+    "construction_ok": 0,
+    "numerical_ok": 0,
+    "positivity_ok": 0,
+    "unitarity_ok": 0,
+    "perturbativity_ok": 0,
+    "stability_ok": 0,
+    "theory_ok": 0,
+    "H2_to_AZ_open": 0,
+    "H2_to_HpW_open": 0,
+    "H2_to_AA_open": 0,
+    "H2_to_HpHm_open": 0,
+    "H2_to_hh_open": 0,
+    "H2_to_tt_open": 0
+  },
+  "theory_ok_flips": [],
+  "hh_threshold_GeV": {
+    "old": 250.26,
+    "new": 250.4
+  },
+  "limitation": "Re-evaluates the previously ACCEPTED points only. It cannot discover points newly admitted at the new mh; that would require replaying the full attempted grid (55,080 points), which was deliberately not run."
+}
