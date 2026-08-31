@@ -1,0 +1,115 @@
+{
+  "schema_version": "dihiggs.llp_benchmark_search.v1",
+  "status": "frozen_with_classifier_block",
+  "purpose": "Deterministic proposal-to-archive substrate for later mixed and photonic DiHiggs LLP benchmark-family search.",
+  "scope": {
+    "families": ["mixed", "photonic"],
+    "validation_masses_GeV": [150.0, 200.0, 250.0],
+    "anchor_mass_GeV": 200.0,
+    "preferred_anchor_ctau_mm": [500.0, 1000.0],
+    "diagnostic_ctau_envelope_mm": null,
+    "diagnostic_envelope_status": "BLOCKED_SCIENTIFIC_DECISION: existing evidence does not justify an envelope containing the required 500-1000 mm anchor interval"
+  },
+  "immutable_model_settings": {
+    "model": "CP-conserving softly-broken Z2 2HDM via THDM::set_param_phys",
+    "m_h_GeV": 125.2,
+    "yukawa_type": 1,
+    "sin_beta_minus_alpha": 1.0,
+    "lambda7": 0.0,
+    "mHp_equals_mA": true,
+    "continuation": {
+      "name": "Q_S",
+      "Q_definition": "(mH_GeV^2 - M2_GeV2) * tan_beta^2",
+      "S_definition": "mA_GeV^2 - mH_GeV^2",
+      "family_rule": "derive each validation mass with the anchor Q and S, retaining tan_beta and lambda6 (therefore X)"
+    },
+    "canonical_evaluator": "dihiggs/app/DihiggsPointV2Evaluator",
+    "canonical_schema": "dihiggs.point.v2",
+    "forbidden_evaluators": ["PhysScanWithFixings", "L06 pre-Yukawa-fix artifacts"]
+  },
+  "search_coordinates": {
+    "allowed": {
+      "mH_GeV": {"type": "number", "units": "GeV", "bounds": [150.0, 250.0]},
+      "mA_GeV": {"type": "number", "units": "GeV", "bounds": [450.0, 550.0]},
+      "M2_GeV2": {"type": "number", "units": "GeV^2", "bounds": [20000.0, 63000.0]},
+      "tan_beta": {"type": "number", "units": "dimensionless", "bounds": [30000.0, 3000000.0]},
+      "lambda6": {"type": "number", "units": "dimensionless", "bounds": [0.0001, 0.05]}
+    },
+    "derived": {
+      "X": "tan_beta * lambda6",
+      "X_units": "dimensionless",
+      "X_bounds": [200.0, 100000.0],
+      "mHp_GeV": "mA_GeV",
+      "m12_sq_GeV2": "M2_GeV2 * sin(atan(tan_beta)) * cos(atan(tan_beta))"
+    },
+    "required_proposal_parameters": ["mH_GeV", "mA_GeV", "M2_GeV2", "tan_beta", "lambda6"],
+    "forbidden_proposal_parameters": ["m_h_GeV", "mHp_GeV", "lambda7", "sin_beta_minus_alpha", "yukawa_type", "family", "score", "archive"],
+    "aliases": {
+      "mH": "mH_GeV",
+      "mH_gev": "mH_GeV",
+      "mA": "mA_GeV",
+      "mA_gev": "mA_GeV",
+      "M2": "M2_GeV2",
+      "M2_gev2": "M2_GeV2",
+      "tb": "tan_beta",
+      "tanbeta": "tan_beta",
+      "l6": "lambda6"
+    }
+  },
+  "gates": {
+    "construction": "construction_ok == 1",
+    "numerical": "numerical_ok == 1",
+    "theory": "positivity_reported_ok == 1 and unitarity_ok == 1 and perturbativity_ok == 1 and theory_ok_v1 == 1",
+    "width": "width_ok == 1 and total_width_GeV is finite and positive",
+    "lifetime": "ctau_mm is finite and abs(ctau_mm - hbar_c_GeV_mm/total_width_GeV) <= 1e-10 * max(1, abs(ctau_mm))",
+    "experimental": "not evaluated by this substrate"
+  },
+  "classification": {
+    "status": "BLOCKED_SCIENTIFIC_DECISION",
+    "required_families": ["mixed", "photonic"],
+    "rules": null,
+    "evidence_labels_only": {
+      "mixed_like": "x approximately 1500 in the post-fix descriptive campaign",
+      "photonic_like": "x approximately 10000 in the post-fix descriptive campaign"
+    },
+    "promotion_requires": "explicit numerical predicates and active-125.20 fixtures supplied by a scientific owner"
+  },
+  "score": {
+    "hard_invalid_score": 0.0,
+    "weights": {
+      "family_topology_match": 0.35,
+      "anchor_lifetime_proximity": 0.35,
+      "cross_mass_family_consistency": 0.25,
+      "diversity_archive_contribution": 0.05
+    },
+    "anchor_lifetime_formula": "1 inside [500,1000] mm; exp(-abs(log(ctau_mm/700))/log(2)) outside",
+    "note": "These are engineering ranking semantics, not experimental efficiency or recast quantities. Hard invalidity is never compensated."
+  },
+  "archive": {
+    "top_k_per_family": 5,
+    "families": ["mixed", "photonic"],
+    "near_duplicate_metric": "RMS normalized Euclidean distance over the five canonical proposal coordinates across the three family masses",
+    "near_duplicate_radius": 0.05,
+    "tie_break": "higher score, then lexicographically smaller family_id",
+    "rejected_and_evicted": "retain in append-only ledger; never delete"
+  },
+  "lifecycle": ["PROPOSED", "EVALUATING", "TERMINATED", "FAILED", "PRUNED"],
+  "provenance_required": [
+    "candidate_id",
+    "proposal_id",
+    "source_lineage",
+    "schema_version",
+    "repository_commit",
+    "repository_dirty",
+    "evaluator_executable_sha256",
+    "dependency_identity",
+    "canonical_evaluator_row",
+    "random_seed",
+    "runtime_and_timestamps"
+  ],
+  "scientific_blockers": [
+    "BLOCKED_SCIENTIFIC_DECISION: no authoritative numerical mixed/photonic classifier thresholds",
+    "BLOCKED_SCIENTIFIC_DECISION: no active-125.20 golden fixtures for those thresholds",
+    "BLOCKED_SCIENTIFIC_DECISION: no justified diagnostic lifetime envelope"
+  ]
+}

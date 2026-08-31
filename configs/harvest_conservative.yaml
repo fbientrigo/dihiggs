@@ -1,0 +1,41 @@
+# Conservative example config for benchmark_search_daemon.py background harvesting.
+#
+# Deliberately modest: 2 workers, small per-cycle budget, frequent checkpoints.
+# Targets a brand-new run directory -- NEVER point run_dir at runs/discovery_v1
+# or runs/discovery_photonic_v1 (the daemon refuses those names outright; see
+# search_discovery/daemon.py:guard_run_dir).
+
+campaign:
+  name: harvest_v1
+
+run_dir: runs/harvest_v1
+evaluator: dihiggs/app/DihiggsPointV2Evaluator
+envelope_id: E1_mixed_exploit
+
+runtime:
+  workers: 2
+  max_evaluations_per_cycle: 24
+  checkpoint_every: 1
+  summary_every: 1
+  shutdown_grace_s: 30
+
+budgets:
+  max_total_evaluations: null       # null = unbounded; set an integer for a bounded run
+  max_cycle_walltime_s: 900
+  max_total_walltime_s: null
+
+policy:
+  seed: 20260825
+  family_validate_per_cycle: 1
+  allocation:
+    explore: 0.20          # A: broad Sobol coverage of the active envelope
+    refine: 0.45           # C: local mutation around the best known mixed/photonic candidate
+    optimize_mixed: 0.25   # B: CMA-ES targeting the mixed-family objective
+    climb: 0.10            # constrained photon-fraction ascent from a validated anchor
+
+stopping:
+  patience_cycles: 40                      # stop if no new valid/archived point for this many cycles
+  max_consecutive_evaluator_failures: 5    # stop if the evaluator binary itself keeps failing
+
+safety:
+  downstream_snapshots_read_only: true
