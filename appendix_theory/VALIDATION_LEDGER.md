@@ -52,13 +52,24 @@ Notes: positivity of physical eigenvalues is a local quadratic condition, not gl
 
 ## F5 — Goldstone and physical charged/CP-odd rotations
 
-Claim: The vacuum direction is the exact zero eigenvector of both charged and CP-odd Hessians, giving
-`G+=c_beta phi1+ + s_beta phi2+`, `H+=-s_beta phi1+ + c_beta phi2+`, `G0=c_beta eta1+s_beta eta2`, `A=-s_beta eta1+c_beta eta2`.  
+Claim: The vacuum direction is the exact zero eigenvector of both charged and CP-odd Hessians, giving `G+=c_beta phi1+ + s_beta phi2+`, `H+=-s_beta phi1+ + c_beta phi2+`, `G0=c_beta eta1+s_beta eta2`, `A=-s_beta eta1+c_beta eta2`.  
 Status: **VERIFIED**  
 Epistemic class: `DERIVED`, `SOURCE`, `TRANSLATED`  
 Independent derivation: direct multiplication of the post-tadpole matrices by `(v1,v2)^T`; orthogonal eigenvector `(-v2,v1)^T`.  
 Primary source: DH05 `gpm`, `goldn` and charged-Higgs text; GHOO18 section-2 beta rotation.  
 Notes: the beta rotation emerges from the vacuum geometry; it is not postulated from a coupling table.
+
+## F6 — Type-I Yukawa mass generation and neutral CP-even interaction
+
+Claim: In the frozen project Type-I basis only `Phi2` couples to charged fermions, giving `m_f=y_f v2/sqrt(2)` and `L_Y^CP-even=-(m_f/(v s_beta)) rho2 fbar f`.  
+Status: **VERIFIED**  
+Epistemic class: `DERIVED`, `SOURCE`, `TRANSLATED`, `PROJECT-DEFINITION`, `IMPLEMENTATION-CHECKED`  
+Assumptions: Type I; project basis `Phi2` Yukawa-active; fermion mass basis with positive real masses; tree level.  
+Primary source after derivation: BFLRS11 Type-I assignment and `Eq:Yukawa`; GHOO18 weak-basis Yukawa Lagrangian and `Yuk_Type_I`.  
+Independent derivation: expand `Phi2^0=(v2+rho2+i eta2)/sqrt(2)` and `tilde Phi2^0=(v2+rho2-i eta2)/sqrt(2)`, separate mass and interaction terms, then add h.c.  
+Project translation: DH05's alternative displayed Type-I special basis is related by `Phi1<->Phi2`; it is not used as the project basis.  
+Implementation check: active 2HDMC `set_yukawas_type(1)` scales `rho_D`, `rho_U`, and `rho_L` uniformly by `cot(beta)`.  
+Notes: this foundational statement precedes the physical-scalar rotation used in C3.
 
 ## C1 — Exact project-compatible scalar potential
 
@@ -85,12 +96,15 @@ Notes: state identity is fixed by mixing direction and convention, not mass orde
 ## C3 — Type-I exact-alignment result for `kappa_f^phi`
 
 Claim: In the adopted project convention, `kappa_f^phi=-cot(beta)` for up quarks, down quarks and charged leptons.  
-Status: **NOT VERIFIED**  
-Epistemic class: `OPEN-QUESTION`  
-Assumptions: Type I; exact alignment; Phase-4 state signs.  
-Primary source: BFLRS11 Yukawa Lagrangian/table; GHOO18 Type-I appendix.  
-Independent derivation: required from the explicit Type-I Yukawa Lagrangian in Phase 5.  
-Notes: Phase 4 has frozen `phi=s_beta rho1-c_beta rho2`; no modifier is inferred from it yet.
+Status: **VERIFIED**  
+Epistemic class: `DERIVED`, `SOURCE`, `TRANSLATED`, `PROJECT-DEFINITION`, `IMPLEMENTATION-CHECKED`  
+Assumptions: Type I with `Phi2` Yukawa-active; tree level; Phase-4 scalar signs; exact project alignment `s_(beta-alpha)=+1`.  
+Primary source after derivation: BFLRS11 `Eq:Yukawa` and Type-I table; GHOO18 `Yuk_Type_I`.  
+Independent derivation: `rho2=c_alpha h+s_alpha phi` and `L_Y=-(m_f/(v s_beta))rho2 fbar f` imply `kappa_f^phi=s_alpha/s_beta=c_(beta-alpha)-s_(beta-alpha)cot(beta)`. Exact alignment gives `-cot(beta)`.  
+Cross-source translation: the matched GHOO18 AL field satisfies `H2_GHOO=-phi_project`; its displayed `+cot(beta)` magnitude therefore maps to the project `-cot(beta)` coefficient.  
+Implementation check: 2HDMC Type-I `rho_F` magnitude is common `cot(beta)` and uses the DH05 scalar convention; combined with the frozen project scalar sign this reproduces `-cot(beta)`.  
+Limiting check: `tan beta -> infinity` suppresses the tree-level non-SM fermion coupling; `kappa_f^h -> 1` exactly in alignment.  
+Notes: the conditional width scaling is `Gamma(phi->f fbar) proportional cot^2(beta)` at fixed masses and radiative prescription; no global total-width/lifetime scaling is inferred.
 
 ## C4 — Exact-alignment result for `kappa_V^phi`
 
@@ -114,14 +128,14 @@ Notes: generic-basis minimization does not substitute for this convention audit.
 
 ## C6 — Exact alignment and `Z6`
 
-Claim: Exact alignment is equivalent to `Z6=0` under the project assumptions.  
+Claim: finite-mass exact alignment is controlled by the vanishing Higgs-basis CP-even off-diagonal term and hence by `Z6=0` once the chosen Higgs basis is explicitly derived.  
 Status: **PARTIALLY VERIFIED**  
 Epistemic class: `SOURCE`, `DERIVED`, `OPEN-QUESTION`  
-Assumptions: CP-conserving neutral sector; non-degenerate state identification.  
+Assumptions: CP-conserving neutral sector; non-degenerate finite-mass state identification.  
 Primary source: DH05 Higgs-basis CP-even matrix; GHOO18 alignment appendix.  
-Independent derivation completed so far: the generic-basis CP-even mass matrix and alignment directions are derived.  
+Independent derivation completed so far: generic-basis CP-even mass matrix and alignment directions are derived.  
 Remaining validation: derive the Higgs-basis matrix from the explicit field rotation and identify its off-diagonal entry as `Z6 v^2`.  
-Notes: GHOO18 prose typo in the approximate-alignment discussion is not used as evidence.
+Notes: decoupling with nonzero `Z6` is an asymptotic route to approximate alignment and must be phrased separately from the finite-mass exact statement.
 
 ## C7 — Exact `phi H+ H-` coupling in the Higgs basis
 
@@ -163,7 +177,7 @@ Claim: determine whether the derived coupling may be written approximately as `-
 Status: **NOT VERIFIED**  
 Epistemic class: `PROJECT-DEFINITION`, `OPEN-QUESTION`  
 Independent derivation: blocked on C10.  
-Notes: `X` remains absent from the foundational mass/mixing derivation.
+Notes: `X` remains absent from the foundational mass/mixing/Yukawa derivation.
 
 ## Phase gates
 
@@ -174,4 +188,5 @@ Notes: `X` remains absent from the foundational mass/mixing derivation.
 | `PHASE_2_PASS` | **PASS** | Complete CP-conserving generic potential reconstructed and convention-checked. |
 | `PHASE_3_PASS` | **PASS** | Vacuum potential, tadpoles, solved quadratic coefficients and `M^2` translation derived and audited. |
 | `PHASE_4_PASS` | **PASS** | Charged, CP-odd and CP-even Hessians derived; Goldstone zero modes proven; beta/alpha rotations obtained; project `h/phi/A/H±` sign convention fixed; source, CAS and 2HDMC checks agree. |
+| `PHASE_5_PASS` | **PASS** | Type-I Yukawa Lagrangian expanded in the project `Phi2` basis; masses and neutral CP-even interactions derived; exact `kappa_f^h` and `kappa_f^phi` obtained; C3 closed; source and 2HDMC checks agree. |
 | `PHASE_9_PASS` | NOT RUN | Requires exact charged-Higgs trilinear derivation. |
