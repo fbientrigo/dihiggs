@@ -1,6 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from dihiggs.app.orchestrator.engines.m2 import M2Engine
+from dihiggs.app.orchestrator.physics_authority import convention_provenance
 from tests.test_orchestrator.conftest import make_fixed_m2, make_grid
 
 
@@ -35,9 +38,17 @@ def test_m2_engine_metadata_and_columns_are_canonical():
     assert engine.executable_basename == "DihiggsPointV2Evaluator"
     assert metadata["schema_version"] == "dihiggs.point.v2"
     assert metadata["mass_convention"]["mh_GeV"] == 125.13
+    assert metadata["mass_convention"]["convention_id"] == "mh_125p13_pdg_2026"
+    assert metadata["mass_convention"]["schema_version"] == "physics_conventions_v3"
+    assert len(metadata["mass_convention"]["source_sha256"]) == 64
     assert "m12_sq /" in metadata["axis_description"]
     assert metadata["acceptance"]["theory_ok_v1"] == "triple_ok_legacy"
     assert {"point_id", "M2_input_GeV2", "experimental_ok"} <= set(engine.expected_csv_columns())
+
+
+def test_new_production_rejects_an_unlabelled_mass_override():
+    with pytest.raises(RuntimeError, match="active v3 Higgs-mass convention"):
+        convention_provenance(source_commit="test", requested_mass_gev=125.20)
 
 
 def test_m2_target_is_buildable():
