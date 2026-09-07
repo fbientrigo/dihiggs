@@ -8,9 +8,23 @@ schema_ref: dihiggs.high_mass_point.v1   # docs/contracts/high_mass_point_schema
 cascade_contract_ref: dihiggs.high_mass_h2.cascade_contract.v1  # docs/contracts/cascade_contract.yaml
 
 frozen_assumptions:
-  m_h_GeV: 125.13
+  physics_convention:
+    convention_id: mh_125p13_pdg_2026
+    m_h_GeV_text: "125.13"
+    schema_version: physics_conventions_v3
+    source_repository: fbientrigo/dihiggs
+    source_commit: 83a05f8faa7bbe63c394e640cc4a561e126f5225
+    source_path: conventions/physics_conventions.yaml
+    source_sha256: f7cea46d28f328f9b66a5de3b9d76fbbb65948c384f813828fb1462dfe1ee147
+  m_h_GeV: 125.13  # numeric task coordinate; text/provenance above are authoritative
   twohdmc_version: "1.8.0"
   note: See HIGH_MASS_H2_CONTRACT.md section 3 for the full Gate B freeze.
+
+campaign_choices:
+  must_be_explicit_per_manifest: [sin_beta_minus_alpha, lambda7, mA_equals_mHp]
+  note: >-
+    These are high-mass campaign choices, not general-2HDM identities. A
+    nonzero lambda7 is hard Z2 breaking and must be recorded as such.
 
 campaign_id_convention: "high_mass_h2_<stage>_<variant>_<yyyymmdd>"
 
@@ -108,6 +122,7 @@ runner_contract:
     - model_variant
     - experiment_class
     - construction_coordinates   # the task_key fields, human-readable
+    - physics_convention  # complete v3 ID/mass/schema/repository/commit/path/SHA-256 block
     - evaluator_cli_argv
     - producer_commit
     - producer_dirty
