@@ -2,7 +2,7 @@
 
 Only unresolved or source-internal issues are kept here. A project physics claim is removed as a blocker once it has been independently derived and promoted in `VALIDATION_LEDGER.md`.
 
-Resolved project claims through Phase 7:
+Resolved project claims through Phase 9:
 - active 2HDMC generic-potential convention: C1;
 - project `h,phi` sign/state map: C2;
 - Type-I exact-alignment `kappa_f^phi=-cot(beta)`: C3;
@@ -11,7 +11,9 @@ Resolved project claims through Phase 7:
 - Higgs-basis stationarity `Y3=-Z6v^2/2`: C5;
 - exact alignment iff `Z6=0`: C6;
 - exact generic-to-Higgs `Z7` map: C8;
-- `lambda7=0`, large-`tan beta`: `Z7 -> -lambda6`: C9.
+- `lambda7=0`, large-`tan beta`: `Z7 -> -lambda6`: C9;
+- exact `phi H+H-` potential/Lagrangian/Feynman-rule map: C7;
+- 2HDMC local trilinear sign layer: resolved in Phase 9.
 
 ## Q0.2 — BFLRS11 displayed CP-even signs versus nearby coupling prose
 
@@ -62,18 +64,20 @@ Policy: do not use the early restricted formulas as normalization evidence.
 
 ## Q6.1 — 2HDMC trilinear-local `Z6/Z7` sign layer
 
-Status: `OPEN, BLOCKING IMPLEMENTATION-LEVEL TRILINEAR SIGN VALIDATION ONLY`  
-Epistemic class: `IMPLEMENTATION-CHECKED`, `OPEN-QUESTION`  
-Phase-7 resolution of the basis part: `THDM::get_param_higgs` returns quantities named `Lambda6,Lambda7` that match the project/DH `Z6,Z7` formulas **including sign** under `H2=-s Phi1+c Phi2`.  
-Remaining observation: `THDM::get_coupling_hhh` receives those values as `l6,l7` and then explicitly defines local `Z6=-l6`, `Z7=-l7`.  
-Conclusion allowed now: this extra minus sign is **not** the generic-to-Higgs-basis transformation.  
-Still unknown: the exact convention layer represented by those local signs in the routine cited to hep-ph/0602242.  
-Resolution path:
-1. derive `rho_v H+H-` and `rho_perp H+H-` coefficients directly from the verified Higgs-basis potential;
-2. convert to `h,phi`, keeping `phi=-rho_perp` at alignment;
-3. distinguish potential coefficient, `L_int` coefficient and Feynman rule;
-4. only then map the 2HDMC routine term by term.  
-Blocks: implementation-level validation of C7/C10/C11; does not block the analytic trilinear derivation.
+Status: `RESOLVED`  
+Epistemic class: `DERIVED`, `IMPLEMENTATION-CHECKED`  
+Resolution: Phase 7 proved `get_param_higgs` returns the project/DH `Z7` sign. Phase 9 then showed that `get_qki` uses second components `(-cba,+sba)` for `(h,H)` while `get_coupling_hhh` defines local `Z7=-l7`. Combining these gives exactly the project Feynman rules `-i v(Z3 sba+Z7 cba)` for `h` and `-i v(Z3 cba-Z7 sba)` for `phi=H`.  
+Conclusion: the extra minus is a local implementation convention compensating the `qki` second-component sign; it is not a different Higgs-basis transformation.  
+Blocks: none.
+
+## Q9.1 — Historical project shorthand `g_phiH+H-=vZ7`
+
+Status: `OPEN NAMING/TRANSITION QUESTION, PHYSICS DERIVATION CLOSED`  
+Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `OPEN-QUESTION`  
+Observation: earlier project material calls `vZ7~-vXcot(beta)` the charged-Higgs trilinear `g`. Under the now-frozen state sign `phi=-rho_perp`, direct extraction gives potential coefficient `C_V=-vZ7`, literal interaction-Lagrangian coefficient `C_L=+vZ7`, and `g=-vZ7` if one defines `L_int=-g phiH+H-`.  
+Interpretation: the old numerical expression is exactly `C_L`, but its symbol `g` is ambiguous.  
+Resolution path: before changing plots or loop code, audit the loop-amplitude convention and relabel historical outputs according to the object they actually consume.  
+Blocks: only semantic migration of old plots/formulas; not the scalar-theory derivation.
 
 ## Q6.2 — Tree-level gauge decoupling versus loop-induced photonic amplitudes
 
