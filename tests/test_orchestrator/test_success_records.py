@@ -167,6 +167,9 @@ class TestSuccessRecordsM2:
         manifest = json.loads(next(tmp_outdir.rglob("run_manifest.json")).read_text())
         assert manifest["point_schema_version"] == "dihiggs.point.v2"
         assert manifest["mass_convention"]["mh_GeV"] == 125.13
+        assert manifest["mass_convention"]["convention_id"] == "mh_125p13_pdg_2026"
+        assert manifest["mass_convention"]["schema_version"] == "physics_conventions_v3"
+        assert len(manifest["mass_convention"]["source_sha256"]) == 64
         assert manifest["acceptance_definitions"]["theory_ok_v1"] == "triple_ok_legacy"
         assert manifest["summary"]["completion_status"] == "complete"
         assert manifest["outputs"][0]["output_sha256"] == meta["output_sha256"]

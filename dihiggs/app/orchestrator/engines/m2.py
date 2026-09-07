@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from dihiggs.app.orchestrator.engines.base import ScanAxis
 from dihiggs.app.orchestrator.grid import ScanGrid
 from dihiggs.app.orchestrator.models import FixedParams
+from dihiggs.app.orchestrator.physics_authority import active_mass_gev, convention_provenance
 
 
 class M2Engine:
@@ -32,7 +33,7 @@ class M2Engine:
         self, executable: Path, grid: ScanGrid, fixed: FixedParams, output_csv: Path
     ) -> List[str]:
         value = lambda number: format(number, ".17g")
-        mh = 125.13 if fixed.mh is None else fixed.mh
+        mh = active_mass_gev() if fixed.mh is None else fixed.mh
         mHp = fixed.mA if fixed.mHp is None else fixed.mHp
         yukawa_type = 1 if fixed.yukawa_type is None else fixed.yukawa_type
         if yukawa_type not in (1, 2, 3, 4):
@@ -67,11 +68,7 @@ class M2Engine:
             "axis_units": "GeV^2",
             "axis_label": "M2",
             "axis_description": "M2 = m12_sq / (sin(beta) * cos(beta)).",
-            "mass_convention": {
-                "mh_GeV": 125.13,
-                "source": "PDG 2026 Higgs listing",
-                "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
-            },
+            "mass_convention": convention_provenance(source_commit=None),
             "acceptance": {
                 "construction_ok": "exact THDM::set_param_phys return value",
                 "numerical_ok": "finite reconstructed lambda1-lambda7, tan_beta, m12_sq and M2",

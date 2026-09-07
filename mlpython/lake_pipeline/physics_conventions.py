@@ -2,9 +2,9 @@
 
 Single in-repo source of truth for constants that used to be copy-pasted into
 individual lake_pipeline scripts (e.g. HBAR_C_GEV_MM). Values come from the
-ecosystem-wide ``conventions/physics_conventions.yaml`` at the repo root, which
-is kept byte-identical with the copies in dihiggs_boundary and
-dihiggs_hep_cross so ctau derivations agree across all three repos.
+project-wide ``conventions/physics_conventions.yaml`` at the repo root. This
+repository owns that contract. Any downstream copy is a checksum-verified cache
+with source-commit provenance, not an independent authority.
 
 The pinned literals below are the fallback when PyYAML or the file is
 unavailable; ``tests/test_physics_conventions.py`` asserts the loaded values
@@ -37,9 +37,12 @@ def _load():
 
 
 _CONV = _load()
+_CONSTANTS = _CONV.get("constants") or {}
 
-HBAR_C_GEV_MM = float(_CONV.get("hbar_c_gev_mm", _HBAR_C_GEV_MM_PINNED))
-C_MM_PER_NS = float(_CONV.get("c_mm_per_ns", _C_MM_PER_NS_PINNED))
+HBAR_C_GEV_MM = float(
+    _CONSTANTS.get("hbar_c_gev_mm", _HBAR_C_GEV_MM_PINNED)
+)
+C_MM_PER_NS = float(_CONSTANTS.get("c_mm_per_ns", _C_MM_PER_NS_PINNED))
 
 
 def ctau_mm_from_width_gev(total_width_gev):

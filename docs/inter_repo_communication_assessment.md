@@ -3,6 +3,12 @@
 _Assessment of how the three dihiggs repos interoperate, the maintainability
 risks in that communication, and the changes made to harden it._
 
+> **Authority notice (2026-09-07):** this is a historical implementation
+> assessment. Its byte-identical-copy/MD5 policy is superseded by
+> [`PROJECT_PHYSICS_AUTHORITY.md`](PROJECT_PHYSICS_AUTHORITY.md). `dihiggs` now
+> owns the canonical contract; downstream copies are checksum-verified caches
+> with source-commit provenance.
+
 ## The three repos and how they talk
 
 | Repo | Pipeline role | Produces | Consumes |

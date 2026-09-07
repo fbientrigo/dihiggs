@@ -27,6 +27,7 @@ from dihiggs.app.orchestrator.io_utils import (
 )
 from dihiggs.app.orchestrator.layout import host_metadata
 from dihiggs.app.orchestrator.models import FixedParams
+from dihiggs.app.orchestrator.physics_authority import convention_provenance
 
 
 def write_initial_manifest(
@@ -110,11 +111,10 @@ def write_initial_manifest(
     if engine_name == "m2":
         manifest.update({
             "point_schema_version": "dihiggs.point.v2",
-            "mass_convention": {
-                "mh_GeV": 125.13 if fixed.mh is None else fixed.mh,
-                "source": "PDG 2026 Higgs listing",
-                "source_url": "https://pdg.lbl.gov/encoder_listings/s126.pdf",
-            },
+            "mass_convention": convention_provenance(
+                source_commit=git.get("commit"),
+                requested_mass_gev=fixed.mh,
+            ),
             "twohdmc_provenance": {
                 "api": "THDM::set_param_phys",
                 "repository_commit": git.get("commit", "unknown"),

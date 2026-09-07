@@ -29,6 +29,7 @@ from typing import Any, Dict, List
 from dihiggs.app.orchestrator.engines.base import EngineAdapter, ScanAxis
 from dihiggs.app.orchestrator.grid import ScanGrid
 from dihiggs.app.orchestrator.models import FixedParams
+from dihiggs.app.orchestrator.physics_authority import active_mass_gev
 
 
 class M2TrackerEngine:
@@ -89,7 +90,7 @@ class M2TrackerEngine:
             f"--m2-min={grid.axis_min:.6g}",
             f"--m2-max={grid.axis_max:.6g}",
             f"--ma={fixed.mA:.6g}",
-            f"--mh={(125.13 if fixed.mh is None else fixed.mh):.17g}",
+            f"--mh={(active_mass_gev() if fixed.mh is None else fixed.mh):.17g}",
             f"--mhp={(fixed.mA if fixed.mHp is None else fixed.mHp):.17g}",
             f"--sin-ba={fixed.sin_ba:.6g}",
             f"--tan-beta={fixed.tan_beta:.6g}",
