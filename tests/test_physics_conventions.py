@@ -19,6 +19,7 @@ HIGH_MASS_SCHEMA = os.path.join(
 CASCADE_CONTRACT = os.path.join(REPO_ROOT, "docs", "contracts", "cascade_contract.yaml")
 
 sys.path.insert(0, LAKE_PIPELINE)
+sys.path.insert(0, REPO_ROOT)
 physics_conventions = importlib.import_module("physics_conventions")
 
 
