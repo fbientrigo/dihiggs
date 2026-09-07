@@ -2,13 +2,7 @@
 
 Only unresolved items are recorded here. A question is removed only when its resolution is entered in `VALIDATION_LEDGER.md` with evidence.
 
-## Q0.1 — Active 2HDMC potential convention
-
-Status: `OPEN`  
-Epistemic class: `OPEN-QUESTION`  
-Question: Does the vendored/active 2HDMC implementation in the current repository use exactly the DH05/BFLRS11 generic-potential signs and normalization for all `m_ij^2` and `lambda_1...lambda_7`?  
-Why not closed in Phase 0: the mission prohibits deriving theory from implementation, and the supplied source packs did not include the 2HDMC paper source `arXiv:0902.0851`. The analytic potential will be frozen first; implementation will then be an independent cross-check.  
-Blocks: final `C1 VERIFIED`, but does not block Phase 1 field definitions.
+`Q0.1` (active 2HDMC generic-potential convention) was removed after C1 was promoted to `VERIFIED`: the analytic DH05/BFLRS11 potential was frozen first, then the active 2HDMC `set_param_gen` stationarity path was independently checked against the derived equation.
 
 ## Q0.2 — BFLRS11 displayed CP-even signs versus gauge-coupling prose
 
@@ -33,7 +27,7 @@ Status: `OPEN, NON-BLOCKING`
 Epistemic class: `SOURCE`, `OPEN-QUESTION`  
 Observation: the source text in Appendix `app:al` contains a sentence stating approximate alignment without decoupling with `|Z_6| >> 1`, while the immediately following footnote and surrounding equations require a small mixing controlled by `Z_6` relative to mass splittings.  
 Resolution path: rely on the explicit mass matrix and independently derive the alignment condition; do not use this prose sentence as evidence.  
-Blocks: nothing in Phase 1; must be avoided when validating C6.
+Blocks: must be avoided when validating C6.
 
 ## Q0.5 — Project `h,phi` to literature `h,H,H_i` map
 
@@ -52,3 +46,12 @@ Question: Which residual sign/rephasing of the second Higgs-basis doublet will b
 Why it matters: `Y_3`, `Z_6`, `Z_7`, the non-SM CP-even field, and odd-`H_2` trilinears change sign together under this convention change.  
 Resolution path: Phase 7 must define the Higgs-basis field rotation explicitly as `H1=Phi1 c_beta+Phi2 s_beta`, `H2=-Phi1 s_beta+Phi2 c_beta`, then retain that sign throughout.  
 Blocks: absolute signs in C5, C7–C11 if the field rotation is not frozen.
+
+## Q3.1 — Stationary point versus physical vacuum
+
+Status: `OPEN BY DESIGN`  
+Epistemic class: `DERIVED`, `OPEN-QUESTION`  
+Question: Do the stationary conditions derived in Phase 3 correspond to the desired local/global electroweak minimum for a given model point?  
+What is established: the two neutral tadpoles vanish at the stationary point. This alone does not establish positive physical scalar masses or global-minimum status.  
+Resolution path: derive the charged, CP-odd and CP-even Hessians in Phase 4, identify Goldstone zero modes, and keep boundedness/global-vacuum tests conceptually separate.  
+Blocks: interpretation of a stationary point as a physical vacuum; does not invalidate the Phase-3 algebra.
