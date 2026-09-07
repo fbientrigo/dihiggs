@@ -27,7 +27,7 @@ EXPECTED_VERSIONS = {
     "HiggsSignals_dataset": "v1.1",
 }
 PINNED_CONVENTIONS_SHA256 = (
-    "03d34c63f3655c433629b3124a36af10bf15071842f17219fdac86e06350ada3"
+    "f7cea46d28f328f9b66a5de3b9d76fbbb65948c384f813828fb1462dfe1ee147"
 )
 CONVENTIONS_SCHEMA_VERSION = "physics_conventions_v3"
 
