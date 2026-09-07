@@ -5,6 +5,7 @@ Only unresolved items are recorded here. A question is removed only when its res
 Resolved entries:
 - `Q0.1` active 2HDMC generic-potential convention: closed with C1.
 - `Q0.5` project `h,phi` state-sign map: closed with C2 after the CP-even Hessian and mixing directions were derived. On the branch connected to `sin(beta-alpha)=1`, the frozen convention is `h=h_DH`, `phi=H_DH`, hence `h=rho_v`, `phi=-rho_perp` at exact alignment. The gauge-coupling interpretation remains a separate C4 question.
+- Type-I project fermion modifier: closed with C3 in Phase 5. The project convention gives `kappa_f^phi=-cot(beta)` for all charged fermions; this result no longer depends on interpreting a GHOO table sign.
 
 ## Q0.2 — BFLRS11 displayed CP-even signs versus gauge-coupling prose
 
@@ -15,13 +16,14 @@ What Phase 4 added: the project now uses the DH05 field signs explicitly, so no 
 Resolution path: derive gauge couplings from the kinetic terms in Phase 6 and compare only after applying the field-sign translation.  
 Blocks: final source-to-source gauge-sign map, not the project derivation.
 
-## Q0.3 — Meaning of the GHOO18 Yukawa “coupling” sign
+## Q0.3 — Meaning of the GHOO18 displayed Yukawa sign
 
-Status: `OPEN`  
-Epistemic class: `SOURCE`, `OPEN-QUESTION`  
-Question: in Appendix `Yuk_Type_I`, is each displayed `bar f f H_j : ...` entry a coefficient in `-L_Y`, in `L_Y`, or a vertex factor stripped of `i`?  
-Resolution path: do not use the table sign as project evidence. Start from GHOO18's explicit `-L_Y=...` equation and independently expand/rotate in Phase 5.  
-Blocks: C3.
+Status: `OPEN, NON-BLOCKING`  
+Epistemic class: `SOURCE`, `TRANSLATED`, `OPEN-QUESTION`  
+Question: for a fully source-to-source sign map, how does each GHOO18 heavy-state label and displayed `bar f f H_j : ...` coefficient map to the project `phi` after all GHOO field signs are frozen?  
+What Phase 5 resolved: C3 no longer depends on this question. Starting from the Type-I gauge-invariant Yukawa Lagrangian and the Phase-4 project scalar rotation gives `kappa_f^phi=-cot(beta)` independently. GHOO18 confirms the `Phi2` projection and `cot(beta)` dependence.  
+Resolution path: if an exact GHOO coefficient-level comparison is needed in the final appendix, map its neutral rotation matrix `R` and any global heavy-state sign before comparing signed coefficients.  
+Blocks: only the optional exact GHOO-to-project signed coefficient map; **does not block C3 or later project derivations**.
 
 ## Q0.4 — GHOO18 approximate-alignment prose typo
 
