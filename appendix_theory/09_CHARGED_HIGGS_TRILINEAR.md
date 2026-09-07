@@ -132,20 +132,25 @@ The Feynman rule tends to
 \boxed{-iv\lambda_6}.
 \]
 
-With the later project coordinate `X=lambda6 tan(beta)`, so `lambda6=X cot(beta)`,
+### Important correction on the `X=lambda6 tan(beta)` rewrite
+
+The preceding expansion `Z7=-lambda6+(lambda345-lambda1)/tan(beta)+...` is an asymptotic expansion at **fixed `lambda6`**. It cannot be converted without qualification into `Z7~-X cot(beta)` when `X=lambda6 tan(beta)` is itself held fixed.
+
+At fixed `X`, one must substitute `lambda6=X/t` before taking `t=tan(beta)->infinity`. Phase 10 shows
+
 \[
-\boxed{C_V^{\phi H^+H^-}\simeq +vX\cot\beta},
+Z_7=(\lambda_{345}-\lambda_1-X)\cot\beta+\mathcal O(\cot^3\beta).
 \]
+
+Under exact alignment (`Z6=0`) and `lambda7=0`, this becomes
+
 \[
-\boxed{C_{\mathcal L}^{\phi H^+H^-}\simeq -vX\cot\beta},
+\boxed{Z_7=-(\lambda_1-\lambda_2+X)\cot\beta+\mathcal O(\cot^3\beta)}.
 \]
-\[
-\boxed{g_{\phi H^+H^-}\simeq +vX\cot\beta}\quad\text{if }\mathcal L_{\rm int}=-g\phi H^+H^-,
-\]
-and
-\[
-\boxed{\text{Feynman rule}\simeq-i vX\cot\beta}.
-\]
+
+Therefore the simpler project shorthand `Z7~-X cot(beta)` requires an additional numerical condition such as `|lambda1-lambda2| << |X|`; it is not a generic consequence of large `tan(beta)` at fixed `X`.
+
+Accordingly, no unqualified `C_V ~ +vX cot(beta)` or `C_L ~ -vX cot(beta)` statement is promoted here. The exact formulas in terms of `Z7` remain valid.
 
 ## Convention map
 
@@ -166,7 +171,7 @@ for `H=phi`, exactly the Feynman rules derived from the project potential. Thus 
 
 Earlier project material used the shorthand
 \[
-g_{\phi H^+H^-}=vZ_7\simeq-vX\cot\beta.
+g_{\phi H^+H^-}=vZ_7,\qquad\text{historically approximated as }-vX\cot\beta.
 \]
 With the now-frozen physical state `phi=-rho_perp`, this equality is **not** the coefficient of `phi H+H-` in the potential and is **not** the `g` defined by `L_int=-g phi H+H-`.
 
