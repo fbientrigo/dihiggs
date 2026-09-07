@@ -5,19 +5,22 @@
 # versions each repo builds against, so version drift is detectable instead of
 # hidden in directory names and build scripts. The declared versions must AGREE
 # across the three manifests -- that agreement is the cross-repo "version pin".
-# tests/test_external_tools.py enforces the versions and the conventions md5.
+# tests/test_external_tools.py enforces the versions and the authoritative
+# conventions SHA-256.
 #
 # NOTE: the 2HDMC tree in THIS repo is a PATCHED FORK, not stock v1.8 (see
 # local_patches). It cannot be replaced by an upstream submodule without losing
 # the lambda1-scan functionality the project depends on.
 schema_version: external_tools_v1
 
-# Shared physics conventions file, byte-identical across all three repos.
-# The md5 is the cross-repo drift pin for conventions/physics_conventions.yaml.
+# Project-wide physics authority. Downstream copies are controlled caches and
+# record this repository commit plus this SHA-256 in a provenance sidecar.
 conventions:
   file: conventions/physics_conventions.yaml
-  schema_version: physics_conventions_v1
-  md5: a2fea4c862d3b678334fd07a396f26ba
+  authority_repository: fbientrigo/dihiggs
+  authority: true
+  schema_version: physics_conventions_v3
+  sha256: 03d34c63f3655c433629b3124a36af10bf15071842f17219fdac86e06350ada3
 
 tools:
   2HDMC:
