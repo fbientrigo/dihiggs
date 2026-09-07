@@ -81,15 +81,13 @@ fail closed rather than infer the state from a mass ordering.
 The active project convention for new production is the decimal string
 
 ```text
-m_h = "125.20" GeV
+m_h = "125.13" GeV
 ```
 
-This is a **project decision**, not a claim that `125.20 GeV` is the PDG 2026
-world-average central value. The PDG 2026 Higgs listing reports
-`125.13 +/- 0.11 GeV`; an older downstream document incorrectly attributed
-the project value to that listing. The distinction matters: a project input
-may be frozen for production without being relabelled as an external
-measurement.
+This adopts the PDG 2026 Higgs world-average central value, reported as
+`125.13 +/- 0.11 GeV`, as the project convention. `125.20 GeV` was a prior
+project convention and remains a named, replay-only convention while its
+downstream consumers are migrated. It is not the PDG 2026 central value.
 
 The decimal string is authoritative. Producers may convert it for numerical
 calculation, but card writers must not reconstruct the original decimal text
@@ -97,14 +95,18 @@ from a binary float.
 
 | Convention ID | Value [GeV] | Status | Permitted use |
 |---|---:|---|---|
-| `mh_125p20_project_2026` | `"125.20"` | active | New production and new handoffs |
+| `mh_125p13_pdg_2026` | `"125.13"` | active | New production and new handoffs |
+| `mh_125p20_project_pre_v3` | `"125.20"` | superseded / pending migration | Exact replay of already-provenanced work only |
 | `mh_125p13_high_mass_v1` | `"125.13"` | historical | High-mass v1, 150 GeV benchmark, point-v2 replay |
 | `mh_125p09_lambda1_boundary_legacy` | `"125.09"` | historical | Lambda1 characterization and legacy boundary replay |
 | `mh_125p0_ufo_autoresearch_legacy` | `"125.0"` | historical | Frozen UFO defaults and replay-only legacy paths |
 
 Historical artifacts retain their original value and checksum. They are not
-silently recalculated, renamed as active, or mixed with `125.20` results. A
-recalculation at another `m_h` is a new point with new provenance.
+silently recalculated, renamed as active, or mixed across convention IDs. A
+recalculation at another `m_h` is a new point with new provenance. The exact
+locations still using `125.20` are enumerated in
+`migration.pending_125p20_uses` in the machine contract and in the discrepancy
+ledger; they are a required migration queue, not an authorization to produce.
 
 ## 5. Campaign choices are not model identities
 
@@ -263,5 +265,5 @@ Reject rather than guess when any of the following occurs:
 - G. C. Branco et al., *Theory and phenomenology of two-Higgs-doublet
   models*, arXiv:1106.0034.
 
-These references define external physics context. The choice `"125.20"` and
-the two effective trilinear formulas remain project decisions.
+The PDG listing supplies the adopted `"125.13"` mass convention. The two
+effective trilinear formulas remain project decisions.
