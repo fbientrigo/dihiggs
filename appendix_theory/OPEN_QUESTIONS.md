@@ -2,7 +2,7 @@
 
 Only unresolved or source-internal issues are kept here. A project physics claim is removed as a blocker once it has been independently derived and promoted in `VALIDATION_LEDGER.md`.
 
-Resolved project claims through Phase 10:
+Resolved project claims through Phase 13:
 - active 2HDMC generic-potential convention: C1;
 - project `h,phi` sign/state map: C2;
 - Type-I exact-alignment `kappa_f^phi=-cot(beta)`: C3;
@@ -15,6 +15,8 @@ Resolved project claims through Phase 10:
 - exact `phi H+H-` potential/Lagrangian/Feynman-rule map: C7;
 - active `gamma gamma` charged-scalar loop object/sign mapping: C12;
 - active `Z gamma` charged-scalar object/sign mapping: C13 (external normalization comparison remains Q10.1).
+- fixed-`X` audit: `X` alone is not sufficient; exact `(X,Q)` relation: C11/C14;
+- physical exact-alignment `h phi phi` coupling and 2HDMC spot-check: C15;
 
 ## Q0.2 — BFLRS11 displayed CP-even signs versus nearby coupling prose
 
@@ -71,14 +73,15 @@ Resolution: Phase 7 proved `get_param_higgs` returns the project/DH `Z7` sign. P
 Conclusion: the extra minus is a local implementation convention compensating the `qki` second-component sign; it is not a different Higgs-basis transformation.  
 Blocks: none.
 
-## Q9.1 — Historical project shorthand `g_phiH+H-=vZ7`
+## Q9.1 — Historical project shorthand `g_phiH+H-=vZ7` and X-only interpretation
 
-Status: `PARTLY RESOLVED; NUMERICAL APPROXIMATION REQUIRES REVALIDATION`  
-Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `IMPLEMENTATION-CHECKED`, `OPEN-QUESTION`  
-Observation: earlier project material calls `vZ7~-vXcot(beta)` the charged-Higgs trilinear `g`. Phase 9 established that `vZ7` is exactly the literal interaction-Lagrangian coefficient `C_L`, while `C_V=-vZ7`. Phase 10 established that the active photonic widths consume the Feynman rule derived from `C_V`, so existing 2HDMC widths are not invalidated by this naming.  
-New correction: at fixed `X=lambda6 tan(beta)`, exact alignment and `lambda7=0`, `Z7=-(X+lambda1-lambda2)cot(beta)+O(cot^3 beta)`. Thus the additional approximation `vZ7~-vXcot(beta)` is not generic.  
-Resolution path: for actual paper points compute `R_X=Z7/[-X cot(beta)]` and `Delta12=lambda1-lambda2`; only retain the historical approximation where its numerical accuracy is demonstrated.  
-Blocks: semantic migration plus any interpretation that attributes the leading loop coefficient to `X` alone.
+Status: `RESOLVED AS A CONVENTION MAP; X-ONLY PHYSICS CLAIM REJECTED GENERICALLY`  
+Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `IMPLEMENTATION-CHECKED`, `NUMERICALLY-CHECKED`  
+Resolution: `vZ7` is the literal interaction-Lagrangian monomial coefficient `C_L`; the physical potential coefficient is `C_V=-vZ7`, and active 2HDMC photonic widths consume the Feynman rule derived from `C_V`.  
+Fixed-`X` correction: in exact alignment with `lambda7=0`, define `Q=(m_phi^2-M^2)tan^2(beta)`. The exact physical-branch relation is `Z7=(X/2-Q/v^2)cot(beta)+(X/2+Q/v^2)cot^3(beta)`. Therefore `X` alone cannot generically determine the loop coefficient.  
+Numerical evidence: the versioned valid `H2scan_mH150_tb300000` point has `X=3e-5` but `Q/v^2~0.742`; exact `Z7` differs from `-X cot(beta)` by about `2.5e4` in magnitude.  
+Policy: no manuscript statement may call `X` the unique control variable. An `X`-only approximation may be shown only as a benchmark-specific empirical approximation with an explicit error test.  
+Blocks: none for the theory appendix if this policy is followed.
 
 ## Q10.1 — Active 2HDMC `Z gamma` normalization versus Anatomy II/HDECAY
 
@@ -89,6 +92,14 @@ Established: which trilinear object and sign enter the active project calculatio
 Not established: an independent derivation of the normalization mismatch and which external convention should be regarded as canonical for a standalone appendix formula.  
 Resolution path: reproduce the `Z H+H-` gauge vertex and the scalar loop diagram independently, then compare operator normalization with HDECAY and Djouadi before changing any code or published formula.  
 Blocks: only an externally normalized standalone `Z gamma` formula; not existing 2HDMC-generated widths.
+
+## Q13.1 — Formal meaning of `m_2^2` in the exploratory `EF_m2` prescription
+
+Status: `OPEN PROJECT-NOTATION QUESTION, EXCLUDE FROM THEORY APPENDIX UNLESS NEEDED`  
+Epistemic class: `PROJECT-DEFINITION`, `OPEN-QUESTION`  
+Established: the exploratory prescription `8(m_phi^2-m_2^2)/v` is project-defined; it is not a 2HDMC definition and `m_2^2` must not be silently identified with project `M^2=m12^2/(s_beta c_beta)`.  
+Policy: the physical appendix does not need this object unless the manuscript explicitly uses the `EF_m2` comparison. If it is used, its exact calculator field/API and formal interpretation must be stated separately.  
+Blocks: only publication of `EF_m2` as if it were a physical 2HDM coupling.
 
 ## Q6.2 — Tree-level gauge decoupling versus loop-induced photonic amplitudes
 
