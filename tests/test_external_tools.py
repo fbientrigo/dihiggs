@@ -1,16 +1,13 @@
-"""Drift guard for external-tool versions and the shared conventions file.
+"""Drift guard for external-tool versions and the physics authority file.
 
-The three repos (dihiggs, dihiggs_boundary, dihiggs_hep_cross) are separate git
-repos and cannot see each other in CI. Cross-repo agreement is instead enforced
-by SHARED PINNED CONSTANTS asserted independently in each repo:
+The repositories are separate and cannot see each other in CI. `dihiggs` owns
+the canonical contract; downstream repositories verify an exact cached copy
+against a source commit and SHA-256 sidecar.
 
   * EXPECTED_VERSIONS  -- every repo's external_tools.lock.yaml must declare
     these same tool versions.
-  * PINNED_CONVENTIONS_MD5 -- every repo's conventions/physics_conventions.yaml
-    must hash to this. Since the file is byte-identical across repos, one pinned
-    md5 makes any drift in any repo fail that repo's CI.
-
-Keep these constants identical across the three test_external_tools.py copies.
+  * PINNED_CONVENTIONS_SHA256 -- the authoritative file in this repository must
+    match its manifest. Downstream migrations pin this value independently.
 """
 
 import hashlib
@@ -29,8 +26,10 @@ EXPECTED_VERSIONS = {
     "HiggsBounds_dataset": "v1.7",
     "HiggsSignals_dataset": "v1.1",
 }
-PINNED_CONVENTIONS_MD5 = "a2fea4c862d3b678334fd07a396f26ba"
-CONVENTIONS_SCHEMA_VERSION = "physics_conventions_v1"
+PINNED_CONVENTIONS_SHA256 = (
+    "03d34c63f3655c433629b3124a36af10bf15071842f17219fdac86e06350ada3"
+)
+CONVENTIONS_SCHEMA_VERSION = "physics_conventions_v3"
 
 
 def _load_manifest():
@@ -57,27 +56,28 @@ def test_declared_versions_match_shared_pins():
         )
 
 
-def test_conventions_md5_matches_pin():
-    """The shared conventions file must hash to the pinned md5 (byte-identical
-    across the three repos)."""
+def test_conventions_sha256_matches_pin():
+    """The authoritative conventions file must match its SHA-256 pin."""
     assert os.path.exists(CONVENTIONS)
     with open(CONVENTIONS, "rb") as fh:
-        actual = hashlib.md5(fh.read()).hexdigest()
-    assert actual == PINNED_CONVENTIONS_MD5, (
-        "conventions/physics_conventions.yaml md5 %s != pinned %s "
-        "(did the shared file drift?)" % (actual, PINNED_CONVENTIONS_MD5)
+        actual = hashlib.sha256(fh.read()).hexdigest()
+    assert actual == PINNED_CONVENTIONS_SHA256, (
+        "conventions/physics_conventions.yaml sha256 %s != pinned %s "
+        "(did the authority file drift?)" % (actual, PINNED_CONVENTIONS_SHA256)
     )
 
 
 def test_manifest_conventions_block_matches_file():
-    """The manifest's recorded md5/schema_version must match the actual file, so
+    """The manifest's SHA-256/schema must match the actual authority file, so
     the manifest cannot silently lag the conventions file."""
     conv = _load_manifest()["conventions"]
-    assert conv["md5"] == PINNED_CONVENTIONS_MD5
+    assert conv["authority_repository"] == "fbientrigo/dihiggs"
+    assert conv["authority"] is True
+    assert conv["sha256"] == PINNED_CONVENTIONS_SHA256
     assert conv["schema_version"] == CONVENTIONS_SCHEMA_VERSION
     with open(CONVENTIONS, "rb") as fh:
-        actual = hashlib.md5(fh.read()).hexdigest()
-    assert conv["md5"] == actual
+        actual = hashlib.sha256(fh.read()).hexdigest()
+    assert conv["sha256"] == actual
 
 
 def test_vendored_paths_exist_when_declared():
