@@ -268,6 +268,28 @@ def test_high_mass_contract_and_templates_consume_v3_authority():
     assert cascade["constants_GeV"]["m_h"] == float(convention["m_h_GeV_text"])
 
 
+def test_new_production_rejects_authority_bytes_not_in_source_commit(tmp_path, monkeypatch):
+    from dihiggs.app.orchestrator import physics_authority
+
+    altered = tmp_path / "physics_conventions.yaml"
+    altered.write_text(
+        physics_authority._CONVENTIONS_PATH.read_text(encoding="utf-8").replace(
+            'value_GeV: "125.13"', 'value_GeV: "125.14"', 1
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(physics_authority, "_CONVENTIONS_PATH", altered)
+    physics_authority._load_contract.cache_clear()
+    try:
+        with pytest.raises(RuntimeError, match="bytes do not match source_commit"):
+            physics_authority.convention_provenance(
+                source_commit=physics_authority._authority_commit(),
+                requested_mass_gev=125.14,
+            )
+    finally:
+        physics_authority._load_contract.cache_clear()
+
+
 def test_ctau_helper():
     w = 2e-13
     assert physics_conventions.ctau_mm_from_width_gev(w) == (
