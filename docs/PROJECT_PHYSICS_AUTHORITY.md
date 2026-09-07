@@ -108,6 +108,15 @@ locations still using `125.20` are enumerated in
 `migration.pending_125p20_uses` in the machine contract and in the discrepancy
 ledger; they are a required migration queue, not an authorization to produce.
 
+For `dihiggs.point.v2` new production, the orchestrator reads the active mass
+from the YAML and emits `convention_id`, decimal mass text, schema version,
+source repository, commit, path, and SHA-256 in `mass_convention`. A requested
+mass different from the active value is rejected by this new-production
+interface; a historical replay must use an explicit historical interface rather
+than silently override the contract. The existing point-v2 spelling `mh_GeV`
+is retained as a compatibility duplicate of canonical `m_h_GeV` until the
+point schema itself is versioned.
+
 ## 5. Campaign choices are not model identities
 
 The following are common project choices, but the general model does not imply
