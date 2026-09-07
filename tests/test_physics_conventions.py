@@ -52,16 +52,27 @@ def test_v3_schema_and_single_authority():
 def test_active_and_historical_higgs_mass_conventions():
     masses = _load_conventions()["mass_conventions"]
     active = masses["active"]
-    assert active["value_GeV"] == "125.20"
+    assert active["id"] == "mh_125p13_pdg_2026"
+    assert active["value_GeV"] == "125.13"
     assert isinstance(active["value_GeV"], str)
-    assert Decimal(active["value_GeV"]) == Decimal("125.20")
+    assert Decimal(active["value_GeV"]) == Decimal("125.13")
     assert active["status"] == "active_new_production"
-    assert active["authority_kind"] == "project_decision"
-    assert active["external_measurement_claim"] is False
+    assert active["authority_kind"] == "external_measurement"
+    assert active["external_measurement_claim"] is True
+    assert active["external_source"]["central_value_GeV"] == "125.13"
+    assert active["external_source"]["uncertainty_GeV"] == "0.11"
 
-    historical = {item["value_GeV"]: item for item in masses["historical"]}
-    assert set(historical) == {"125.13", "125.09", "125.0"}
-    assert all(item["status"] == "historical" for item in historical.values())
+    historical = {item["id"]: item for item in masses["historical"]}
+    assert set(historical) == {
+        "mh_125p20_project_pre_v3",
+        "mh_125p13_high_mass_v1",
+        "mh_125p09_lambda1_boundary_legacy",
+        "mh_125p0_ufo_autoresearch_legacy",
+    }
+    assert historical["mh_125p20_project_pre_v3"]["value_GeV"] == "125.20"
+    assert historical["mh_125p20_project_pre_v3"]["status"] == (
+        "superseded_pending_consumer_migration"
+    )
     assert all(item["new_production_allowed"] is False for item in historical.values())
     assert all(item["preserve_for_replay"] is True for item in historical.values())
 
@@ -165,13 +176,28 @@ def test_stage_ownership_and_migration_fail_closed():
     assert conv["failure_policy"]["default"] == "reject"
 
 
+def test_pending_125p20_migration_inventory_is_actionable():
+    migration = _load_conventions()["migration"]
+    pending = migration["pending_125p20_uses"]
+    assert pending["required_before_new_production"] is True
+    occurrences = {(item["repository"], item["path"]): item for item in pending["occurrences"]}
+    assert ("fbientrigo/dihiggs_hep_cross", "src/llp_recast/constants.py") in occurrences
+    assert ("fbientrigo/dihiggs_hep_cross", "state/CURRENT_CAMPAIGN.yaml") in occurrences
+    assert all(item["action"] for item in occurrences.values())
+    collision = migration["excluded_numeric_collision"]
+    assert collision["repository"] == "fbientrigo/dihiggs_llp_recast"
+    assert collision["path"].endswith("geometry.csv")
+
+
 def test_human_contract_agrees_with_machine_contract():
     assert os.path.exists(HUMAN_CONTRACT)
     with open(HUMAN_CONTRACT) as fh:
         human = fh.read()
     required_literals = [
         "physics_conventions_v3",
-        'm_h = "125.20" GeV',
+        'm_h = "125.13" GeV',
+        "mh_125p13_pdg_2026",
+        "mh_125p20_project_pre_v3",
         "mh_125p13_high_mass_v1",
         "mh_125p09_lambda1_boundary_legacy",
         "mh_125p0_ufo_autoresearch_legacy",
