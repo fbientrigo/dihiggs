@@ -46,7 +46,8 @@ Epistemic class: `DERIVED`, `SOURCE`, `IMPLEMENTATION-CHECKED`
 
 ## F7 — Higgs-basis field rotation and operator map
 
-Claim: with the frozen project sign `H1=c_beta Phi1+s_beta Phi2`, `H2=-s_beta Phi1+c_beta Phi2`, one has `<H1^0>=v/sqrt2`, `<H2^0>=0`, and the complete generic potential transforms into the declared `Y_i,Z_i` Higgs-basis potential.  
+Claim: with the frozen project sign
+`H1=c_beta Phi1+s_beta Phi2`, `H2=-s_beta Phi1+c_beta Phi2`, one has `<H1^0>=v/sqrt2`, `<H2^0>=0`, and the complete generic potential transforms into the declared `Y_i,Z_i` Higgs-basis potential.  
 Status: **VERIFIED**  
 Epistemic class: `DERIVED`, `SOURCE`, `TRANSLATED`, `IMPLEMENTATION-CHECKED`, `PROJECT-DEFINITION`  
 Independent derivation: Phase 7 reconstructs the four generic bilinears in terms of `H1,H2` bilinears and extracts all quadratic/quartic coefficients operator by operator.  
@@ -86,7 +87,8 @@ Epistemic class: `DERIVED`, `SOURCE`, `IMPLEMENTATION-CHECKED`
 
 ## C5 — Higgs-basis stationarity `Y3=-Z6 v^2/2`
 
-Claim: in the selected Higgs-basis convention with `+[Y3 H1dag H2+h.c.]`, `Y1=-Z1 v^2/2` and `Y3=-Z6 v^2/2`.  
+Claim: in the selected Higgs-basis convention with `+[Y3 H1dag H2+h.c.]`,
+`Y1=-Z1 v^2/2` and `Y3=-Z6 v^2/2`.  
 Status: **VERIFIED**  
 Epistemic class: `DERIVED`, `SOURCE`, `TRANSLATED`, `IMPLEMENTATION-CHECKED`  
 Independent derivation A: direct Higgs-basis tadpoles in Phase 7.  
@@ -98,7 +100,8 @@ Translation: DH05 uses `-[M12_H^2 H1dag H2+h.c.]`, so `Y3=-M12_H^2`; DH stationa
 Claim: exact tree-level alignment is equivalent to `Z6=0` when alignment means the VEV direction `rho_v` is a CP-even mass eigenstate.  
 Status: **VERIFIED**  
 Epistemic class: `DERIVED`, `SOURCE`, `IMPLEMENTATION-CHECKED`  
-Independent derivation: the Phase-7 CP-even Higgs-basis Hessian is `[[Z1 v^2, Z6 v^2],[Z6 v^2, m_A^2+Z5 v^2]]`; the VEV vector `(1,0)` is an eigenvector iff `Z6=0`.  
+Independent derivation: the Phase-7 CP-even Higgs-basis Hessian is
+`[[Z1 v^2, Z6 v^2],[Z6 v^2, m_A^2+Z5 v^2]]`; the VEV vector `(1,0)` is an eigenvector iff `Z6=0`.  
 Physical identity: `Z6 v^2=(m_h^2-m_phi^2)sba*cba`.  
 Degeneracy note: exact degeneracy removes uniqueness of the mixing-angle label, not the off-diagonal condition.
 
@@ -122,30 +125,34 @@ Implementation check: 2HDMC `get_param_higgs` returns the same expression and si
 
 ## C9 — Large-`tan beta`, `lambda7=0` limit of `Z7`
 
-Claim: for the frozen project `H2` sign, `Z7 -> -lambda6` as `tan beta -> infinity` with `lambda7=0`.  
-Status: **VERIFIED AT FIXED `lambda6`**  
+Claim: for the frozen project `H2` sign,
+`Z7 -> -lambda6` as `tan beta -> infinity` with `lambda7=0`.  
+Status: **VERIFIED**  
 Epistemic class: `DERIVED`  
-Exact finite-`t` form: `Z7=-[lambda6 t^4+(lambda1-lambda345)t^3-3 lambda6 t^2+(lambda345-lambda2)t]/(1+t^2)^2`.  
+Exact finite-`t` form:
+`Z7=-[lambda6 t^4+(lambda1-lambda345)t^3-3 lambda6 t^2+(lambda345-lambda2)t]/(1+t^2)^2`.  
 Expansion: `Z7=-lambda6+(lambda345-lambda1)/t+O(t^-2)`.  
-Notes: Phase 10 shows that this asymptotic statement cannot be converted without qualification into a fixed-`X=lambda6 t` statement.
+Notes: this is a fixed-`lambda6` asymptotic statement; it is not a fixed-`X` result.
 
 ## C10 — Large-`tan beta` approximation for the physical `phi H+H-` trilinear
 
-Claim: object-dependent large-`tan beta` limit at fixed `lambda6`, `lambda7=0`.  
-Status: **VERIFIED WITH OBJECT LABELS AT FIXED `lambda6`**  
+Claim: object-dependent large-`tan beta` limit at `lambda7=0` with `lambda6` held fixed.  
+Status: **VERIFIED WITH OBJECT LABELS**  
 Epistemic class: `DERIVED`  
 Results: `C_V=-vZ7 -> +v lambda6`; literal `C_L=+vZ7 -> -v lambda6`; if `L_int=-g phiH+H-`, then `g=C_V -> +v lambda6`; Feynman rule `-> -i v lambda6`.  
-Notes: the old unqualified statement `g~-v lambda6` is convention-ambiguous and must not be used without declaring which object is meant.
+Notes: the old unqualified statement `g~-v lambda6` is convention-ambiguous and must not be used without declaring both the object and the asymptotic procedure.
 
-## C11 — Re-expression with `X=lambda6 tan(beta)`
+## C11 — Project coordinate `X=lambda6 tan(beta)` and fixed-`X` limit
 
-Claim: determine the leading large-`tan beta` trilinear when `X=lambda6 tan(beta)` itself is held fixed.  
-Status: **CONDITIONAL; PREVIOUS UNQUALIFIED FORM DOWNGRADED**  
-Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `OPEN-QUESTION`  
-Exact observation: the fixed-`lambda6` limit `Z7->-lambda6` and the fixed-`X` limit are different asymptotic procedures. With `lambda7=0`, exact alignment and fixed `X`, `Z7=-(X+lambda1-lambda2) cot(beta)+O(cot^3 beta)`.  
-Therefore `Z7~-X cot(beta)` additionally requires `|lambda1-lambda2| << |X|` or an equivalent numerical cancellation.  
-Consequences: at fixed `X`, `C_V=-vZ7 ~ v(X+lambda1-lambda2)cot(beta)` and the literal `C_L=+vZ7` carries the opposite sign.  
-Notes: use exact `Z7` point-by-point unless the extra hierarchy is explicitly verified.
+Claim: determine whether `X` alone controls the charged-Higgs trilinear in the exact-alignment `lambda7=0` physical branch.  
+Status: **RESOLVED: X ALONE IS NOT SUFFICIENT**  
+Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `NUMERICALLY-CHECKED`  
+Define `t=tan(beta)` and `Q=(m_phi^2-M^2)t^2`. The exact physical-branch relation is
+`Z7=(X/2-Q/v^2)/t + (X/2+Q/v^2)/t^3`.  
+Hence at large `t`, `Z7=(X/2-Q/v^2)cot(beta)+O(cot^3 beta)`.  
+Consequences: `Z7~-X cot(beta)` is not a generic fixed-`X` law; it can be used only after a benchmark-specific numerical validation.  
+Numerical check: the versioned valid `H2scan_mH150_tb300000` point has `X=3e-5`, `Q/v^2~0.742`, giving exact `Z7~-2.47e-6` while `-X/t=-1e-10`.  
+Policy: manuscript equations use exact `Z7`; `X` is presented only as a project diagnostic coordinate.
 
 ## C12 — Charged-scalar loop convention in `phi -> gamma gamma`
 
@@ -164,6 +171,27 @@ Status: **VERIFIED FOR OBJECT/SIGN; EXTERNAL NORMALIZATION CROSS-CHECK OPEN**
 Epistemic class: `DERIVED`, `IMPLEMENTATION-CHECKED`, `OPEN-QUESTION`  
 Active code result after factoring the common phase: `Ahat_Hp^(Zgamma)=-K_Z C_V v/(2mHp^2) I_1`, with `K_Z=2cW-1/cW`. At alignment, `C_V=-vZ7`, hence the term is `+K_Z v^2 Z7/(2mHp^2) I_1`.  
 Caution: the source code itself states that its chosen normalization reproduces HDECAY but is not consistent with Anatomy II Eqs. 2.23/2.33. The project must not modify this implementation until that normalization difference is independently reproduced.
+
+## C14 — Exact fixed-`X` two-coordinate relation
+
+Claim: in exact alignment with `lambda7=0`, the physical branch can be expressed with `X=lambda6 tan(beta)` and `Q=(m_phi^2-M^2)tan^2(beta)` as
+`Z7=(X/2-Q/v^2)cot(beta)+(X/2+Q/v^2)cot^3(beta)`.  
+Status: **VERIFIED**  
+Epistemic class: `DERIVED`, `IMPLEMENTATION-CHECKED`, `NUMERICALLY-CHECKED`, `PROJECT-DEFINITION`  
+Independent derivation: combine the exact physical-input inversion for `lambda1,lambda2` with the exact-alignment `Z7` identity; symbolic reduction is exact.  
+Numerical check: versioned valid `H2scan_mH150_tb300000` benchmark reproduces the exact relation and demonstrates that the `Q` term can dominate over `X`.  
+Notes: neither `X` nor `Q` is a general 2HDM invariant; they are project-facing coordinates after the basis/branch is fixed.
+
+## C15 — Physical exact-alignment `h phi phi` coupling
+
+Claim: with `L_int=-(1/2) g_hphiphi h phi^2`, exact alignment gives
+`g_hphiphi^phys = v(Z3+Z4+Z5) = (m_h^2+2m_phi^2-2M^2)/v`.  
+Status: **VERIFIED**  
+Epistemic class: `DERIVED`, `SOURCE`, `IMPLEMENTATION-CHECKED`, `NUMERICALLY-CHECKED`  
+Independent derivation: direct cubic extraction from the Higgs-basis potential gives `V subset (v/2)(Z3+Z4+Z5) h phi^2`; the identical-field factor converts this to the vertex `-i g`. Exact alignment also yields `Y2=M^2-m_h^2/2`, reducing the result to masses and `M^2`.  
+Source check: GHOO18 exact-alignment cubic coefficient reduces to the same potential coefficient.  
+Numerical check: the versioned valid `H2scan_mH150_tb300000` point predicts `63.59142520025 GeV`; direct 2HDMC returns `-i 63.59142520076 GeV`.  
+Production-policy note: the PI simplified prescription `8m_phi^2/v` is a separate effective MadGraph coupling, not the physical 2HDM result.
 
 ## Implementation caution carried into the trilinear phase
 
@@ -184,3 +212,5 @@ Phase 9 resolves the implementation layer: `get_qki` uses second components `(-c
 | `PHASE_9_PASS` | **PASS** | charged-Higgs trilinear extracted directly; potential/Lagrangian/Feynman-rule objects and 2HDMC sign layer resolved |
 | `PHASE_10_GAMMAGAMMA_PASS` | **PASS** | charged-scalar gamma-gamma loop object, sign and normalization mapped to active 2HDMC |
 | `PHASE_10_ZGAMMA_MAPPING_PASS` | **PASS** | active Z-gamma object/sign mapping derived; external normalization discrepancy remains open |
+| `PHASE_11_PASS` | **PASS** | fixed-`X` audit proves `X` alone is insufficient and derives exact `(X,Q)` relation |
+| `PHASE_13_PASS` | **PASS** | physical `h phi phi` derived and numerically reproduced with a valid 2HDMC benchmark |
