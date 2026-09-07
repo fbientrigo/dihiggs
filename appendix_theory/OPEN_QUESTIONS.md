@@ -2,7 +2,7 @@
 
 Only unresolved or source-internal issues are kept here. A project physics claim is removed as a blocker once it has been independently derived and promoted in `VALIDATION_LEDGER.md`.
 
-Resolved project claims through Phase 9:
+Resolved project claims through Phase 10:
 - active 2HDMC generic-potential convention: C1;
 - project `h,phi` sign/state map: C2;
 - Type-I exact-alignment `kappa_f^phi=-cot(beta)`: C3;
@@ -11,9 +11,10 @@ Resolved project claims through Phase 9:
 - Higgs-basis stationarity `Y3=-Z6v^2/2`: C5;
 - exact alignment iff `Z6=0`: C6;
 - exact generic-to-Higgs `Z7` map: C8;
-- `lambda7=0`, large-`tan beta`: `Z7 -> -lambda6`: C9;
+- `lambda7=0`, large-`tan beta` at fixed `lambda6`: `Z7 -> -lambda6`: C9;
 - exact `phi H+H-` potential/Lagrangian/Feynman-rule map: C7;
-- 2HDMC local trilinear sign layer: resolved in Phase 9.
+- active `gamma gamma` charged-scalar loop object/sign mapping: C12;
+- active `Z gamma` charged-scalar object/sign mapping: C13 (external normalization comparison remains Q10.1).
 
 ## Q0.2 — BFLRS11 displayed CP-even signs versus nearby coupling prose
 
@@ -72,12 +73,22 @@ Blocks: none.
 
 ## Q9.1 — Historical project shorthand `g_phiH+H-=vZ7`
 
-Status: `OPEN NAMING/TRANSITION QUESTION, PHYSICS DERIVATION CLOSED`  
-Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `OPEN-QUESTION`  
-Observation: earlier project material calls `vZ7~-vXcot(beta)` the charged-Higgs trilinear `g`. Under the now-frozen state sign `phi=-rho_perp`, direct extraction gives potential coefficient `C_V=-vZ7`, literal interaction-Lagrangian coefficient `C_L=+vZ7`, and `g=-vZ7` if one defines `L_int=-g phiH+H-`.  
-Interpretation: the old numerical expression is exactly `C_L`, but its symbol `g` is ambiguous.  
-Resolution path: before changing plots or loop code, audit the loop-amplitude convention and relabel historical outputs according to the object they actually consume.  
-Blocks: only semantic migration of old plots/formulas; not the scalar-theory derivation.
+Status: `PARTLY RESOLVED; NUMERICAL APPROXIMATION REQUIRES REVALIDATION`  
+Epistemic class: `PROJECT-DEFINITION`, `DERIVED`, `IMPLEMENTATION-CHECKED`, `OPEN-QUESTION`  
+Observation: earlier project material calls `vZ7~-vXcot(beta)` the charged-Higgs trilinear `g`. Phase 9 established that `vZ7` is exactly the literal interaction-Lagrangian coefficient `C_L`, while `C_V=-vZ7`. Phase 10 established that the active photonic widths consume the Feynman rule derived from `C_V`, so existing 2HDMC widths are not invalidated by this naming.  
+New correction: at fixed `X=lambda6 tan(beta)`, exact alignment and `lambda7=0`, `Z7=-(X+lambda1-lambda2)cot(beta)+O(cot^3 beta)`. Thus the additional approximation `vZ7~-vXcot(beta)` is not generic.  
+Resolution path: for actual paper points compute `R_X=Z7/[-X cot(beta)]` and `Delta12=lambda1-lambda2`; only retain the historical approximation where its numerical accuracy is demonstrated.  
+Blocks: semantic migration plus any interpretation that attributes the leading loop coefficient to `X` alone.
+
+## Q10.1 — Active 2HDMC `Z gamma` normalization versus Anatomy II/HDECAY
+
+Status: `OPEN IMPLEMENTATION-SOURCE NORMALIZATION QUESTION, NON-BLOCKING FOR OBJECT/SIGN MAPPING`  
+Epistemic class: `IMPLEMENTATION-CHECKED`, `SOURCE`, `OPEN-QUESTION`  
+Observation: active `DecayTable::hZga` uses the charged-scalar factor `(2*cW-1/cW)` and explicitly comments that this normalization gives the HDECAY result but is not consistent with Anatomy II Eqs. 2.23/2.33.  
+Established: which trilinear object and sign enter the active project calculation is known exactly.  
+Not established: an independent derivation of the normalization mismatch and which external convention should be regarded as canonical for a standalone appendix formula.  
+Resolution path: reproduce the `Z H+H-` gauge vertex and the scalar loop diagram independently, then compare operator normalization with HDECAY and Djouadi before changing any code or published formula.  
+Blocks: only an externally normalized standalone `Z gamma` formula; not existing 2HDMC-generated widths.
 
 ## Q6.2 — Tree-level gauge decoupling versus loop-induced photonic amplitudes
 
