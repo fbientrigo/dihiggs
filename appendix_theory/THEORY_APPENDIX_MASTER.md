@@ -2,7 +2,7 @@
 
 Issue: `fbientrigo/dihiggs#81`  
 Status: **canonical single-document audit record**  
-Coverage: **Phases 0–9**
+Coverage: **Phases 0–10**
 
 This document is the primary theory record. It is written so that an independent reviewer can reconstruct every sign, normalization and basis map without trusting project code or a copied formula. Phase-specific files and symbolic scripts are auxiliary checks only.
 
@@ -692,16 +692,14 @@ The inverse rotation gives
 \boxed{\Phi_2^\dagger\Phi_1=cs(A-B)-s^2C+c^2D}.
 \]
 
-Substituting these four identities into the generic potential and collecting independent Higgs-basis operators yields the quadratic map
+Substituting estas identities into the generic potential and collecting independent Higgs-basis operators yields
 
 \[
 \boxed{Y_1=m_{11}^2c^2+m_{22}^2s^2-2m_{12}^2sc},
 \]
-
 \[
 \boxed{Y_2=m_{11}^2s^2+m_{22}^2c^2+2m_{12}^2sc},
 \]
-
 \[
 \boxed{Y_3=(m_{22}^2-m_{11}^2)sc-m_{12}^2(c^2-s^2)}.
 \]
@@ -709,43 +707,32 @@ Substituting these four identities into the generic potential and collecting ind
 With `lambda345=lambda3+lambda4+lambda5`, `s2b=2sc`, `c2b=c^2-s^2`,
 
 \[
-\boxed{Z_1=\lambda_1c^4+\lambda_2s^4+\frac12\lambda_{345}s_{2\beta}^2
-+2s_{2\beta}(c^2\lambda_6+s^2\lambda_7)},
+\boxed{Z_1=\lambda_1c^4+\lambda_2s^4+\frac12\lambda_{345}s_{2\beta}^2+2s_{2\beta}(c^2\lambda_6+s^2\lambda_7)},
 \]
-
 \[
-\boxed{Z_2=\lambda_1s^4+\lambda_2c^4+\frac12\lambda_{345}s_{2\beta}^2
--2s_{2\beta}(s^2\lambda_6+c^2\lambda_7)},
+\boxed{Z_2=\lambda_1s^4+\lambda_2c^4+\frac12\lambda_{345}s_{2\beta}^2-2s_{2\beta}(s^2\lambda_6+c^2\lambda_7)},
 \]
 
 and for `i=3,4,5`,
 
 \[
-\boxed{Z_i=\lambda_i+\frac14s_{2\beta}^2(\lambda_1+\lambda_2-2\lambda_{345})
--s_{2\beta}c_{2\beta}(\lambda_6-\lambda_7)}.
+\boxed{Z_i=\lambda_i+\frac14s_{2\beta}^2(\lambda_1+\lambda_2-2\lambda_{345})-s_{2\beta}c_{2\beta}(\lambda_6-\lambda_7)}.
 \]
 
 The sign-sensitive coefficients are
 
 \[
-\boxed{
-Z_6=-\frac12s_{2\beta}(\lambda_1c^2-\lambda_2s^2-\lambda_{345}c_{2\beta})
-+c\cos3\beta\,\lambda_6+s\sin3\beta\,\lambda_7},
+\boxed{Z_6=-\frac12s_{2\beta}(\lambda_1c^2-\lambda_2s^2-\lambda_{345}c_{2\beta})+c\cos3\beta\,\lambda_6+s\sin3\beta\,\lambda_7},
 \]
-
 \[
-\boxed{
-Z_7=-\frac12s_{2\beta}(\lambda_1s^2-\lambda_2c^2+\lambda_{345}c_{2\beta})
-+s\sin3\beta\,\lambda_6+c\cos3\beta\,\lambda_7}.
+\boxed{Z_7=-\frac12s_{2\beta}(\lambda_1s^2-\lambda_2c^2+\lambda_{345}c_{2\beta})+s\sin3\beta\,\lambda_6+c\cos3\beta\,\lambda_7}.
 \]
 
 A useful polynomial form is
 
 \[
-\boxed{
-\begin{aligned}
-Z_7={}&c^4\lambda_7+c^3s(\lambda_2-\lambda_{345})
-+3c^2s^2(\lambda_6-\lambda_7)\\
+\boxed{\begin{aligned}
+Z_7={}&c^4\lambda_7+c^3s(\lambda_2-\lambda_{345})+3c^2s^2(\lambda_6-\lambda_7)\\
 &+cs^3(\lambda_{345}-\lambda_1)-s^4\lambda_6.
 \end{aligned}}
 \]
@@ -762,13 +749,10 @@ H_2^0=\frac{\rho_\perp+iA}{\sqrt2}.
 The linear terms give
 
 \[
-\left.\frac{\partial V}{\partial\rho_v}\right|_0
-=v\left(Y_1+\frac12Z_1v^2\right),
+\left.\frac{\partial V}{\partial\rho_v}\right|_0=v\left(Y_1+\frac12Z_1v^2\right),
 \]
-
 \[
-\left.\frac{\partial V}{\partial\rho_\perp}\right|_0
-=v\left(Y_3+\frac12Z_6v^2\right).
+\left.\frac{\partial V}{\partial\rho_\perp}\right|_0=v\left(Y_3+\frac12Z_6v^2\right).
 \]
 
 Therefore
@@ -778,133 +762,147 @@ Therefore
 \boxed{Y_3=-\frac12Z_6v^2}.
 \]
 
-This is independently reproduced by substituting the Phase-3 generic tadpoles into the derived `Y1,Y3,Z1,Z6` formulas.
-
 ### Masses and alignment in Higgs basis
 
-The charged and CP-odd masses are
-
 \[
-\boxed{m_{H^\pm}^2=Y_2+\frac12Z_3v^2},
-\]
-
-\[
+\boxed{m_{H^\pm}^2=Y_2+\frac12Z_3v^2},\qquad
 \boxed{m_A^2=Y_2+\frac12(Z_3+Z_4-Z_5)v^2}.
 \]
 
-The CP-even Hessian in `(rho_v,rho_perp)` is
+The CP-even Hessian is
 
 \[
-\boxed{
-\mathcal M_{H,\rm even}^2=
-\begin{pmatrix}
-Z_1v^2&Z_6v^2\\
-Z_6v^2&m_A^2+Z_5v^2
-\end{pmatrix}}.
+\boxed{\mathcal M_{H,\rm even}^2=\begin{pmatrix}Z_1v^2&Z_6v^2\\Z_6v^2&m_A^2+Z_5v^2\end{pmatrix}}.
 \]
 
-The VEV direction is `(1,0)`. It is an eigenvector iff the off-diagonal entry vanishes. Since `v != 0`,
+Thus
 
 \[
-\boxed{\text{exact alignment}\iff Z_6=0}.
-\]
-
-Using the Phase-4 physical rotation,
-
-\[
-\boxed{Z_6v^2=(m_h^2-m_\phi^2)s_{\beta-\alpha}c_{\beta-\alpha}},
+\boxed{\text{exact alignment}\iff Z_6=0},
 \]
 
 and
 
 \[
-\boxed{Z_1v^2=m_h^2s_{\beta-\alpha}^2+m_\phi^2c_{\beta-\alpha}^2}.
+\boxed{Z_6v^2=(m_h^2-m_\phi^2)s_{\beta-\alpha}c_{\beta-\alpha}}.
 \]
 
 ### Controlled large-`tan beta` limit
 
-For `lambda7=0` and `t=tan beta`, the exact `Z7` becomes
+For `lambda7=0`, `t=tan beta`,
 
 \[
 Z_7=-\frac{\lambda_6t^4+(\lambda_1-\lambda_{345})t^3-3\lambda_6t^2+(\lambda_{345}-\lambda_2)t}{(1+t^2)^2}.
 \]
 
-Hence
+At **fixed `lambda6`**,
 
 \[
 \boxed{Z_7=-\lambda_6+\frac{\lambda_{345}-\lambda_1}{t}+\mathcal O(t^{-2})},
 \]
 
-so
-
-\[
-\boxed{Z_7\to-\lambda_6}.
-\]
-
-This validates the basis-translation hypothesis only. It does **not** yet determine the physical `phi H+H-` sign because `phi=-rho_perp` in exact alignment.
+so `Z7 -> -lambda6`. Phase 10 will show why this fixed-`lambda6` limit cannot be turned without qualification into a fixed-`X=lambda6 t` limit.
 
 ## Convention map
 
-DH05 Higgs-basis potential uses
-
-\[
--[M_{12,H}^2H_1^\dagger H_2+\mathrm{h.c.}],
-\]
-
-while the project/GHOO `Y_i` convention uses `+[Y3 H1dag H2+h.c.]`. Thus
-
-\[
-\boxed{Y_3=-M_{12,H}^2}.
-\]
-
-At real `chi=0`, DH `Lambda_i` equal project `Z_i`. Under the residual redefinition `H2->-H2`,
-
-\[
-Y_3,Z_6,Z_7\to-(Y_3,Z_6,Z_7),\qquad Z_5\to Z_5.
-\]
-
-The project has frozen `H2=-s Phi1+c Phi2`, so this residual sign is no longer available for later adjustment.
+DH05 Higgs-basis potential uses `-[M12_H^2 H1dag H2+h.c.]`, while the project/GHOO convention uses `+[Y3 H1dag H2+h.c.]`; hence `Y3=-M12_H^2`. At real `chi=0`, DH `Lambda_i` equal project `Z_i` under the frozen `H2=-s Phi1+c Phi2` sign.
 
 ## What was checked against the source
 
-- DH05 `higgsbasis` and `abbasis` match the derived field rotation/components.
-- DH05 `maa`–`mab` match `Y1,Y2,Y3=-M12_H^2`.
-- DH05 `Lam1def`–`Lam7def` match the derived `Z1...Z7` at `xi=chi=0`.
-- DH05 Higgs-basis stationarity matches `Y1=-Z1v^2/2`, `Y3=-Z6v^2/2` after the explicit quadratic-sign translation.
-- DH05 CP-even Higgs-basis matrix matches the direct Hessian.
-- 2HDMC `get_param_higgs` reproduces the same `Z1...Z7`, including `Z6,Z7` signs.
-- 2HDMC `set_param_hybrid_sba` uses `Z6=(mh^2-mH^2)sba*cba/v^2`, matching the derived physical identity.
-- `phase7_higgs_basis_check.py` reconstructs the basis map symbolically and returns `PHASE7_HIGGS_BASIS_CHECK=PASS`.
+DH05 Higgs-basis definitions, quadratic map, `Lambda1...Lambda7`, stationarity and mass matrix; active 2HDMC `get_param_higgs`; active 2HDMC hybrid `Z6` identity; independent symbolic reconstruction.
 
 ## What remains uncertain
 
-The Higgs-basis map, stationarity, `Z6` alignment criterion, exact `Z7` map and `Z7->-lambda6` limit are closed.
-
-One implementation issue remains isolated: `2HDMC::get_coupling_hhh` calls `get_param_higgs` and then defines local `Z6=-l6`, `Z7=-l7`. Phase 7 proves those extra minuses are **not** part of the basis transformation. Their meaning belongs to the trilinear/Feynman-rule convention layer and must be audited there.
-
-The physical `phi H+H-` coupling remains **NOT VERIFIED**.
+At this point the physical `phi H+H-` coupling had not yet been extracted. That is Phase 9.
 
 ## Next smallest validation
 
-Extract from the verified Higgs-basis potential only the terms
-
-\[
-\rho_vH^+H^-,\qquad \rho_\perp H^+H^-.
-\]
-
-Then convert to `h,phi`, keeping
-
-\[
-\rho_v=s_{\beta-\alpha}h+c_{\beta-\alpha}\phi,
-\qquad
-\rho_\perp=c_{\beta-\alpha}h-s_{\beta-\alpha}\phi,
-\]
-
-and only afterward take alignment. Keep potential coefficient, interaction-Lagrangian coefficient and Feynman rule separate.
+Extract the `rho_v H+H-` and `rho_perp H+H-` terms directly from the verified Higgs-basis potential.
 
 ---
 
-# B. Validation status after Phase 9
+# Phase 9 — Charged-Higgs trilinear
+
+## What is established
+
+From the verified Higgs-basis potential,
+
+\[
+\boxed{V\supset v(Z_3\rho_v+Z_7\rho_\perp)H^+H^-}.
+\]
+
+Using
+
+\[
+\rho_v=s h+c\phi,\qquad \rho_\perp=c h-s\phi,
+\]
+
+with `s=s_(beta-alpha)`, `c=c_(beta-alpha)`,
+
+\[
+\boxed{C_V^{hH^+H^-}=v(Z_3s+Z_7c)},
+\qquad
+\boxed{C_V^{\phi H^+H^-}=v(Z_3c-Z_7s)}.
+\]
+
+At exact alignment,
+
+\[
+\boxed{C_V^{hH^+H^-}=vZ_3},\qquad
+\boxed{C_V^{\phi H^+H^-}=-vZ_7}.
+\]
+
+Here `C_V` is the coefficient in the scalar potential.
+
+Since `L_int=-V_int`, the literal Lagrangian monomial coefficient is
+
+\[
+\boxed{C_{\mathcal L}^{\phi H^+H^-}=+vZ_7}.
+\]
+
+If instead
+
+\[
+\mathcal L_{\rm int}\supset-g_{\phi H^+H^-}\phi H^+H^-,
+\]
+
+then
+
+\[
+\boxed{g_{\phi H^+H^-}=-vZ_7}.
+\]
+
+The Feynman rule is
+
+\[
+\boxed{-iC_V^{\phi H^+H^-}=+ivZ_7}
+\]
+
+at alignment.
+
+## Derivation
+
+`Z3(H1dagH1)(H2dagH2)` supplies `vZ3 rho_v H+H-`. `Z7(H2dagH2)H1dagH2+h.c.` supplies `vZ7 rho_perp H+H-`. The other Higgs-basis operators do not produce this field content at cubic order.
+
+The symbolic third derivatives reproduce exactly `vZ3` and `vZ7` before the physical-state rotation.
+
+## Large-`tan beta` and the historical `X` rewrite
+
+At fixed `lambda6`, Phase 7 gives `Z7 -> -lambda6`. This implies the corresponding fixed-`lambda6` limits of the different trilinear objects. However, **this is not yet a proof of the fixed-`X` relation** because `X=lambda6 tan(beta)` changes the asymptotic problem.
+
+Phase 10 therefore supersedes any unqualified statement that directly substitutes `lambda6=X cot(beta)` into the fixed-`lambda6` leading term.
+
+## Convention map
+
+GHOO18 defines its cubic `q_i` as a coefficient in the potential. Active 2HDMC returns the Feynman rule. The internal `qki` second-component signs and local `Z7=-l7` together reproduce `-i v(Z3 cba-Z7 sba)` for `phi`; no physical inconsistency remains.
+
+## What remains uncertain
+
+Only how the historical `vZ7` object is consumed by the loop implementation, and whether the `-X cot(beta)` approximation is numerically valid in the project's fixed-`X` region.
+
+---
+
+# B. Validation status after Phase 10
 
 | Claim | Status |
 |---|---|
@@ -919,9 +917,11 @@ and only afterward take alignment. Keep potential coefficient, interaction-Lagra
 | `Y3=-Z6v^2/2` | **VERIFIED** |
 | exact alignment iff `Z6=0` | **VERIFIED** |
 | exact `Z7(lambda_i,beta)` map | **VERIFIED** |
-| `lambda7=0`, large `tan beta`: `Z7->-lambda6` | **VERIFIED** |
+| `lambda7=0`, large `tan beta`: `Z7->-lambda6` | **VERIFIED at fixed `lambda6`** |
 | exact physical `phi H+H-` coupling | **VERIFIED** |
-| object-specific `X=lambda6 tan beta` translation | **VERIFIED** |
+| `X=lambda6 tan beta` interpretation | **CONDITIONAL: exact `Z7` required; `Z7~-X cot(beta)` not generic at fixed `X`** |
+| `phi -> gamma gamma` charged-scalar object/sign mapping | **VERIFIED** |
+| active 2HDMC `phi -> Z gamma` object/sign mapping | **VERIFIED; external normalization discrepancy remains open** |
 
 # C. Phase gates
 
@@ -934,202 +934,234 @@ and only afterward take alignment. Keep potential coefficient, interaction-Lagra
 \boxed{\text{PHASE 5 PASS}}\quad
 \boxed{\text{PHASE 6 PASS}}\quad
 \boxed{\text{PHASE 7 PASS}}\quad
-\boxed{\text{PHASE 9 PASS}}.
+\boxed{\text{PHASE 9 PASS}}\quad
+\boxed{\text{PHASE 10 PASS}_{\gamma\gamma}}.
 \]
+
+The charged-Higgs trilinear and the `gamma gamma` loop convention are now derived and cross-checked. The active `Z gamma` object/sign mapping is also established, but its HDECAY-versus-Anatomy-II normalization discrepancy remains explicitly open. The historical `g=vZ7` naming is mapped to the literal interaction-Lagrangian coefficient `C_L`; the further approximation `vZ7~-vX cot(beta)` is conditional rather than generic at fixed `X`.
 
 ---
 
-# Phase 9 — Charged-Higgs trilinear extracted directly from the verified Higgs-basis potential
+# Phase 10 — Audit of the charged-scalar loop in `phi -> gamma gamma` and `phi -> Z gamma`
+
+This phase answers which trilinear object is actually consumed by the photonic loop implementation and what sign enters the interference. It also audits the large-`tan beta` limit at fixed project coordinate `X=lambda6 tan(beta)`.
 
 ## What is established
 
-The frozen Higgs basis is
-\[
-H_1=\begin{pmatrix}G^+\\(v+\rho_v+iG^0)/\sqrt2\end{pmatrix},\qquad
-H_2=\begin{pmatrix}H^+\\(\rho_\perp+iA)/\sqrt2\end{pmatrix},
-\]
-with
-\[
-\rho_v=s_{\beta-\alpha}h+c_{\beta-\alpha}\phi,\qquad
-\rho_\perp=c_{\beta-\alpha}h-s_{\beta-\alpha}\phi.
-\]
-At exact alignment, `sba=1,cba=0`, so `h=rho_v` and `phi=-rho_perp`.
+Use
 
-The only Higgs-basis operators capable of producing a neutral CP-even field times `H+H-` at cubic order are
 \[
-Z_3(H_1^\dagger H_1)(H_2^\dagger H_2)
-\]
-and
-\[
-\{Z_7(H_2^\dagger H_2)H_1^\dagger H_2+\mathrm{h.c.}\}.
-\]
-Direct expansion gives
-\[
-\boxed{V\supset v\,(Z_3\rho_v+Z_7\rho_\perp)H^+H^-}.
-\]
-Therefore, before alignment,
-\[
-\boxed{C_V^{hH^+H^-}=v(Z_3s_{\beta-\alpha}+Z_7c_{\beta-\alpha})},
-\]
-\[
-\boxed{C_V^{\phi H^+H^-}=v(Z_3c_{\beta-\alpha}-Z_7s_{\beta-\alpha})}.
-\]
-At exact alignment,
-\[
-\boxed{C_V^{hH^+H^-}=vZ_3},\qquad
-\boxed{C_V^{\phi H^+H^-}=-vZ_7}.
+V\supset C_V^S S H^+H^-,\qquad
+\mathcal L_{\rm int}\supset-C_V^S S H^+H^-.
 \]
 
-Here `C_V` means the coefficient of the displayed monomial in the scalar potential.
+Then
 
-Because `L_int=-V_int`, the literal coefficient multiplying `phi H+H-` in the interaction Lagrangian is
 \[
-\boxed{C_{\mathcal L}^{\phi H^+H^-}=+vZ_7}
-\]
-in exact alignment.
-
-If instead one defines a dimension-one coupling by
-\[
-\boxed{\mathcal L_{\rm int}\supset-g_{\phi H^+H^-}\,\phi H^+H^-},
-\]
-then
-\[
-\boxed{g_{\phi H^+H^-}=C_V^{\phi H^+H^-}=-vZ_7}.
+\boxed{\Gamma_{SH^+H^-}^{\rm FR}=-iC_V^S}.
 \]
 
-Since `phi`, `H+`, and `H-` are distinct external fields, there is no extra identical-particle factorial. The Feynman rule is
-\[
-\boxed{\phi H^+H^-:\quad -iC_V^{\phi H^+H^-}=+ivZ_7}
-\]
-in exact alignment.
+For `phi`,
 
-## Derivation
+\[
+C_V^\phi=v(Z_3c_{\beta-\alpha}-Z_7s_{\beta-\alpha}),
+\]
+
+and at alignment
+
+\[
+\boxed{C_V^\phi=-vZ_7},\qquad
+\boxed{C_{\mathcal L}^\phi=+vZ_7}.
+\]
+
+### Actual project code path
+
+The project evaluators/scans call `DecayTable::get_gamma_hgaga(2)` and `DecayTable::get_gamma_hZga(2)`. They do not inject a hand-defined `vZ7`; existing photonic widths therefore inherit the 2HDMC Feynman-rule convention.
+
+## `phi -> gamma gamma`
+
+In `DecayTable::hgaga`, the charged scalar enters as
+
+```cpp
+model.get_coupling_hhh(h,4,4,g_hhchc);
+S_sum = S_sum + ... + g_hhchc/v*v2/(2.*pow(mHp,2))*F_0(tau_Hp);
+```
+
+Since `g_hhchc=-iC_V` and `v2=v^2`, factoring the common global `-i` gives
+
+\[
+\boxed{\widehat{\mathcal A}_{H^\pm}^{\gamma\gamma}=\frac{C_V^S v}{2m_{H^\pm}^2}A_0(\tau_{H^\pm})}.
+\]
+
+Including fermions and W,
+
+\[
+\boxed{\widehat{\mathcal A}_{\gamma\gamma}^S=\sum_fN_cQ_f^2\kappa_f^SA_{1/2}+\kappa_V^SA_1+\frac{C_V^Sv}{2m_{H^\pm}^2}A_0}.
+\]
+
+Thus
+
+\[
+\boxed{\Gamma(S\to\gamma\gamma)=\frac{\alpha^2m_S^3}{256\pi^3v^2}|\widehat{\mathcal A}_{\gamma\gamma}^S|^2}.
+\]
+
+For aligned Type-I `phi`,
+
+\[
+\kappa_f^\phi=-\cot\beta,\qquad \kappa_V^\phi=0,\qquad C_V^\phi=-vZ_7,
+\]
+
+so
+
+\[
+\boxed{\widehat{\mathcal A}_{\gamma\gamma}^\phi=-\cot\beta\sum_fN_cQ_f^2A_{1/2}-\frac{v^2Z_7}{2m_{H^\pm}^2}A_0}.
+\]
+
+If the historical object is defined as
+
+\[
+g_{\rm old}\equiv vZ_7=C_{\mathcal L}^\phi,
+\]
+
+then it enters this reduced amplitude as
+
+\[
+\boxed{-\frac{g_{\rm old}v}{2m_{H^\pm}^2}A_0}.
+\]
+
+So `vZ7` enters `gamma gamma` with a **minus sign** in this reduced-amplitude convention.
+
+## `phi -> Z gamma`
+
+Active 2HDMC uses
+
+```cpp
+S_sum = S_sum
+      - g_hww*FW(...)
+      - (2.*ctw-1./ctw)*g_hhchc/v*v2/(2.*pow(mHp,2))*FHp(...);
+```
+
+with `FHp=I_1`. Define
+
+\[
+K_Z=2c_W-\frac1{c_W}=\frac{2c_W^2-1}{c_W}.
+\]
+
+After substituting `g_hhchc=-iC_V` and factoring the common `-i`, the active reduced scalar term is
+
+\[
+\boxed{\widehat{\mathcal A}_{H^\pm}^{Z\gamma,2HDMC}=-K_Z\frac{C_V^Sv}{2m_{H^\pm}^2}I_1}.
+\]
+
+At alignment,
+
+\[
+\boxed{\widehat{\mathcal A}_{H^\pm}^{Z\gamma,2HDMC}=+K_Z\frac{v^2Z_7}{2m_{H^\pm}^2}I_1}.
+\]
+
+Thus historical `g_old=vZ7` enters the active `Z gamma` reduced scalar contribution with a **plus sign**.
+
+The active source explicitly warns that its chosen charged-Higgs `Z gamma` normalization matches HDECAY but is not consistent with the cited Anatomy-II formulas. The project object/sign mapping is therefore closed, but the external normalization discrepancy remains an open implementation-source question; no code should be changed until separately derived.
+
+## Fixed `lambda6` versus fixed `X`
+
+The exact `lambda7=0` result is
+
+\[
+Z_7=-\frac{\lambda_6t^4+(\lambda_1-\lambda_{345})t^3-3\lambda_6t^2+(\lambda_{345}-\lambda_2)t}{(1+t^2)^2},\qquad t=\tan\beta.
+\]
+
+At fixed `lambda6`,
+
+\[
+\boxed{Z_7=-\lambda_6+\frac{\lambda_{345}-\lambda_1}{t}+\frac{5\lambda_6}{t^2}+\mathcal O(t^{-3})}.
+\]
+
+At fixed `X=lambda6 t`, substitute `lambda6=X/t` before taking the limit:
+
+\[
+\boxed{Z_7=\frac{\lambda_{345}-\lambda_1-X}{t}+\frac{5X+2\lambda_1+\lambda_2-3\lambda_{345}}{t^3}+\mathcal O(t^{-5})}.
+\]
+
+Hence fixed `lambda6` and fixed `X` are distinct asymptotic limits.
+
+Under exact alignment `Z6=0`, `lambda7=0`, one can eliminate `lambda345` and obtain exactly
+
+\[
+\boxed{Z_7=-\frac{t(\lambda_1-\lambda_2)+\lambda_6(t^2-1)}{1+t^2}}.
+\]
+
+At fixed `X`,
+
+\[
+\boxed{Z_7=-(\lambda_1-\lambda_2+X)\cot\beta+\mathcal O(\cot^3\beta)}.
+\]
+
+Therefore
+
+\[
+Z_7\simeq-X\cot\beta
+\]
+
+requires an additional hierarchy/cancellation such as
+
+\[
+|\lambda_1-\lambda_2|\ll|X|.
+\]
+
+It is not a generic consequence of large `tan beta` at fixed `X`.
+
+## Correct leading loop behavior at fixed `X`
 
 Define
-\[
-A_1\equiv H_1^\dagger H_1,\qquad A_2\equiv H_2^\dagger H_2,\qquad C\equiv H_1^\dagger H_2.
-\]
-Keeping only pieces that can contain one neutral CP-even field and `H+H-`,
-\[
-A_1=\cdots+v\rho_v+\cdots,
-\]
-\[
-A_2=H^-H^++\cdots,
-\]
-\[
-C=\cdots+\frac v2(\rho_\perp+iA)+\cdots,
-\qquad
-C^\dagger=\cdots+\frac v2(\rho_\perp-iA)+\cdots.
-\]
-Thus
-\[
-Z_3A_1A_2\supset vZ_3\rho_vH^+H^-.
-\]
-For real `Z7`,
-\[
-Z_7A_2C+\mathrm{h.c.}=Z_7A_2(C+C^\dagger),
-\]
-and
-\[
-C+C^\dagger\supset v\rho_\perp.
-\]
-Hence
-\[
-Z_7A_2(C+C^\dagger)\supset vZ_7\rho_\perp H^+H^-.
-\]
-No other Higgs-basis term contributes at this field order: `Z2` has no VEV insertion; `Z4,Z5,Z6` require Goldstone/other charged fields to generate charged-scalar factors; quadratic terms do not generate a cubic scalar interaction.
 
-Substitute the already-derived physical rotation:
 \[
-\rho_v=s h+c\phi,\qquad \rho_\perp=c h-s\phi,
-\]
-where `s=s_(beta-alpha)`, `c=c_(beta-alpha)`. Then
-\[
-V\supset v[(Z_3s+Z_7c)h+(Z_3c-Z_7s)\phi]H^+H^-.
-\]
-This proves the general result and its alignment limit without using a coupling table.
-
-## Large-tan(beta) limit and lambda6
-
-Phase 7 established, for `lambda7=0`,
-\[
-Z_7=-\lambda_6+\frac{\lambda_{345}-\lambda_1}{\tan\beta}+\mathcal O(\tan^{-2}\beta).
-\]
-Therefore the different trilinear objects behave as
-\[
-\boxed{C_V^{\phi H^+H^-}= -vZ_7
-=+v\lambda_6-\frac{v(\lambda_{345}-\lambda_1)}{\tan\beta}+\cdots},
-\]
-\[
-\boxed{C_{\mathcal L}^{\phi H^+H^-}=+vZ_7
-=-v\lambda_6+\frac{v(\lambda_{345}-\lambda_1)}{\tan\beta}+\cdots},
-\]
-and, under `L_int=-g phi H+H-`,
-\[
-\boxed{g_{\phi H^+H^-}\simeq +v\lambda_6}.
-\]
-The Feynman rule tends to
-\[
-\boxed{-iv\lambda_6}.
+\Delta_X=X+\lambda_1-\lambda_2.
 \]
 
-With the later project coordinate `X=lambda6 tan(beta)`, so `lambda6=X cot(beta)`,
+Then
+
 \[
-\boxed{C_V^{\phi H^+H^-}\simeq +vX\cot\beta},
-\]
-\[
-\boxed{C_{\mathcal L}^{\phi H^+H^-}\simeq -vX\cot\beta},
-\]
-\[
-\boxed{g_{\phi H^+H^-}\simeq +vX\cot\beta}\quad\text{if }\mathcal L_{\rm int}=-g\phi H^+H^-,
-\]
-and
-\[
-\boxed{\text{Feynman rule}\simeq-i vX\cot\beta}.
+C_V^\phi=-vZ_7=v\Delta_X\cot\beta+\mathcal O(\cot^3\beta).
 \]
 
-## Convention map
+Therefore
 
-GHOO18 explicitly states that its `q_i` is the coefficient of `H_i H+H-` in the potential. Its cubic-coupling appendix further states that potential coefficients become Feynman rules by multiplying by `-i` plus combinatorial factors for identical fields. For `H_i H+H-`, the three fields are distinct, so no extra factorial appears. This agrees with the object separation above.
-
-Active 2HDMC implements
-`c=-i v Re(q_{i1} Z3_local + q_{i2} Z7_local)` in `get_coupling_hhh`, after setting `Z7_local=-Lambda7_returned`. Phase 7 proved `Lambda7_returned=Z7_project`. Meanwhile `get_qki` uses second components `(-cba,+sba)` for `(h,H)`. Combining both sign layers gives
 \[
--i v(Z_3s+Z_7c)
+\boxed{\widehat{\mathcal A}_{\gamma\gamma}^\phi=\cot\beta\left[-\sum_fN_cQ_f^2A_{1/2}+\frac{v^2\Delta_X}{2m_{H^\pm}^2}A_0\right]+\mathcal O(\cot^3\beta)}.
 \]
-for `h` and
-\[
--i v(Z_3c-Z_7s)
-\]
-for `H=phi`, exactly the Feynman rules derived from the project potential. Thus the Phase-6 `Z7_local=-l7` mystery is resolved: it compensates the sign convention used in the second `qki` component and is not a different Higgs-basis `Z7`.
 
-## Project-convention conflict discovered
+For the active 2HDMC `Z gamma` convention,
 
-Earlier project material used the shorthand
 \[
-g_{\phi H^+H^-}=vZ_7\simeq-vX\cot\beta.
+\boxed{\widehat{\mathcal A}_{Z\gamma}^{\phi,2HDMC}=\cot\beta\left[-\mathcal F_f^{Z\gamma}-K_Z\frac{v^2\Delta_X}{2m_{H^\pm}^2}I_1\right]+\mathcal O(\cot^3\beta)}.
 \]
-With the now-frozen physical state `phi=-rho_perp`, this equality is **not** the coefficient of `phi H+H-` in the potential and is **not** the `g` defined by `L_int=-g phi H+H-`.
 
-It is, however, exactly the literal coefficient in `L_int`:
-\[
-C_{\mathcal L}^{\phi H^+H^-}=vZ_7.
-\]
-Therefore the old numerical expression can be retained only if its symbol is explicitly defined as the coefficient multiplying the monomial directly in `L_int`, not as the potential coefficient or as a `-g` convention. The master document must preserve this distinction.
+Thus an overall `cot(beta)` factorization can remain valid under the stated assumptions, and widths can scale as `cot^2(beta)`. What does not follow is that the coefficient is a function of `X` alone.
 
 ## What was checked against the source
 
-1. Direct symbolic differentiation of the full Higgs-basis potential gives
-`d^3 V/(d rho_v dH+ dH-)=v Z3` and
-`d^3 V/(d rho_perp dH+ dH-)=v Z7`.
-2. Physical-state substitution gives `v(Z3 cba-Z7 sba)` for `phi`.
-3. GHOO18 confirms that `q_i` denotes the coefficient in the potential and that the Feynman rule is obtained with `-i` (plus factorials only for identical particles).
-4. Active 2HDMC reproduces exactly `-i` times the derived potential coefficient once its `qki` and local `Z7=-l7` conventions are combined.
+1. Project scans call the active 2HDMC `DecayTable` photonic widths.
+2. `hgaga` consumes `get_coupling_hhh` directly and multiplies by `v/(2mHp^2)F_0`.
+3. Phase 9 established `get_coupling_hhh=-iC_V` in the project convention.
+4. 2HDMC documents `F_0` with the Djouadi sign and `F_1` with the opposite sign, yielding the common global phase described above.
+5. Djouadi Anatomy II gives the same charged-scalar `gamma gamma` mass suppression and spin-zero form-factor structure.
+6. Active 2HDMC explicitly records its `Z gamma` normalization difference relative to Anatomy II/HDECAY.
+7. A symbolic audit independently checks the fixed-`lambda6`, fixed-`X`, and exact-alignment expansions.
 
 ## What remains uncertain
 
-The analytic trilinear and the 2HDMC Feynman-rule translation are closed. What remains is a **project naming decision**: older plots/notes that call `vZ7` the coupling `g_phiH+H-` must be relabeled or explicitly defined as a Lagrangian monomial coefficient. No physics formula should be changed without tracking which convention those downstream loop-amplitude formulas assumed.
+- Existing 2HDMC-generated photonic widths are not invalidated by the historical `g=vZ7` naming ambiguity.
+- The active `Z gamma` object/sign mapping is closed.
+- The active `Z gamma` normalization versus Anatomy II/HDECAY still needs a separate diagrammatic/HDECAY audit.
+- `g_old=vZ7~-vXcot(beta)` must be tested numerically on the actual model points rather than assumed.
 
 ## Next smallest validation
 
-Audit the charged-scalar contribution to `phi -> gamma gamma` and `phi -> Z gamma` starting from a declared interaction-Lagrangian convention. Determine whether the loop formula consumes `C_V`, `C_L`, `g` defined by `L=-g phiH+H-`, or the raw Feynman rule. Only then update any prior `g=vZ7` plotting convention.
+For each benchmark/scanned point store
+
+\[
+R_X=\frac{Z_7}{-X\cot\beta},\qquad \Delta_{12}=\lambda_1-\lambda_2.
+\]
+
+This directly measures whether the historical fixed-`X` approximation is accurate where the paper actually uses it.
