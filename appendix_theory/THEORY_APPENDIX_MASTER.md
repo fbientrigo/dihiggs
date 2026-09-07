@@ -1,45 +1,73 @@
 # 2HDM theory appendix — canonical derivation and convention audit
 
 Issue: `fbientrigo/dihiggs#81`  
-Status of this document: **canonical single-document audit record**.  
-Current coverage: **Phases 0–5**. Future phases must be appended here as the primary narrative; phase-specific files may remain as auxiliary audit records.
+Status: **canonical single-document audit record**.  
+Current coverage: **Phases 0–6**.
 
-The purpose of this document is not to collect formulas. It is to make every sign, normalization, field definition, basis transformation and physical conclusion traceable from the beginning.
+This is the document that must remain sufficient for an independent reviewer to reconstruct the theory chain without trusting project code or a formula copied from the literature. Phase-specific Markdown files and symbolic scripts are auxiliary audits; this file is the primary narrative.
+
+The governing order is
+
+\[
+\boxed{
+\text{fields}
+\to\text{potential}
+\to\text{vacuum}
+\to\text{stationarity}
+\to\text{mass matrices}
+\to\text{physical states}
+\to\text{Yukawa/gauge couplings}
+\to\text{Higgs basis}
+\to\text{scalar trilinears}
+\to\text{loop amplitudes}
+\to X
+}.
+\]
+
+No later project coordinate or phenomenological expectation is allowed to determine an earlier sign or normalization.
 
 ---
 
-# A. Audit rules and notation frozen before any physics conclusion
+# A. Audit rules, sources and conventions frozen before deriving physics
 
 ## A.1 Epistemic labels
 
-- `[SOURCE]`: stated explicitly in an inspected primary source.
-- `[DERIVED]`: obtained algebraically from already declared definitions.
-- `[TRANSLATED]`: obtained by an explicit map between source conventions.
-- `[IMPLEMENTATION-CHECKED]`: independently compared with the active code after the analytic result was frozen.
+Every nontrivial statement is conceptually assigned one or more of:
+
+- `[SOURCE]`: explicitly stated in an inspected source.
+- `[DERIVED]`: obtained algebraically from definitions already fixed in this document.
+- `[TRANSLATED]`: obtained through an explicit convention map.
+- `[IMPLEMENTATION-CHECKED]`: compared with project/2HDMC code only after the analytic result was frozen.
 - `[PROJECT-DEFINITION]`: a convention or coordinate chosen by this project.
-- `[OPEN-QUESTION]`: not yet promoted to an established result.
+- `[OPEN-QUESTION]`: not yet established strongly enough to use downstream.
 
-A source quotation is not treated as an independent derivation. Code is not allowed to choose the analytic formula it is later used to check.
+Source agreement alone is not an independent derivation when the object can be reconstructed from first principles. Code is never allowed to choose the analytic formula it is later used to check.
 
-## A.2 Objects that must never be conflated
+## A.2 Objects that must not be conflated
 
-The following are distinct unless an equation explicitly relates them:
+The following objects are distinct unless an equation explicitly connects them:
 
 \[
 m_{22}^2,\qquad m_{12}^2,\qquad M^2,\qquad Y_2,\qquad Y_3.
 \]
 
-Similarly,
+Likewise,
 
 \[
 \lambda_6,\lambda_7
 \]
 
-are generic-basis quartics and are not the Higgs-basis quantities
+are generic-basis quartics and are **not** the Higgs-basis quantities
 
 \[
 Z_6,Z_7.
 \]
+
+For scalar trilinears, three objects will later be kept separate:
+
+1. coefficient in the potential `V`;
+2. coefficient in `L_int=-V_int`;
+3. Feynman rule including `-i` and identical-particle factors.
 
 The project coordinate
 
@@ -47,158 +75,82 @@ The project coordinate
 X\equiv\lambda_6\tan\beta
 \]
 
-is a later project-defined coordinate. It is intentionally absent from the foundational derivation through Phase 5.
+is a later `[PROJECT-DEFINITION]`. It is intentionally absent from the foundational derivation through Phase 6.
 
-## A.3 Interaction-sign discipline
+## A.3 Primary sources used as convention anchors
 
-For every scalar interaction we distinguish three objects:
+The primary analytic anchor is Davidson–Haber (DH05, hep-ph/0504050), because it provides the generic potential, VEVs, minimization, scalar rotations and Higgs-basis notation in one internally connected convention.
 
-1. coefficient in the potential `V`;
-2. coefficient in `L_int=-V_int`;
-3. Feynman rule obtained from `i L_int`, including combinatorial factors.
+Branco et al. (BFLRS11, arXiv:1106.0034) is used as an independent broad review and for Type-I Yukawa structure. It explicitly warns that signs/factors of symbols differ across 2HDM papers.
 
-For a Yukawa interaction we explicitly define
+Grzadkowski–Haber–Ogreid–Osland (GHOO18, arXiv:1808.01472) is used mainly for Higgs-basis/alignment and later trilinear translation. Its generic quadratic symbols use a different normalization from DH05 and must not be copied symbol-for-symbol.
 
-\[
-\mathcal L_{\phi ff}
-=-\frac{m_f}{v}\kappa_f^\phi\,\phi\bar f f.
-\]
+The active vendored 2HDMC implementation is an implementation check, never the primary analytic source.
 
-Thus a signed modifier `kappa` is meaningful only together with the declared scalar-field sign.
+## A.4 Generic-basis potential convention
 
-## A.4 Primary sources inspected
-
-### S1 — Davidson & Haber, hep-ph/0504050
-
-Primary TeX: `hbasis.tex`.  
-Role: main analytic anchor because it contains the generic potential, vacuum definitions, minimization and Higgs-basis conventions in one internally consistent notation.
-
-Archive SHA256:
-`b6f133cc7875c71e3952386f56721f261aa51ccc9cfa1c8ee8aeeb17fbb8db01`.
-
-### S2 — Branco et al., arXiv:1106.0034
-
-Primary TeX: `PhysRep_large.tex`.  
-Role: independent review-level cross-check, especially scalar Hessians and Type-I Yukawa structure. It explicitly states that its potential notation follows Davidson–Haber, but some displayed scalar-state signs in an early pedagogical subsection must be translated carefully.
-
-Archive SHA256:
-`6e3693b8fc46a8f26dc546a4389ab3f4f5ead704fbcf0ee5e61bd8524ed19481`.
-
-### S3 — Grzadkowski, Haber, Ogreid, Osland, arXiv:1808.01472
-
-Primary TeX: `paper_heavyhiggs_jhep_revised3.tex`.  
-Role: Higgs-basis/alignment and cubic/Yukawa cross-check, with a different quadratic-symbol convention that must be translated explicitly.
-
-Archive SHA256:
-`03c4b3f6a32c30beb4f62645ea941c0735c38fd09b5d99f215e8ce229d3d874b`.
-
----
-
-# Phase 0 — Source and convention inventory
-
-## What is established
-
-[SOURCE][PROJECT-DEFINITION] Davidson–Haber is used as the main generic-basis sign convention.
-
-Its scalar potential uses
+We freeze the DH05/BFLRS11 generic-basis convention:
 
 \[
-+m_{11}^2\Phi_1^\dagger\Phi_1
+\begin{aligned}
+V={}&m_{11}^2\Phi_1^\dagger\Phi_1
 +m_{22}^2\Phi_2^\dagger\Phi_2
--[m_{12}^2\Phi_1^\dagger\Phi_2+\mathrm{h.c.}]
+-\left[m_{12}^2\Phi_1^\dagger\Phi_2+\text{h.c.}\right]\\
+&+\frac12\lambda_1(\Phi_1^\dagger\Phi_1)^2
++\frac12\lambda_2(\Phi_2^\dagger\Phi_2)^2\\
+&+\lambda_3(\Phi_1^\dagger\Phi_1)(\Phi_2^\dagger\Phi_2)
++\lambda_4(\Phi_1^\dagger\Phi_2)(\Phi_2^\dagger\Phi_1)\\
+&+\left\{
+\frac12\lambda_5(\Phi_1^\dagger\Phi_2)^2
++\left[\lambda_6(\Phi_1^\dagger\Phi_1)
++\lambda_7(\Phi_2^\dagger\Phi_2)\right]\Phi_1^\dagger\Phi_2
++\text{h.c.}
+\right\}.
+\end{aligned}
 \]
 
-with the quartic normalization written explicitly in Phase 2.
+For the CP-conserving branch used here all displayed coefficients are taken real. `lambda7=0` is a campaign specialization and is **not** part of the model definition.
 
-[SOURCE] Branco uses the same operator normalization for the generic potential.
-
-[TRANSLATED] GHOO18 instead writes its quadratic terms as
+GHOO18 instead writes its generic quadratic terms with an overall `-1/2`. Operator matching gives
 
 \[
--\frac12\{m_{11,G}^2\Phi_1^\dagger\Phi_1
-+m_{22,G}^2\Phi_2^\dagger\Phi_2
-+[m_{12,G}^2\Phi_1^\dagger\Phi_2+\mathrm{h.c.}]\},
-\]
-
-so operator matching gives
-
-\[
-\boxed{m_{11,\rm DH}^2=-\frac12m_{11,G}^2},
+\boxed{m_{11,\rm DH}^2=-\frac12m_{11,\rm G}^2},
 \qquad
-\boxed{m_{22,\rm DH}^2=-\frac12m_{22,G}^2},
+\boxed{m_{22,\rm DH}^2=-\frac12m_{22,\rm G}^2},
 \qquad
-\boxed{m_{12,\rm DH}^2=+\frac12m_{12,G}^2}.
+\boxed{m_{12,\rm DH}^2=+\frac12m_{12,\rm G}^2}.
 \]
 
-No formula from GHOO can therefore be copied symbol-for-symbol into the DH convention without this translation.
-
-## Derivation
-
-The quadratic map follows by matching coefficients of the independent operators
-
-\[
-\Phi_1^\dagger\Phi_1,
-\quad
-\Phi_2^\dagger\Phi_2,
-\quad
-\Phi_1^\dagger\Phi_2+\mathrm{h.c.}
-\]
-
-between the two potentials.
-
-## Convention map
-
-DH05 uses hypercharge `Y=1` with
-
-\[
-Q=T_3+\frac{Y}{2},
-\]
-
-which is equivalent to the modern convention `Y=1/2` with `Q=T_3+Y`.
-
-DH05 CP-even source states are frozen as
-
-\[
-h_{\rm DH}=-\rho_1\sin\alpha+\rho_2\cos\alpha,
-\qquad
-H_{\rm DH}=\rho_1\cos\alpha+\rho_2\sin\alpha.
-\]
-
-The early simple display in Branco is the global-sign reversal of these two fields. This does not change masses but does change every interaction containing an odd number of those fields unless all signs are transformed consistently.
-
-## What was checked against the source
-
-- DH05 generic potential, VEV definition, `tan beta`, Higgs basis and CP-even rotation.
-- Branco generic potential and Type-I model table.
-- GHOO generic potential and Higgs-basis potential.
-
-## What remains uncertain
-
-At this stage no project `h/phi` state map, no Yukawa modifier, no gauge modifier and no trilinear coupling is promoted.
-
-## Next smallest validation
-
-Define the doublets and reconstruct the complete renormalizable potential before introducing physical states.
+This map is `[DERIVED][TRANSLATED]` by matching coefficients of the same operators.
 
 ---
 
-# Phase 1 — Fields, VEVs and the beta coordinate
+# Phase 1 — Fields, electroweak quantum numbers and vacuum coordinates
 
 ## What is established
 
-[DERIVED][SOURCE] The two scalar doublets are written
+We begin with two complex `SU(2)_L` scalar doublets with identical hypercharge. In modern notation
+
+\[
+Q=T^3+Y,
+\qquad
+Y(\Phi_i)=\frac12.
+\]
+
+DH05 uses the equivalent convention `Q=T3+Y/2` and calls the doublet hypercharge `Y=1`.
+
+The component expansion is fixed as
 
 \[
 \boxed{
 \Phi_i=
 \begin{pmatrix}
 \phi_i^+\\[1mm]
-\dfrac{v_i+\rho_i+i\eta_i}{\sqrt2}
-\end{pmatrix}},
-\qquad i=1,2.
+(v_i+\rho_i+i\eta_i)/\sqrt2
+\end{pmatrix}}
 \]
 
-We select a neutral CP-conserving vacuum with real non-negative VEVs,
+with a real, neutral, CP-conserving vacuum
 
 \[
 \langle\Phi_1\rangle=\frac1{\sqrt2}\binom0{v_1},
@@ -214,95 +166,90 @@ Define
 \boxed{\tan\beta=\frac{v_2}{v_1}},
 \]
 
-and therefore
+and
 
 \[
-v_1=v c_\beta,
+c_\beta\equiv\frac{v_1}{v},
 \qquad
-v_2=v s_\beta.
+s_\beta\equiv\frac{v_2}{v}.
 \]
 
-No physical `H+`, `A`, `h` or `phi` is assumed yet.
+No `h`, `phi`, `A` or `H^\pm` state is assumed at this stage.
 
 ## Derivation
 
-The `1/sqrt(2)` normalization makes the real neutral fluctuations canonically normalized. The charged component has electric charge +1 and the lower component is neutral under the chosen hypercharge convention.
+The factor `1/sqrt(2)` makes `rho_i` and `eta_i` canonically normalized real fields. The upper component has charge `+1` and the lower component charge `0` because, for a `Y=1/2` doublet,
+
+\[
+Q_{\rm upper}=+\frac12+\frac12=1,
+\qquad
+Q_{\rm lower}=-\frac12+\frac12=0.
+\]
+
+The vacuum is chosen in the neutral lower components so electromagnetism remains unbroken.
 
 ## Convention map
 
-The project uses `rho_i` for CP-even real neutral fluctuations and `eta_i` for CP-odd real neutral fluctuations.
+`v1,v2 >=0` and positive `tan beta` define the coordinate patch used by the project/2HDMC. A relative CP phase is absent because the present branch is CP conserving.
 
 ## What was checked against the source
 
-DH05 `potmin` and `tanbdef`, Branco component expansion, GHOO VEV definitions.
+DH05 gives the same VEV normalization and `tan beta=v2/v1`; BFLRS11 uses the same component expansion. No physical-state convention was imported yet.
 
 ## What remains uncertain
 
-No statement about which linear combination is physical or SM-like.
+Nothing needed for the next phase. The question of whether a stationary point is the global electroweak vacuum is deliberately postponed.
 
 ## Next smallest validation
 
-Construct the most general CP-conserving renormalizable scalar potential from gauge invariants.
+Enumerate the complete renormalizable gauge-singlet scalar operator basis and reconstruct the potential before invoking any physical masses.
 
 ---
 
-# Phase 2 — Generic CP-conserving scalar potential
+# Phase 2 — Scalar potential reconstructed from the operator basis
 
 ## What is established
 
-The independent gauge-invariant bilinears are
-
-\[
-B_{ij}=\Phi_i^\dagger\Phi_j.
-\]
-
-Hermiticity and renormalizability lead to the DH/Branco potential
-
-\[
-\boxed{
-\begin{aligned}
-V={}&m_{11}^2\Phi_1^\dagger\Phi_1
-+m_{22}^2\Phi_2^\dagger\Phi_2
--[m_{12}^2\Phi_1^\dagger\Phi_2+\mathrm{h.c.}]\\
-&+\frac12\lambda_1(\Phi_1^\dagger\Phi_1)^2
-+\frac12\lambda_2(\Phi_2^\dagger\Phi_2)^2\\
-&+\lambda_3(\Phi_1^\dagger\Phi_1)(\Phi_2^\dagger\Phi_2)
-+\lambda_4(\Phi_1^\dagger\Phi_2)(\Phi_2^\dagger\Phi_1)\\
-&+\left\{\frac12\lambda_5(\Phi_1^\dagger\Phi_2)^2
-+[\lambda_6(\Phi_1^\dagger\Phi_1)+\lambda_7(\Phi_2^\dagger\Phi_2)]\Phi_1^\dagger\Phi_2
-+\mathrm{h.c.}\right\}.
-\end{aligned}}
-\]
-
-For the CP-conserving specialization used in the current project, all displayed parameters are real.
-
-The campaign restriction `lambda7=0` is **not** imposed here; it is a later parameter-space choice.
+The complete renormalizable scalar potential in the frozen generic basis is the expression in Section A.4.
 
 ## Derivation
 
-Dimension-two gauge singlets are `B11`, `B22`, `B12` and `B21=B12^dagger`. Dimension-four terms are products of these bilinears. Hermiticity fixes which coefficients are real and which terms require an explicit hermitian conjugate. CP conservation permits a basis where the remaining complex coefficients are real.
+The gauge-invariant bilinears are
+
+\[
+B_{ij}\equiv\Phi_i^\dagger\Phi_j,
+\qquad B_{ji}=B_{ij}^\dagger.
+\]
+
+Dimension-two Hermitian invariants give `B11`, `B22` and the complex off-diagonal `B12` plus h.c. Dimension-four terms are all products of two such bilinears. Hermiticity gives the displayed `lambda1...lambda7` structure. CP conservation allows a real basis for `m12^2,lambda5,lambda6,lambda7` in the branch studied here.
+
+The signs and factors are therefore not arbitrary conventions after they are frozen:
+
+- `+m11^2 B11`;
+- `+m22^2 B22`;
+- `-[m12^2 B12+h.c.]`;
+- `1/2` multiplying `lambda1`, `lambda2` and the displayed `lambda5` monomial;
+- `lambda6,lambda7` appear before adding h.c.
 
 ## Convention map
 
-The exact DH/Branco operator normalization is frozen as the project generic-basis potential. GHOO quadratic symbols obey the Phase-0 factor/sign map.
+DH05 and BFLRS11 match term-for-term. GHOO18 requires the quadratic translation written in A.4; its quartic normalization is otherwise compatible with the displayed operator form.
 
 ## What was checked against the source
 
-DH05 Eq. `pot` and Branco Eq. `2_VH1` agree term by term. The active 2HDMC generic-parameter path later reproduces stationarity equations derived from this potential.
+After reconstructing the operator content independently, it was checked against DH05 Eq. `pot` and BFLRS11 Eq. `2_VH1`. The active 2HDMC generic-input path later reproduced the independently derived stationarity relation, providing an implementation-level consistency check.
 
 ## What remains uncertain
 
-A potential definition alone does not identify the vacuum or physical masses.
+Nothing blocks minimization. Boundedness/global-minimum questions are separate from the algebraic stationarity conditions.
 
 ## Next smallest validation
 
-Evaluate `V` on the neutral vacuum and differentiate it rather than importing minimization formulas.
+Substitute the neutral VEVs term by term and differentiate the resulting vacuum potential.
 
 ---
 
-# Phase 3 — Neutral vacuum and minimization
-
-## What is established
+# Phase 3 — Vacuum potential and minimization
 
 Define
 
@@ -310,7 +257,9 @@ Define
 \lambda_{345}\equiv\lambda_3+\lambda_4+\lambda_5.
 \]
 
-Direct substitution of the neutral real VEVs gives
+## What is established
+
+Direct substitution of the neutral real vacuum gives
 
 \[
 \boxed{
@@ -326,7 +275,7 @@ V_0={}&\frac12m_{11}^2v_1^2
 \end{aligned}}
 \]
 
-The two neutral stationarity equations are
+The stationarity equations are
 
 \[
 \boxed{
@@ -334,8 +283,7 @@ The two neutral stationarity equations are
 +\frac12\lambda_1v_1^3
 +\frac12\lambda_{345}v_1v_2^2
 +\frac32\lambda_6v_1^2v_2
-+\frac12\lambda_7v_2^3
-}
++\frac12\lambda_7v_2^3}
 \]
 
 and
@@ -346,11 +294,8 @@ and
 +\frac12\lambda_2v_2^3
 +\frac12\lambda_{345}v_1^2v_2
 +\frac12\lambda_6v_1^3
-+\frac32\lambda_7v_1v_2^2
-}.
++\frac32\lambda_7v_1v_2^2}.
 \]
-
-The factors `3 lambda6` and `3 lambda7` are produced directly by differentiating the cubic powers of the VEVs; they are not convention guesses.
 
 Solving for the diagonal quadratic coefficients,
 
@@ -358,93 +303,98 @@ Solving for the diagonal quadratic coefficients,
 \boxed{
 \begin{aligned}
 m_{11}^2={}&m_{12}^2\frac{v_2}{v_1}
--\frac12\left[\lambda_1v_1^2+\lambda_{345}v_2^2
-+3\lambda_6v_1v_2+\lambda_7\frac{v_2^3}{v_1}\right],\\
+-\frac12\left[
+\lambda_1v_1^2+\lambda_{345}v_2^2
++3\lambda_6v_1v_2
++\lambda_7\frac{v_2^3}{v_1}
+\right],\\
 m_{22}^2={}&m_{12}^2\frac{v_1}{v_2}
--\frac12\left[\lambda_2v_2^2+\lambda_{345}v_1^2
-+\lambda_6\frac{v_1^3}{v_2}+3\lambda_7v_1v_2\right].
+-\frac12\left[
+\lambda_2v_2^2+\lambda_{345}v_1^2
++\lambda_6\frac{v_1^3}{v_2}
++3\lambda_7v_1v_2
+\right].
 \end{aligned}}
 \]
 
 ## Derivation
 
-Each factor in `V0` follows from
+At the vacuum,
 
 \[
-\Phi_1^\dagger\Phi_1=v_1^2/2,
+\Phi_1^\dagger\Phi_1=\frac{v_1^2}{2},
 \quad
-\Phi_2^\dagger\Phi_2=v_2^2/2,
+\Phi_2^\dagger\Phi_2=\frac{v_2^2}{2},
 \quad
-\Phi_1^\dagger\Phi_2=v_1v_2/2.
+\Phi_1^\dagger\Phi_2=\frac{v_1v_2}{2}.
 \]
 
-For example, the `lambda6` term plus h.c. is
+The Hermitian conjugate doubles real `m12`, `lambda5`, `lambda6`, `lambda7` contributions where appropriate. In particular,
 
 \[
-2\lambda_6\left(\frac{v_1^2}{2}\right)\left(\frac{v_1v_2}{2}\right)
-=\frac12\lambda_6v_1^3v_2,
+V_0\supset\frac12\lambda_6v_1^3v_2
++\frac12\lambda_7v_1v_2^3.
 \]
 
-whose derivative with respect to `v1` is
+Differentiation directly explains the easily missed factors:
 
 \[
-\frac32\lambda_6v_1^2v_2.
+\frac{\partial}{\partial v_1}(v_1^3v_2)=3v_1^2v_2,
+\qquad
+\frac{\partial}{\partial v_2}(v_1v_2^3)=3v_1v_2^2.
 \]
 
-The neutral-field tadpoles satisfy
+These are the origin of the `3 lambda6` and `3 lambda7` terms; they are not source conventions.
+
+The neutral CP-even tadpoles obey
 
 \[
 \left.\frac{\partial V}{\partial\rho_i}\right|_0
 =\frac{\partial V_0}{\partial v_i},
 \]
 
-because the neutral real fields enter through `v_i+rho_i`.
+because `rho_i` appears through `v_i+rho_i` around the selected vacuum.
 
-### Derived soft coordinate M^2
-
-Only after minimization define
+Only after minimization do we introduce the useful shorthand
 
 \[
 \boxed{M^2\equiv\frac{m_{12}^2}{s_\beta c_\beta}}.
 \]
 
-Then
-
-\[
-\boxed{
-\begin{aligned}
-m_{11}^2={}&M^2s^2
--\frac{v^2}{2}\left[\lambda_1c^2+\lambda_{345}s^2+3\lambda_6sc+\lambda_7\frac{s^3}{c}\right],\\
-m_{22}^2={}&M^2c^2
--\frac{v^2}{2}\left[\lambda_2s^2+\lambda_{345}c^2+\lambda_6\frac{c^3}{s}+3\lambda_7sc\right].
-\end{aligned}}
-\]
-
-Therefore
+Thus
 
 \[
 \boxed{m_{22}^2\neq m_{12}^2\neq M^2}
 \]
 
-generically.
+generically, despite all three having mass dimension two.
 
 ## Convention map
 
-GHOO stationarity equations can be translated with the Phase-0 quadratic-symbol map. `M^2` is a project/literature shorthand derived from the off-diagonal soft term and VEV orientation; it is not a diagonal mass parameter.
+In beta notation,
+
+\[
+\begin{aligned}
+m_{11}^2={}&M^2s^2-\frac{v^2}{2}
+\left[\lambda_1c^2+\lambda_{345}s^2+3\lambda_6sc+\lambda_7\frac{s^3}{c}\right],\\
+m_{22}^2={}&M^2c^2-\frac{v^2}{2}
+\left[\lambda_2s^2+\lambda_{345}c^2+\lambda_6\frac{c^3}{s}+3\lambda_7sc\right].
+\end{aligned}
+\]
+
+`M2` in project data means this derived `M^2`; it is not the generic-basis coefficient `m22_2`.
 
 ## What was checked against the source
 
-- DH05 minimization equations agree after setting the phase to zero and parameters real.
-- A symbolic differentiation audit reproduces both tadpoles.
-- Active 2HDMC `set_param_gen` reproduces the derived `m22^2` equation term by term.
+The derived stationarity equations match DH05 after specializing its general phase-dependent expressions to the real CP-conserving branch. A symbolic derivative audit reproduces them. Active 2HDMC `set_param_gen` reproduces the derived `m22^2` relation term by term.
 
 ## What remains uncertain
 
-Stationarity does not prove a local or global minimum.
+Vanishing tadpoles prove stationarity, not global minimality. The Hessian must be examined next; global-vacuum questions remain distinct even after positive local masses are obtained.
 
 ## Next smallest validation
 
-Compute the charged, CP-odd and CP-even Hessians from the same potential and prove the Goldstone zero modes.
+Compute charged, CP-odd and CP-even Hessians directly from the same potential before defining physical scalar states.
 
 ---
 
@@ -452,90 +402,31 @@ Compute the charged, CP-odd and CP-even Hessians from the same potential and pro
 
 ## What is established
 
-The physical charged and CP-odd directions are not assumed. They emerge because the post-tadpole Hessians have a common rank-one geometry.
-
-### Charged sector before tadpoles
-
-\[
-\mathcal M_\pm^2=
-\begin{pmatrix}X_\pm&Y_\pm\\Y_\pm&Z_\pm\end{pmatrix}
-\]
-
-with
-
-\[
-\begin{aligned}
-X_\pm&=m_{11}^2+\frac12\lambda_1v_1^2+\frac12\lambda_3v_2^2+\lambda_6v_1v_2,\\
-Z_\pm&=m_{22}^2+\frac12\lambda_2v_2^2+\frac12\lambda_3v_1^2+\lambda_7v_1v_2,\\
-Y_\pm&=-m_{12}^2+\frac12(\lambda_4+\lambda_5)v_1v_2
-+\frac12\lambda_6v_1^2+\frac12\lambda_7v_2^2.
-\end{aligned}
-\]
-
-After substituting the Phase-3 tadpoles,
+After imposing the tadpoles, both the charged and CP-odd Hessians factorize as
 
 \[
 \boxed{
-\mathcal M_\pm^2
-=D_\pm
+\mathcal M^2=D
 \begin{pmatrix}
-v_2/v_1&-1\\-1&v_1/v_2
+v_2/v_1&-1\\
+-1&v_1/v_2
 \end{pmatrix}}
 \]
 
-where
+with a sector-dependent scalar `D`.
+
+The vacuum vector is therefore an exact zero mode:
 
 \[
-D_\pm=m_{12}^2-\frac12[(\lambda_4+\lambda_5)v_1v_2+\lambda_6v_1^2+\lambda_7v_2^2].
+\mathcal M^2\binom{v_1}{v_2}=0,
 \]
 
-### CP-odd sector before tadpoles
+while the orthogonal vector `(-v2,v1)` is physical. Consequently the beta rotation is derived from the vacuum geometry:
 
 \[
-\begin{aligned}
-(\mathcal M_A^2)_{11}&=m_{11}^2+\frac12\lambda_1v_1^2
-+\frac12(\lambda_3+\lambda_4-\lambda_5)v_2^2+\lambda_6v_1v_2,\\
-(\mathcal M_A^2)_{22}&=m_{22}^2+\frac12\lambda_2v_2^2
-+\frac12(\lambda_3+\lambda_4-\lambda_5)v_1^2+\lambda_7v_1v_2,\\
-(\mathcal M_A^2)_{12}&=-m_{12}^2+\lambda_5v_1v_2
-+\frac12\lambda_6v_1^2+\frac12\lambda_7v_2^2.
-\end{aligned}
-\]
-
-After tadpoles,
-
-\[
-\boxed{
-\mathcal M_A^2
-=D_A
-\begin{pmatrix}
-v_2/v_1&-1\\-1&v_1/v_2
-\end{pmatrix}}
-\]
-
-with
-
-\[
-D_A=m_{12}^2-\lambda_5v_1v_2-\frac12(\lambda_6v_1^2+\lambda_7v_2^2).
-\]
-
-### Goldstone proof
-
-For either sector,
-
-\[
-\begin{pmatrix}
-v_2/v_1&-1\\-1&v_1/v_2
-\end{pmatrix}
-\binom{v_1}{v_2}=0.
-\]
-
-Hence the vacuum direction is the zero mode, while the orthogonal vector `(-v2,v1)` is physical. Therefore
-
-\[
-\boxed{G^+=c_\beta\phi_1^++s_\beta\phi_2^+},
+\boxed{G^+=c_\beta\phi_1^+ +s_\beta\phi_2^+},
 \qquad
-\boxed{H^+=-s_\beta\phi_1^++c_\beta\phi_2^+},
+\boxed{H^+=-s_\beta\phi_1^+ +c_\beta\phi_2^+},
 \]
 
 \[
@@ -544,95 +435,76 @@ Hence the vacuum direction is the zero mode, while the orthogonal vector `(-v2,v
 \boxed{A=-s_\beta\eta_1+c_\beta\eta_2}.
 \]
 
-Thus `beta` diagonalizes these sectors because it describes the vacuum orientation.
-
-### Physical masses
-
-The nonzero eigenvalues are
+The physical masses are
 
 \[
-\boxed{
-m_A^2=M^2-\frac{v^2}{2}
-\left(2\lambda_5+\lambda_6\cot\beta+\lambda_7\tan\beta\right)}
+\boxed{m_A^2=M^2-\frac{v^2}{2}
+\left(2\lambda_5+\lambda_6\cot\beta+\lambda_7\tan\beta\right)},
 \]
-
-and
 
 \[
-\boxed{
-m_{H^\pm}^2=M^2-\frac{v^2}{2}
-\left(\lambda_4+\lambda_5+\lambda_6\cot\beta+\lambda_7\tan\beta\right)}.
+\boxed{m_{H^\pm}^2=M^2-\frac{v^2}{2}
+\left(\lambda_4+\lambda_5+\lambda_6\cot\beta+\lambda_7\tan\beta\right)},
 \]
 
-Therefore
+so
 
 \[
 \boxed{m_{H^\pm}^2-m_A^2=\frac{v^2}{2}(\lambda_5-\lambda_4)}.
 \]
 
-The `lambda6` and `lambda7` dependence cancels exactly in this splitting.
-
-## Derivation — CP-even sector
+## Derivation: CP-even Hessian
 
 Before tadpole elimination,
 
 \[
-\boxed{
 \mathcal M_\rho^2=
-\begin{pmatrix}\mathcal M_{11}^2&\mathcal M_{12}^2\\\mathcal M_{12}^2&\mathcal M_{22}^2\end{pmatrix}}
+\begin{pmatrix}\mathcal M_{11}^2&\mathcal M_{12}^2\\\mathcal M_{12}^2&\mathcal M_{22}^2\end{pmatrix}
 \]
 
 with
 
 \[
 \begin{aligned}
-\mathcal M_{11}^2&=m_{11}^2+\frac32\lambda_1v_1^2+\frac12\lambda_{345}v_2^2+3\lambda_6v_1v_2,\\
-\mathcal M_{22}^2&=m_{22}^2+\frac32\lambda_2v_2^2+\frac12\lambda_{345}v_1^2+3\lambda_7v_1v_2,\\
-\mathcal M_{12}^2&=-m_{12}^2+\lambda_{345}v_1v_2+\frac32\lambda_6v_1^2+\frac32\lambda_7v_2^2.
+\mathcal M_{11}^2={}&m_{11}^2+\frac32\lambda_1v_1^2+\frac12\lambda_{345}v_2^2+3\lambda_6v_1v_2,\\
+\mathcal M_{22}^2={}&m_{22}^2+\frac32\lambda_2v_2^2+\frac12\lambda_{345}v_1^2+3\lambda_7v_1v_2,\\
+\mathcal M_{12}^2={}&-m_{12}^2+\lambda_{345}v_1v_2+\frac32\lambda_6v_1^2+\frac32\lambda_7v_2^2.
 \end{aligned}
 \]
 
-After tadpoles,
+After tadpoles it is especially useful to express the same matrix in terms of `m_A^2`:
 
 \[
 \boxed{
 \begin{aligned}
-\mathcal M_{11}^2&=M^2s^2+v^2\left[\lambda_1c^2+\frac32\lambda_6sc-\frac12\lambda_7\frac{s^3}{c}\right],\\
-\mathcal M_{22}^2&=M^2c^2+v^2\left[\lambda_2s^2-\frac12\lambda_6\frac{c^3}{s}+\frac32\lambda_7sc\right],\\
-\mathcal M_{12}^2&=-M^2sc+v^2\left[\lambda_{345}sc+\frac32\lambda_6c^2+\frac32\lambda_7s^2\right].
+\mathcal M_{11}^2={}&m_A^2s^2+v^2(\lambda_1c^2+\lambda_5s^2+2\lambda_6sc),\\
+\mathcal M_{22}^2={}&m_A^2c^2+v^2(\lambda_2s^2+\lambda_5c^2+2\lambda_7sc),\\
+\mathcal M_{12}^2={}&-m_A^2sc+v^2[(\lambda_3+\lambda_4)sc+\lambda_6c^2+\lambda_7s^2].
 \end{aligned}}
 \]
 
-An implementation-friendly equivalent form is
+This is algebraically equivalent to the `M^2` representation and matches active 2HDMC after the independent derivation.
+
+## CP-even diagonalization and frozen sign convention
+
+Adopt the DH05 convention
 
 \[
 \boxed{
-\begin{aligned}
-\mathcal M_{11}^2&=m_A^2s^2+v^2(\lambda_1c^2+\lambda_5s^2+2\lambda_6sc),\\
-\mathcal M_{22}^2&=m_A^2c^2+v^2(\lambda_2s^2+\lambda_5c^2+2\lambda_7sc),\\
-\mathcal M_{12}^2&=-m_A^2sc+v^2[(\lambda_3+\lambda_4)sc+\lambda_6c^2+\lambda_7s^2].
-\end{aligned}}
+\begin{pmatrix}h\\\phi\end{pmatrix}
+=\begin{pmatrix}-s_\alpha&c_\alpha\\c_\alpha&s_\alpha\end{pmatrix}
+\begin{pmatrix}\rho_1\\\rho_2\end{pmatrix}}
 \]
 
-### Alpha rotation
+on the project branch, with `h=h_DH` and `phi=H_DH`.
 
-Freeze the DH CP-even sign convention
-
-\[
-\boxed{
-\begin{pmatrix}h_{\rm DH}\\H_{\rm DH}\end{pmatrix}
-=
-\begin{pmatrix}-s_\alpha&c_\alpha\\c_\alpha&s_\alpha\end{pmatrix}
-\begin{pmatrix}\rho_1\\\rho_2\end{pmatrix}}.
-\]
-
-The off-diagonal element after rotation vanishes when
+Zeroing the off-diagonal element of the rotated Hessian gives
 
 \[
 \boxed{\tan2\alpha=\frac{2\mathcal M_{12}^2}{\mathcal M_{11}^2-\mathcal M_{22}^2}},
 \]
 
-with the quadrant determined by the eigenvector branch rather than the tangent alone.
+with the quadrant fixed by the eigenvector branch, not the tangent alone.
 
 The eigenvalues are
 
@@ -644,169 +516,121 @@ m_{h,H}^2=\frac12\left[
 \right]}.
 \]
 
-### Vacuum-aligned CP-even direction and project state signs
-
-Define
+Define the CP-even vacuum-aligned and orthogonal directions
 
 \[
-\rho_v=c_\beta\rho_1+s_\beta\rho_2,
+\boxed{\rho_v=c_\beta\rho_1+s_\beta\rho_2},
 \qquad
-\rho_\perp=-s_\beta\rho_1+c_\beta\rho_2.
+\boxed{\rho_\perp=-s_\beta\rho_1+c_\beta\rho_2}.
 \]
 
 Then
 
 \[
-\boxed{h_{\rm DH}=s_{\beta-\alpha}\rho_v+c_{\beta-\alpha}\rho_\perp},
+\boxed{h=s_{\beta-\alpha}\rho_v+c_{\beta-\alpha}\rho_\perp},
 \]
 
 \[
-\boxed{H_{\rm DH}=c_{\beta-\alpha}\rho_v-s_{\beta-\alpha}\rho_\perp}.
+\boxed{\phi=c_{\beta-\alpha}\rho_v-s_{\beta-\alpha}\rho_\perp}.
 \]
 
-The project branch uses
+On the project exact-alignment branch
 
 \[
-\sin(\beta-\alpha)=1.
+s_{\beta-\alpha}=1,
 \]
 
-Therefore
+so
 
 \[
-h_{\rm DH}=\rho_v,
-\qquad
-H_{\rm DH}=-\rho_\perp.
+\boxed{h=\rho_v=c_\beta\rho_1+s_\beta\rho_2},
 \]
-
-Freeze the project names
 
 \[
-\boxed{h\equiv h_{\rm DH}},
-\qquad
-\boxed{\phi\equiv H_{\rm DH}}.
+\boxed{\phi=-\rho_\perp=s_\beta\rho_1-c_\beta\rho_2}.
 \]
 
-Hence, in exact alignment,
-
-\[
-\boxed{h=c_\beta\rho_1+s_\beta\rho_2},
-\qquad
-\boxed{\phi=s_\beta\rho_1-c_\beta\rho_2}.
-\]
-
-This sign of `phi` is inherited from the DH field convention. It is not chosen to force a later Yukawa or scalar-trilinear sign.
+This sign of `phi` is frozen **before** deriving Yukawa or scalar trilinear couplings. It is not chosen to obtain a desired `-cot beta` or charged-Higgs-loop sign.
 
 ## Convention map
 
-2HDMC's active physical-input branch uses `alpha=beta-asin(sba)` on its non-negative `cba` branch, consistent with `alpha=beta-pi/2` at exact alignment.
-
-An early pedagogical restricted subsection of Branco contains charged/CP-odd displayed mass-term factors that do not match the Hessian of its printed potential. Its later general Hessian agrees with the independent derivation and is used as the source cross-check. The discrepancy is recorded rather than silently repaired.
+BFLRS11's early simple display uses global negatives of the DH CP-even fields. That is a field-sign convention and cannot be mixed selectively with its coupling tables. The project consistently retains the DH signs above.
 
 ## What was checked against the source
 
-DH Goldstone/charged rotations, DH CP-even states, GHOO beta rotations, Branco general scalar Hessian and active 2HDMC mass matrices.
+DH05 gives the same charged/Goldstone beta rotations and CP-even alpha convention. GHOO18 uses the same beta geometry. The later general scalar-sector Hessian in BFLRS11 agrees with the independently derived entries. Active 2HDMC reproduces `m_A^2`, the charged–odd splitting and the CP-even matrix.
+
+A source-internal caution is retained: an early restricted BFLRS11 pedagogical subsection displays charged/odd “mass terms” with factors that do not match the Hessian of its own printed potential; those early formulas are not used as normalization evidence.
 
 ## What remains uncertain
 
-- Gauge interpretation of `rho_v` still requires the kinetic-term derivation.
-- Exact alignment versus `Z6=0` still requires the Higgs-basis mass matrix.
-- Positive physical squared masses are a local quadratic condition, not a global-minimum proof.
+Positive physical squared masses are local quadratic conditions, not proof of the global electroweak minimum. At an exact CP-even degeneracy the mixing angle is not uniquely defined. The gauge interpretation of `rho_v` is deliberately left for Phase 6 rather than inferred here.
 
 ## Next smallest validation
 
-Derive Type-I Yukawa modifiers from the Yukawa Lagrangian using the state signs just frozen.
+Derive Type-I Yukawa modifiers from the gauge-invariant Yukawa Lagrangian using the already-fixed scalar signs.
 
 ---
 
-# Phase 5 — Type-I Yukawa couplings
+# Phase 5 — Type-I Yukawa sector
 
 ## What is established
 
-Type I means all charged fermions couple to `Phi2` and not `Phi1`. In flavor-matrix notation define the sign convention
+The Type-I assignment places all charged-fermion Yukawa couplings on `Phi2`. Write the sign convention explicitly:
 
 \[
 \boxed{
 -\mathcal L_Y^{\rm I}
-=\overline Q_LY_d\Phi_2d_R
-+\overline Q_LY_u\widetilde\Phi_2u_R
-+\overline L_LY_\ell\Phi_2\ell_R
-+\mathrm{h.c.}}
+=\bar Q_LY_d\Phi_2d_R
++\bar Q_LY_u\widetilde\Phi_2u_R
++\bar L_LY_\ell\Phi_2\ell_R
++\text{h.c.}}
 \]
 
-with
+where `tilde Phi2=i sigma2 Phi2*` for the up-type operator.
+
+After fermion mass diagonalization,
 
 \[
-\widetilde\Phi_2=i\sigma_2\Phi_2^*.
+\boxed{m_f=\frac{y_fv_2}{\sqrt2}=\frac{y_fvs_\beta}{\sqrt2}},
+\qquad f=u,d,\ell.
 \]
 
-Using
-
-\[
-\Phi_2^0=\frac{v_2+\rho_2+i\eta_2}{\sqrt2},
-\qquad
-\widetilde\Phi_2^0=\frac{v_2+\rho_2-i\eta_2}{\sqrt2},
-\]
-
-the CP-even fluctuation `rho2` enters every charged-fermion sector with the same sign.
-
-After diagonalizing the fermion mass matrices,
-
-\[
-\boxed{m_f=\frac{y_fv_2}{\sqrt2}}
-\]
-
-and therefore
+The neutral CP-even interaction therefore begins as
 
 \[
 \boxed{
 \mathcal L_Y^{\rm CP-even}
-=-\sum_f\frac{m_f}{v_2}\rho_2\bar f f
-=-\sum_f\frac{m_f}{v s_\beta}\rho_2\bar f f}.
+=-\sum_f\frac{m_f}{v_2}\rho_2\bar f f}.
 \]
 
 ## Derivation
 
-Phase 4 fixed
+The Phase-4 rotation matrix is orthogonal and symmetric, so its inverse is itself:
 
 \[
-\begin{pmatrix}h\\\phi\end{pmatrix}
-=R_\alpha\begin{pmatrix}\rho_1\\\rho_2\end{pmatrix},
+\rho_1=-s_\alpha h+c_\alpha\phi,
 \qquad
-R_\alpha=
-\begin{pmatrix}-s_\alpha&c_\alpha\\c_\alpha&s_\alpha\end{pmatrix}.
-\]
-
-Since
-
-\[
-R_\alpha^TR_\alpha=I,
-\qquad
-R_\alpha^T=R_\alpha,
-\]
-
-the inverse transformation is
-
-\[
 \boxed{\rho_2=c_\alpha h+s_\alpha\phi}.
 \]
 
-Substitute into the interaction:
+Substitution gives
 
 \[
 \boxed{
 \mathcal L_Y^{\rm CP-even}
 =-\sum_f\frac{m_f}{v}
-\left(
+\left[
 \frac{c_\alpha}{s_\beta}h
 +\frac{s_\alpha}{s_\beta}\phi
-\right)\bar f f}.
+\right]\bar f f}.
 \]
 
-Define
+Define modifiers through
 
 \[
 \mathcal L_Y^{\rm CP-even}
-=-\sum_f\frac{m_f}{v}
+\equiv-\sum_f\frac{m_f}{v}
 (\kappa_f^h h+\kappa_f^\phi\phi)\bar f f.
 \]
 
@@ -815,27 +639,20 @@ Then
 \[
 \boxed{\kappa_f^h=\frac{c_\alpha}{s_\beta}},
 \qquad
-\boxed{\kappa_f^\phi=\frac{s_\alpha}{s_\beta}},
-\qquad f=u,d,\ell.
+\boxed{\kappa_f^\phi=\frac{s_\alpha}{s_\beta}}.
 \]
 
-### Exact alignment
-
-On the frozen branch
+At exact alignment,
 
 \[
 \alpha=\beta-\frac\pi2,
+\qquad
+c_\alpha=s_\beta,
+\qquad
+s_\alpha=-c_\beta,
 \]
 
 so
-
-\[
-c_\alpha=s_\beta,
-\qquad
-s_\alpha=-c_\beta.
-\]
-
-Therefore
 
 \[
 \boxed{\kappa_f^h=1},
@@ -844,102 +661,410 @@ Therefore
 \qquad f=u,d,\ell.
 \]
 
-The minus sign follows from the scalar state convention. Equivalently, exact alignment gave
+The minus sign is therefore a consequence of the already-frozen field convention
 
 \[
 \phi=s_\beta\rho_1-c_\beta\rho_2,
 \]
 
-so the `Phi2` projection of `phi` is `-c_beta`, while the mass-generating VEV fraction is `s_beta`.
+not an imported coupling-table sign.
 
-### Meaning of the signed coupling
-
-With the declared convention,
+If one instead defines
 
 \[
-\mathcal L_{\phi ff}
-=-\frac{m_f}{v}\kappa_f^\phi\phi\bar f f
-=+\frac{m_f}{v}\cot\beta\,\phi\bar f f
+\mathcal L_{\phi ff}=-g_{\phi ff}\phi\bar f f,
 \]
 
-at exact alignment.
+then
 
-A global field redefinition `phi -> -phi` would flip every interaction containing an odd number of `phi` fields. Therefore a signed coupling should never be quoted without the field convention.
+\[
+\boxed{g_{\phi ff}=-\frac{m_f}{v}\cot\beta}
+\]
+
+and the corresponding scalar Feynman rule is
+
+\[
+\boxed{+i\frac{m_f}{v}\cot\beta}.
+\]
+
+This explicit separation prevents later confusion between a dimensionless modifier, a Lagrangian coefficient and a vertex factor.
 
 ## Convention map
 
-- Branco Type-I model table: `u_R,d_R,e_R` all couple to `Phi2`.
-- Branco Yukawa table gives `xi_h=c_alpha/s_beta` and `xi_H=s_alpha/s_beta` for all charged fermions; this matches the derivation after adopting the DH-sign state convention.
-- GHOO Type-I appendix sets its `eta_1^{u,d,l}=0` and its CP-even neutral couplings are controlled by the `Phi2` projection `R_{j2}/s_beta`.
-- The absolute sign of a GHOO heavy state must be translated with its scalar field sign; only the dependence and projection structure are used as a cross-check here.
+BFLRS11 Type I gives `c_alpha/s_beta` for the DH-sign light-state convention after translation and `s_alpha/s_beta` for the companion CP-even state. GHOO18 uses a Higgs-basis presentation and must be translated at the level of its explicit `-L_Y`, not by guessing the meaning of a table sign.
 
 ## What was checked against the source
 
-The independent result was compared only after derivation with:
-
-1. Branco `tab:3_models` Type-I assignment;
-2. Branco `Eq:Yukawa` overall `-m_f/v` normalization;
-3. Branco `tab:3_couplings` CP-even modifiers;
-4. GHOO Appendix `Yuk_Type_I` and its `R_{j2}/s_beta` neutral structure;
-5. active project use of `2HDMC::set_yukawas_type(1)` as an implementation consistency check.
-
-A symbolic audit verifies that the chosen rotation is orthogonal/self-inverse and that `alpha=beta-pi/2` gives exactly `1` and `-cot(beta)`.
+Only after the derivation, BFLRS11 was used to confirm that all `u_R,d_R,e_R` couple to `Phi2` in Type I and that the functional dependence agrees. Active 2HDMC Type-I paths use `set_yukawas_type(1)` and scale its orthogonal-basis Yukawa matrices by `cot beta`, consistent with the derived structure after accounting for field-sign conventions.
 
 ## What remains uncertain
 
-- `kappa_V^phi=0` is still **not** inferred; it must come from gauge kinetic terms.
-- `Z6=0` and its relation to exact alignment remain for the Higgs-basis phase.
-- The project does not yet promote any `phi H+H-` trilinear formula.
-- Pseudoscalar and charged-Higgs Yukawa vertices are derivable from the same Lagrangian but are not needed for the current high-risk claim.
+Nothing blocks the neutral Type-I modifier result. A global field redefinition `phi -> -phi` would flip every odd-`phi` coupling simultaneously; the project has already frozen one consistent sign convention.
 
 ## Next smallest validation
+
+Derive the `WW/ZZ` modifiers from the scalar kinetic term instead of using a coupling table.
+
+---
+
+# Phase 6 — Gauge couplings and the physical meaning of alignment
+
+## What is established
 
 Start from
 
 \[
-\sum_{i=1}^2(D_\mu\Phi_i)^\dagger(D^\mu\Phi_i)
+\boxed{\mathcal L_{\rm kin}=\sum_{i=1}^2(D_\mu\Phi_i)^\dagger(D^\mu\Phi_i)}.
 \]
 
-and derive the terms linear in `rho_i` and quadratic in `W/Z`. This must show independently which CP-even direction couples to vector-boson pairs and determine `kappa_V^h` and `kappa_V^phi`.
-
----
-
-# B. Validation status after Phase 5
-
-| Claim | Status after Phase 5 |
-|---|---|
-| Generic scalar potential and signs | **VERIFIED** |
-| Neutral tadpoles/minimization | **VERIFIED** |
-| `m22^2`, `m12^2`, `M^2` distinction | **VERIFIED** |
-| Charged/CP-odd Goldstone rotations | **VERIFIED** |
-| `m_A^2`, `m_H+^2`, CP-even Hessian | **VERIFIED** |
-| project scalar-state convention `h,phi` | **VERIFIED** |
-| Type-I `kappa_f^h=c_alpha/s_beta` | **VERIFIED** |
-| Type-I exact-alignment `kappa_f^phi=-cot beta` | **VERIFIED** |
-| exact-alignment `kappa_V^phi=0` | **NOT YET VERIFIED** |
-| `Y3=-Z6 v^2/2` | **SOURCE-VERIFIED; independent Higgs-basis derivation pending** |
-| exact alignment iff `Z6=0` | **PARTIALLY VERIFIED; derivation pending** |
-| exact `phi H+H-` trilinear | **NOT VERIFIED** |
-| generic-to-Higgs-basis `Z7` map | **NOT VERIFIED independently** |
-| large-`tan beta` trilinear approximations | **NOT VERIFIED** |
-| `X=lambda6 tan beta` interpretation | **DEFERRED by design** |
-
----
-
-# C. Phase gates
+Use modern hypercharge notation
 
 \[
-\boxed{\text{PHASE 0 PASS}}
-\quad
-\boxed{\text{PHASE 1 PASS}}
-\quad
-\boxed{\text{PHASE 2 PASS}}
-\quad
-\boxed{\text{PHASE 3 PASS}}
-\quad
-\boxed{\text{PHASE 4 PASS}}
-\quad
-\boxed{\text{PHASE 5 PASS}}.
+Q=T^3+Y,
+\qquad
+Y(\Phi_i)=\frac12,
 \]
 
-The next phase is intentionally narrow: gauge couplings from kinetic terms. No Higgs-basis or trilinear result should be promoted before that derivation is complete.
+and
+
+\[
+\boxed{D_\mu=\partial_\mu+i g\frac{\sigma^a}{2}W_\mu^a+i g'\frac12B_\mu}.
+\]
+
+The gauge masses are
+
+\[
+\boxed{m_W^2=\frac{g^2v^2}{4}},
+\qquad
+\boxed{m_Z^2=\frac{(g^2+g'^2)v^2}{4}}.
+\]
+
+Most importantly, every tree-level neutral CP-even `SVV` coupling is controlled by one scalar combination:
+
+\[
+\boxed{v_1\rho_1+v_2\rho_2=v\rho_v}.
+\]
+
+Therefore
+
+\[
+\boxed{\kappa_V^h=\sin(\beta-\alpha)},
+\qquad
+\boxed{\kappa_V^\phi=\cos(\beta-\alpha)}.
+\]
+
+At exact alignment,
+
+\[
+\boxed{\kappa_V^h=1},
+\qquad
+\boxed{\kappa_V^\phi=0}.
+\]
+
+This is the first point where the Phase-4 geometrical statement `h=rho_v`, `phi=-rho_perp` obtains its physical gauge interpretation.
+
+## Derivation: charged gauge part
+
+Set temporarily
+
+\[
+\Phi_i\rightarrow\frac1{\sqrt2}\binom0{x_i},
+\qquad x_i=v_i+\rho_i.
+\]
+
+With
+
+\[
+W^\pm=\frac{W^1\mp iW^2}{\sqrt2},
+\]
+
+one finds
+
+\[
+(T^1W^1+T^2W^2)\frac1{\sqrt2}\binom0{x_i}
+=\binom{x_iW^+/2}{0}.
+\]
+
+Hence
+
+\[
+(D_\mu\Phi_i)^\dagger(D^\mu\Phi_i)
+\supset\frac{g^2}{4}x_i^2W_\mu^+W^{-\mu}.
+\]
+
+Summing the doublets and expanding,
+
+\[
+\mathcal L\supset
+\frac{g^2}{4}(v_1^2+v_2^2)W^+W^-
++\frac{g^2}{2}(v_1\rho_1+v_2\rho_2)W^+W^-+\cdots.
+\]
+
+Thus
+
+\[
+\boxed{\mathcal L_{WW,\rm linear}=\frac{2m_W^2}{v}\rho_vW_\mu^+W^{-\mu}}.
+\]
+
+## Derivation: neutral gauge part and photon cancellation
+
+For the neutral lower component,
+
+\[
+T^3=-\frac12,
+\qquad Y=+\frac12.
+\]
+
+Define
+
+\[
+A=s_WW^3+c_WB,
+\qquad
+Z=c_WW^3-s_WB,
+\]
+
+with
+
+\[
+s_W=\frac{g'}{\sqrt{g^2+g'^2}},
+\qquad
+c_W=\frac{g}{\sqrt{g^2+g'^2}},
+\qquad
+g_Z=\sqrt{g^2+g'^2}.
+\]
+
+The lower-component gauge factor is
+
+\[
+-i\frac g2W^3+i\frac{g'}2B
+=-i\frac{g_Z}{2}Z.
+\]
+
+The photon cancels exactly because the neutral VEV has `Q=0`. Therefore
+
+\[
+(D_\mu\Phi_i)^\dagger(D^\mu\Phi_i)
+\supset\frac{g_Z^2}{8}x_i^2Z_\mu Z^\mu.
+\]
+
+After summing and expanding,
+
+\[
+\boxed{\mathcal L_{ZZ,\rm linear}=\frac{m_Z^2}{v}\rho_vZ_\mu Z^\mu}.
+\]
+
+The factor-of-two difference between the displayed `WW` and `ZZ` Lagrangian coefficients is due to the identical real `Z` fields. The physical three-point rules are
+
+\[
+SW_\mu^+W_\nu^-:\quad i\kappa_V^S\frac{2m_W^2}{v}g_{\mu\nu},
+\]
+
+\[
+SZ_\mu Z_\nu:\quad i\kappa_V^S\frac{2m_Z^2}{v}g_{\mu\nu}.
+\]
+
+## Projection onto mass eigenstates
+
+Using
+
+\[
+\rho_1=-s_\alpha h+c_\alpha\phi,
+\qquad
+\rho_2=c_\alpha h+s_\alpha\phi,
+\]
+
+we obtain
+
+\[
+\begin{aligned}
+\rho_v
+&=c_\beta\rho_1+s_\beta\rho_2\\
+&=(-c_\beta s_\alpha+s_\beta c_\alpha)h
+ +(c_\beta c_\alpha+s_\beta s_\alpha)\phi\\
+&=\boxed{s_{\beta-\alpha}h+c_{\beta-\alpha}\phi}.
+\end{aligned}
+\]
+
+Therefore, defining
+
+\[
+\mathcal L_{SVV}\equiv\kappa_V^S
+\left[
+\frac{2m_W^2}{v}SW^+W^-+\frac{m_Z^2}{v}SZZ
+\right],
+\]
+
+immediately gives the modifiers above.
+
+The conceptual result is basis-geometric:
+
+\[
+\boxed{
+\text{tree-level }SVV\text{ strength}
+=\text{projection of }S\text{ onto the VEV direction}.}
+\]
+
+It depends only on the canonical kinetic terms and VEV geometry, not on the scalar potential.
+
+## CP-odd and quartic checks
+
+With imaginary fields retained,
+
+\[
+|v_i+\rho_i+i\eta_i|^2=(v_i+\rho_i)^2+\eta_i^2.
+\]
+
+No term linear in `eta_i` exists, so
+
+\[
+\boxed{AWW=AZZ=0}
+\]
+
+at tree level for the linear `AVV` vertices.
+
+Orthogonality of the CP-even rotation gives
+
+\[
+\boxed{\rho_1^2+\rho_2^2=h^2+\phi^2}.
+\]
+
+Thus the diagonal CP-even quartic gauge interactions are angle-independent and the mixed `VVhphi` term cancels. This is an internal consistency check independent of the trilinear projection.
+
+## Convention map
+
+The project/DH state convention gives
+
+\[
+\kappa_V^h=s_{\beta-\alpha},
+\qquad
+\kappa_V^\phi=c_{\beta-\alpha}.
+\]
+
+BFLRS11 states the same physical modifiers but its early displayed scalar fields carry global sign differences relative to DH; those displays are not mixed with the project convention. GHOO18 defines alignment as a mass eigenstate parallel to the VEV and gives it the SM `VV` coupling.
+
+Active 2HDMC uses
+
+\[
+q_{k1}=(s_{\beta-\alpha},c_{\beta-\alpha},0,i)
+\]
+
+for `(h,H,A,H+)`, and its `get_coupling_vvh` multiplies `Re(q_k1)` by the SM `ZZ` or `WW` vertex. This is a posterior implementation check of the derived geometry.
+
+## What was checked against the source
+
+DH05 gives `h_DH VV ∝ sin(beta-alpha)` and `H_DH VV ∝ cos(beta-alpha)`. BFLRS11 and GHOO18 agree after convention translation. 2HDMC reproduces `h:sba`, `H:cba`, `A:0` in its gauge-vertex implementation.
+
+The symbolic audit `checks/phase6_gauge_check.py` verifies
+
+\[
+-c_\beta s_\alpha+s_\beta c_\alpha=\sin(\beta-\alpha),
+\]
+
+\[
+c_\beta c_\alpha+s_\beta s_\alpha=\cos(\beta-\alpha),
+\]
+
+the exact-alignment values `(1,0)`, and the angle-independent norm `rho1^2+rho2^2=h^2+phi^2`.
+
+## What remains uncertain
+
+Phase 6 does **not** prove
+
+\[
+\text{exact alignment}\Longleftrightarrow Z_6=0.
+\]
+
+That statement belongs to the Higgs-basis potential/mass matrix and must be derived in Phase 7.
+
+A new implementation caution is also frozen: 2HDMC's `get_param_higgs` exposes variables called `Lambda6,Lambda7`, while its scalar-trilinear routine later defines local `Z6=-l6`, `Z7=-l7`. No project statement about the sign of `Z6`, `Z7` or `phi H^+H^-` may use those names without an explicit Phase-7/9 convention audit.
+
+Loop-induced `phi -> gamma gamma` and `phi -> Z gamma` remain possible; `kappa_V^phi=0` only states that the tree-level linear `phi WW` and `phi ZZ` vertices vanish in exact alignment.
+
+## Next smallest validation
+
+Construct the Higgs basis explicitly:
+
+\[
+\boxed{H_1=c_\beta\Phi_1+s_\beta\Phi_2},
+\qquad
+\boxed{H_2=-s_\beta\Phi_1+c_\beta\Phi_2}.
+\]
+
+Then independently derive:
+
+1. `H1` carries the entire VEV and `H2` none;
+2. all quadratic coefficients `Y1,Y2,Y3`;
+3. all quartics `Z1...Z7`;
+4. the stationarity equations in this basis;
+5. the CP-even Higgs-basis mass matrix and the precise relation between its off-diagonal element and alignment.
+
+Only after those steps may `Z7` and the charged-Higgs trilinear be interpreted.
+
+---
+
+# B. Validation status after Phase 6
+
+| Claim | Status |
+|---|---|
+| field/VEV normalization | **VERIFIED** |
+| complete generic CP-conserving potential | **VERIFIED** |
+| vacuum potential and tadpoles | **VERIFIED** |
+| `m22^2`, `m12^2`, `M^2` distinction | **VERIFIED** |
+| charged, CP-odd and CP-even Hessians | **VERIFIED** |
+| Goldstone and physical beta rotations | **VERIFIED** |
+| DH/project CP-even state signs | **VERIFIED** |
+| Type-I `kappa_f^h=c_alpha/s_beta` | **VERIFIED** |
+| Type-I exact-alignment `kappa_f^phi=-cot beta` | **VERIFIED** |
+| `kappa_V^h=sin(beta-alpha)` | **VERIFIED** |
+| `kappa_V^phi=cos(beta-alpha)` | **VERIFIED** |
+| exact alignment: `kappa_V^h=1`, `kappa_V^phi=0` | **VERIFIED** |
+| tree-level `AVV=0` | **VERIFIED** |
+| Higgs-basis `Y3=-Z6 v^2/2` | **PARTIALLY VERIFIED: source only; derivation pending** |
+| exact alignment `iff Z6=0` | **PARTIALLY VERIFIED; Higgs-basis derivation pending** |
+| exact `phi H+H-` trilinear | **NOT VERIFIED** |
+| exact generic-to-Higgs-basis `Z7` map | **PARTIALLY VERIFIED: source only** |
+| large-`tan beta`, `lambda7=0` limit of `Z7` | **NOT VERIFIED** |
+| `g_(phi H+H-) ~ -v lambda6` | **NOT VERIFIED** |
+| re-expression in `X=lambda6 tan beta` | **NOT VERIFIED** |
+
+The distinction between the verified gauge alignment statements and the pending `Z6` statement is intentional. Phase 6 establishes alignment operationally through VEV projection and gauge interactions; Phase 7 must establish its Higgs-basis parameter criterion.
+
+## Phase gates
+
+| Gate | Status | Evidence |
+|---|---|---|
+| `PHASE_0_PASS` | **PASS** | source/convention inventory frozen |
+| `PHASE_1_PASS` | **PASS** | fields, charges, VEVs and beta established |
+| `PHASE_2_PASS` | **PASS** | complete generic potential reconstructed |
+| `PHASE_3_PASS` | **PASS** | `V0`, tadpoles and soft-coordinate distinction derived |
+| `PHASE_4_PASS` | **PASS** | all scalar Hessians, Goldstones, masses and state signs derived |
+| `PHASE_5_PASS` | **PASS** | Type-I modifiers derived from `-L_Y` |
+| `PHASE_6_PASS` | **PASS** | `WW/ZZ` masses and scalar modifiers derived from kinetic terms; exact-alignment gauge meaning established |
+| `PHASE_7_PASS` | NOT RUN | Higgs-basis potential must be independently reconstructed |
+| `PHASE_9_PASS` | NOT RUN | exact charged-Higgs trilinear not yet derived |
+
+---
+
+# C. Open issues that remain intentionally open
+
+1. **Global vacuum:** positive physical masses test local quadratic curvature; they do not alone prove the selected neutral stationary point is the global minimum.
+2. **Exact CP-even degeneracy:** at exact degeneracy a unique mixing angle is not defined; state-identification statements must state their non-degeneracy assumption.
+3. **BFLRS11 source-internal sign/factor cautions:** project signs come from its own derivation, not selective source snippets.
+4. **Residual Higgs-basis sign:** `H2 -> -H2` changes `Y3,Z6,Z7` and odd-`H2` couplings together. Phase 7 must freeze the project Higgs-basis sign by the explicit rotation above.
+5. **2HDMC Higgs-basis sign layer:** `get_param_higgs`/`get_coupling_hhh` naming and sign translations require an explicit audit before trilinear comparison.
+6. **GHOO18 approximate-alignment prose typo:** a prose sentence suggesting large `|Z6|` is not used; the explicit Higgs-basis mass matrix will decide the condition.
+
+---
+
+# D. Maintenance rule for all later phases
+
+A phase is not considered closed merely because an auxiliary file exists. Before its gate becomes `PASS`, this canonical document must be enriched with:
+
+1. the assumptions imported from earlier phases;
+2. the derivation in sufficient detail to reproduce signs/factors;
+3. the explicit convention map;
+4. source checks performed after the derivation;
+5. implementation checks, if relevant, performed after the analytic result is frozen;
+6. unresolved questions and the smallest next validation.
+
+This prevents the appendix from becoming a chain of disconnected formulas and keeps the complete reasoning auditable by an independent reviewer.
