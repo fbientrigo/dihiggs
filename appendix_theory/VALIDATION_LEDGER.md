@@ -107,11 +107,12 @@ Degeneracy note: exact degeneracy removes uniqueness of the mixing-angle label, 
 
 ## C7 — Exact `phi H+H-` trilinear
 
-Claim: exact Higgs-basis expression and exact-alignment reduction in a declared potential/Lagrangian/Feynman-rule convention.  
-Status: **NOT VERIFIED**  
-Epistemic class: `OPEN-QUESTION`  
-Prerequisites now resolved: Higgs-basis sign and `Z7` definition.  
-Remaining validation: explicit cubic operator extraction, physical-state substitution and implementation sign translation.
+Claim: the exact potential coefficient is `C_V=v(Z3 cba-Z7 sba)` and at alignment `C_V=-vZ7`; the literal coefficient in `L_int=-V_int` is `+vZ7`; with `L_int=-g phi H+H-`, `g=-vZ7`; the Feynman rule is `-i C_V=+i vZ7` at alignment.  
+Status: **VERIFIED**  
+Epistemic class: `DERIVED`, `SOURCE`, `IMPLEMENTATION-CHECKED`  
+Independent derivation: direct cubic extraction from the Phase-7 Higgs-basis potential and symbolic third derivatives.  
+Source check: GHOO18 defines `q_i` as the coefficient in the potential and prescribes multiplication by `-i`, with combinatorics only for identical fields.  
+Implementation check: active 2HDMC reproduces `-i v(Z3 cba-Z7 sba)` after combining `get_qki` with its local `Z7=-l7` convention.
 
 ## C8 — Exact generic-basis expression for `Z7`
 
@@ -135,22 +136,23 @@ Notes: this does not yet determine the physical `phi H+H-` sign because exact al
 
 ## C10 — Large-`tan beta` approximation for the physical `phi H+H-` trilinear
 
-Claim: determine whether the declared trilinear object satisfies approximately `-v lambda6`.  
-Status: **NOT VERIFIED**  
-Epistemic class: `OPEN-QUESTION`  
-Blocked only on C7/trilinear convention audit; C8–C9 are now closed.
+Claim: object-dependent large-`tan beta` limit at `lambda7=0`.  
+Status: **VERIFIED WITH OBJECT LABELS**  
+Epistemic class: `DERIVED`  
+Results: `C_V=-vZ7 -> +v lambda6`; literal `C_L=+vZ7 -> -v lambda6`; if `L_int=-g phiH+H-`, then `g=C_V -> +v lambda6`; Feynman rule `-> -i v lambda6`.  
+Notes: the old unqualified statement `g~-v lambda6` is convention-ambiguous and must not be used without declaring which object is meant.
 
 ## C11 — Re-expression with `X=lambda6 tan(beta)`
 
-Claim: determine whether the derived trilinear may be rewritten approximately as `-v X cot(beta)`.  
-Status: **NOT VERIFIED**  
-Epistemic class: `PROJECT-DEFINITION`, `OPEN-QUESTION`  
-Blocked on C7/C10.  
-Notes: `X` remains absent from the foundational derivation through Phase 7.
+Claim: rewrite the verified large-`tan beta` objects using `lambda6=X cot(beta)`.  
+Status: **VERIFIED WITH OBJECT LABELS**  
+Epistemic class: `PROJECT-DEFINITION`, `DERIVED`  
+Results: `C_V ~ +v X cot(beta)`, literal `C_L ~ -v X cot(beta)`, `g` under `L_int=-g phiH+H-` is `~ +v X cot(beta)`, and the Feynman rule is `~ -i v X cot(beta)`.  
+Notes: earlier project shorthand `g=vZ7~-vXcot(beta)` corresponds numerically to the literal Lagrangian monomial coefficient `C_L`, not to the potential coefficient or to the `L=-g...` convention under the now-frozen `phi=-rho_perp` sign.
 
 ## Implementation caution carried into the trilinear phase
 
-Phase 7 establishes that `THDM::get_param_higgs` returns `Lambda6,Lambda7` with the **same signs** as the project/DH `Z6,Z7` under the frozen `H2=-s Phi1+c Phi2` convention. However, `THDM::get_coupling_hhh` subsequently defines local `Z6=-l6`, `Z7=-l7`. Therefore that extra minus sign is not part of the basis transformation. It is a local trilinear/Feynman-rule convention layer that must be mapped operator by operator before implementation-level sign comparisons are used.
+Phase 9 resolves the implementation layer: `get_qki` uses second components `(-cba,+sba)` for `(h,H)` while `get_coupling_hhh` uses local `Z7=-Lambda7_returned`. The two sign layers combine to reproduce exactly the project Feynman rules `-i v(Z3 sba+Z7 cba)` and `-i v(Z3 cba-Z7 sba)`. The local minus is therefore an implementation convention, not a different Higgs-basis `Z7`.
 
 ## Phase gates
 
@@ -164,4 +166,4 @@ Phase 7 establishes that `THDM::get_param_higgs` returns `Lambda6,Lambda7` with 
 | `PHASE_5_PASS` | **PASS** | Type-I modifiers derived from the Yukawa Lagrangian |
 | `PHASE_6_PASS` | **PASS** | gauge masses/modifiers derived from kinetic terms |
 | `PHASE_7_PASS` | **PASS** | full Higgs-basis rotation, `Y_i,Z_i`, stationarity, mass matrix and alignment criterion derived/audited |
-| `PHASE_9_PASS` | NOT RUN | exact charged-Higgs trilinear derivation required |
+| `PHASE_9_PASS` | **PASS** | charged-Higgs trilinear extracted directly; potential/Lagrangian/Feynman-rule objects and 2HDMC sign layer resolved |
