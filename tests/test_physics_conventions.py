@@ -9,6 +9,14 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LAKE_PIPELINE = os.path.join(REPO_ROOT, "mlpython", "lake_pipeline")
 CONVENTIONS = os.path.join(REPO_ROOT, "conventions", "physics_conventions.yaml")
 HUMAN_CONTRACT = os.path.join(REPO_ROOT, "docs", "PROJECT_PHYSICS_AUTHORITY.md")
+HIGH_MASS_CONTRACT = os.path.join(REPO_ROOT, "docs", "HIGH_MASS_H2_CONTRACT.md")
+HIGH_MASS_TEMPLATE = os.path.join(
+    REPO_ROOT, "docs", "contracts", "high_mass_campaign_template.yaml"
+)
+HIGH_MASS_SCHEMA = os.path.join(
+    REPO_ROOT, "docs", "contracts", "high_mass_point_schema.yaml"
+)
+CASCADE_CONTRACT = os.path.join(REPO_ROOT, "docs", "contracts", "cascade_contract.yaml")
 
 sys.path.insert(0, LAKE_PIPELINE)
 physics_conventions = importlib.import_module("physics_conventions")
@@ -215,6 +223,49 @@ def test_human_contract_agrees_with_machine_contract():
     ]
     for literal in required_literals:
         assert literal in human
+
+
+def test_high_mass_contract_and_templates_consume_v3_authority():
+    yaml = pytest.importorskip("yaml")
+    with open(HIGH_MASS_TEMPLATE) as fh:
+        template = yaml.safe_load(fh)
+    with open(HIGH_MASS_SCHEMA) as fh:
+        schema = yaml.safe_load(fh)
+    with open(CASCADE_CONTRACT) as fh:
+        cascade = yaml.safe_load(fh)
+    with open(HIGH_MASS_CONTRACT) as fh:
+        high_mass = fh.read()
+
+    convention = template["frozen_assumptions"]["physics_convention"]
+    active = _load_conventions()["mass_conventions"]["active"]
+    assert convention["convention_id"] == active["id"]
+    assert convention["m_h_GeV_text"] == active["value_GeV"]
+    assert convention["schema_version"] == "physics_conventions_v3"
+    assert len(convention["source_commit"]) == 40
+    assert len(convention["source_sha256"]) == 64
+    assert "physics_convention" in template["runner_contract"]["manifest_required_fields"]
+    assert set(template["campaign_choices"]["must_be_explicit_per_manifest"]) == {
+        "sin_beta_minus_alpha",
+        "lambda7",
+        "mA_equals_mHp",
+    }
+
+    fields = {field["name"]: field for field in schema["fields"]}
+    assert fields["physics_convention"]["required"] is True
+    assert set(fields["physics_convention"]["required_fields"]) == {
+        "convention_id",
+        "m_h_GeV_text",
+        "schema_version",
+        "source_repository",
+        "source_commit",
+        "source_path",
+        "source_sha256",
+    }
+    assert "Z2-softly-broken" not in high_mass
+    assert "nonzero `lambda7` is hard Z2 breaking" in high_mass
+    assert "Campaign choice" in high_mass
+    assert cascade["physics_convention"] == convention
+    assert cascade["constants_GeV"]["m_h"] == float(convention["m_h_GeV_text"])
 
 
 def test_ctau_helper():
