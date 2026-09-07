@@ -32,7 +32,7 @@ Audited `main`: `2264ffe1b8d8f59bec69341d6aa1a917396ccb2b`
 | `README.md` | New-looking smoke/orchestrator examples use `125.13` | `aligned_non_authoritative` | Label examples with the v3 convention ID; historical examples require labels |
 | `docs/contracts/canonical_evaluators_v2.md` | Calls `125.13` the default/current convention | `aligned_non_authoritative` | Distinguish v2 replay from v3 production provenance |
 | `docs/HIGH_MASS_H2_CONTRACT.md` | Freezes `125.13` for its campaign and incorrectly calls `lambda6`, `lambda7`, and `m12_sq` soft breaking | mixed: historical mass; `incorrect_claim` for Z2 wording | Preserve campaign numbers; issue #84 corrects active wording and labels the campaign historical |
-| `dihiggs/app/orchestrator/cli.py`, `manifest.py`, `engines/m2_tracker.py` | Carry active-looking `125.13` defaults | `migration_required` | Replace silent defaults with v3 provenance-aware input without changing frozen artifacts |
+| `dihiggs/app/orchestrator/physics_authority.py`, `cli.py`, `manifest.py`, `engines/m2.py`, `engines/m2_tracker.py` | v3 producer path reads the active contract, records ID/schema/repository/commit/path/SHA-256, and rejects an unlabelled mass override | `aligned_non_authoritative` | Keep explicit historical replay separate from this new-production path |
 | `docs/campaigns/high_mass_h2_physical_point_scan_v2_mh12520/` | A 125.20 recalculation exists in repository history but is not present at audited `main` | non-authoritative evidence | Do not infer authority from an unmerged/newer artifact; promote only through normal review |
 
 ## `fbientrigo/dihiggs_ufo`
