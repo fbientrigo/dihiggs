@@ -22,18 +22,33 @@ constants:
 
 mass_conventions:
   active:
-    id: mh_125p20_project_2026
+    id: mh_125p13_pdg_2026
     state: h
-    value_GeV: "125.20"
+    value_GeV: "125.13"
     serialization: decimal_string
     status: active_new_production
-    authority_kind: project_decision
+    authority_kind: external_measurement
     decision_issue: https://github.com/fbientrigo/dihiggs/issues/83
-    external_measurement_claim: false
+    external_measurement_claim: true
+    external_source:
+      publisher: Particle Data Group
+      edition: 2026
+      url: https://pdg.lbl.gov/2026/listings/rpp2026-list-higgs-boson.pdf
+      central_value_GeV: "125.13"
+      uncertainty_GeV: "0.11"
     note: >-
-      This is the project's frozen production convention. It is not presented
-      as the PDG 2026 world-average central value.
+      This is the PDG 2026 world-average central value adopted as the
+      project's frozen production convention.
   historical:
+    - id: mh_125p20_project_pre_v3
+      value_GeV: "125.20"
+      status: superseded_pending_consumer_migration
+      new_production_allowed: false
+      preserve_for_replay: true
+      scope: >-
+        Former project convention still present in identified downstream
+        code, configuration, campaign state, documentation, and tests; see
+        migration.pending_125p20_uses. It must not seed a new run after v3.
     - id: mh_125p13_high_mass_v1
       value_GeV: "125.13"
       status: historical
@@ -191,6 +206,67 @@ stage_ownership:
     does_not_own: [upstream_model_quantities, UFO_implementation, MadGraph_cross_sections, recast_efficiency]
 
 migration:
+  pending_125p20_uses:
+    purpose: >-
+      Closed inventory of exact 125.20 convention uses found on audited main
+      branches. It is a migration queue, not authority. New production must
+      not read any pending entry after this contract is adopted.
+    required_before_new_production: true
+    discovery_rule: >-
+      Search exact convention token 125.20 in active code, configuration,
+      documentation, and tests. Do not classify unrelated longer numerical
+      values (for example detector geometry coordinates) as Higgs masses.
+    occurrences:
+      - repository: fbientrigo/dihiggs_ufo
+        path: docs/PHYSICAL_POINT_UFO_HANDOFF.md
+        kind: documentation
+        action: replace_false_PDG_attribution_and_link_v3
+      - repository: fbientrigo/dihiggs_ufo
+        path: pack_b/operator/build_model_derived.py
+        kind: historical_builder_comment
+        action: preserve_125p13_builder_and_replace_active_125p20_reference_with_v3
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: conventions/physics_conventions.yaml
+        kind: controlled_cache
+        action: replace_with_byte_identical_v3_cache_and_provenance_sidecar
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: src/llp_recast/constants.py
+        kind: active_code_default
+        action: replace_pinned_text_and_v3_loader_path
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: scripts/run_mass_jet_control_campaign.py
+        kind: active_campaign_script
+        action: parameterize_or_adopt_active_v3_mass_with_explicit_provenance
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: state/CURRENT_CAMPAIGN.yaml
+        kind: current_campaign_state
+        action: classify_as_frozen_125p20_campaign_or_regenerate_as_a_new_125p13_campaign
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: docs/MH_CONVENTION.md
+        kind: documentation
+        action: replace_false_PDG_attribution_and_link_v3
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: docs/CURRENT_DATA_AUTHORITY.md
+        kind: documentation
+        action: separate_data_authority_from_v3_physics_authority
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: tests/test_constants.py
+        kind: regression_test
+        action: update_only_with_the_corresponding_constants_migration
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: tests/test_run_physical_point_madgraph.py
+        kind: regression_test
+        action: label_125p20_cases_historical_or_update_new_production_fixture
+      - repository: fbientrigo/dihiggs_hep_cross
+        path: tests/test_madgraph_banner_verification.py
+        kind: regression_test
+        action: label_125p20_cases_historical_or_update_new_production_fixture
+  excluded_numeric_collision:
+    repository: fbientrigo/dihiggs_llp_recast
+    path: results/r8_h2_model_derived_4b/run_01/geometry.csv
+    reason: >-
+      Values such as 125.2024322162061 are geometry data, not an exact Higgs
+      mass convention token; preserve the frozen result unchanged.
   downstream_copy:
     authority: false
     content_policy: byte_identical_cache
