@@ -120,8 +120,10 @@ handoff consumer is permitted to treat as physically meaningful. See
 ### Variant A — `FACTORIZED_G_ONLY`
 
 - Purpose: clean production/kinematics + detector-response benchmarking.
-- `pp -> H2 H2` is generated directly from `g_hH2H2_GeV`; H2 is stable in the
-  LHE; a specific H2 decay may be forced in Pythia for response studies.
+- `pp -> H2 H2` uses the signed `g_physical_hphiphi_GeV` and the declared
+  2HDMC-to-UFO mapping; `g_hH2H2_GeV` is only its non-negative compatibility
+  magnitude. H2 is stable in the LHE; a specific H2 decay may be forced in
+  Pythia for response studies.
 - Carries **both** `ctau_physical_mm` (from `total_width_H2`, informational
   only in this variant) **and** `ctau_response_mm` (whatever lifetime the
   response study independently scans). These must never be identified with
@@ -251,9 +253,10 @@ same check), width decomposition closes to `1e-9` relative or better,
 `ctau_mm` is internally consistent with `total_width_GeV`, the mass
 hierarchy holds by construction (`mH2 < mA = mHp`, `mh < mH2`), cascade
 flags are computed and consistent with the forced hierarchy, theory status
-is recorded (not assumed), and `g_hH2H2_GeV` is finite and non-negative for
-every constructed point. `width_tt_GeV` is confirmed exactly zero below
-threshold and monotonically rising through `P1 < P3 < P4 < P5`.
+is recorded (not assumed), the signed trilinear and its magnitude are finite,
+and the legacy `g_hH2H2_GeV` alias is non-negative for every constructed
+point. `width_tt_GeV` is confirmed exactly zero below threshold and
+monotonically rising through `P1 < P3 < P4 < P5`.
 
 ## 8. Downstream interfaces (not modified in this task)
 

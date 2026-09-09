@@ -1,5 +1,5 @@
 {
-  "schema": "dihiggs.h2_production_coupling.v1",
+  "schema": "dihiggs.h2_production_coupling.v2",
   "point_id": "H2scan_mH150_tb300000",
   "construction_theory_status": "VALIDATED",
   "benchmark_commit": "92ad4d80f537bffd8663e42f1c6881e82849feab",
@@ -32,15 +32,38 @@
     "final_scalar_pdg": 9000006
   },
   "coupling": {
-    "name": "h-H2-H2",
+    "name": "h-phi-phi",
+    "two_hdmc_hphiphi_real_GeV": 0.0,
+    "two_hdmc_hphiphi_imag_GeV": -63.5914252007596588,
+    "g_physical_hphiphi_GeV": 63.5914252007596588,
+    "g_physical_hphiphi_abs_GeV": 63.5914252007596588,
     "g_hH2H2_GeV": 63.5914252007596588,
-    "two_hdmc_returned_real_GeV": 0.0,
-    "two_hdmc_returned_imag_GeV": -63.5914252007596588,
-    "two_hdmc_convention": "c = -i*g for the real scalar coefficient g; no factorial or symmetry rescaling",
-    "ufo_GHphiphi_convention": "H h2 h2 vertex is +i*GHphiphi",
-    "converted_GHphiphi_GeV": -63.5914252007596588,
-    "conversion_formula": "GHphiphi = Im(c) = -g_hH2H2_GeV",
+    "legacy_alias": "g_hH2H2_GeV = g_physical_hphiphi_abs_GeV",
+    "potential_convention": "V contains +(g_physical_hphiphi_GeV/2!)*h*phi^2",
+    "interaction_convention": "L_int=-V contains -(g_physical_hphiphi_GeV/2!)*h*phi^2",
+    "two_hdmc_convention": "c=-i*d^3V/(dh*dphi*dphi)=-i*g_physical_hphiphi_GeV",
+    "feynman_rule": "-i*g_physical_hphiphi_GeV",
+    "ufo_mapping": "GH1H2H2=-i*c=Im(c)=-g_physical_hphiphi_GeV; vertex +i*GH1H2H2",
     "source_evidence": "2hdmc/src/THDM.cpp get_coupling_hhh; output block REGH1H2H2/IMGH1H2H2"
+  },
+  "opposite_sign_valid_point": {
+    "construction": {
+      "m_h_GeV": 125.13,
+      "m_phi_GeV": 250.0,
+      "mA_GeV": 500.0,
+      "mHp_GeV": 500.0,
+      "sin_beta_minus_alpha": 1.0,
+      "tan_beta": 1.1,
+      "M2_GeV2": 75000.0,
+      "lambda6": 0.0,
+      "lambda7": 0.0,
+      "yukawa_type": 1
+    },
+    "theory_ok_v1": true,
+    "two_hdmc_hphiphi_real_GeV": 0.0,
+    "two_hdmc_hphiphi_imag_GeV": 37.9435525437830847,
+    "g_physical_hphiphi_GeV": -37.9435525437830847,
+    "g_physical_hphiphi_abs_GeV": 37.9435525437830847
   },
   "replay": {
     "total_width_GeV": 4.56118529862185007e-14,

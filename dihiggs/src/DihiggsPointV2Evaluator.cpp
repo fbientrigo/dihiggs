@@ -50,6 +50,8 @@ struct Result {
     double positivity_ok = nan(), unitarity_ok = nan(), perturbativity_ok = nan();
     double stability_ok = nan(), triple_ok = nan(), theory_ok = nan();
     double experimental_evaluated = 0.0, experimental_ok = nan();
+    double two_hdmc_hphiphi_real_GeV = nan(), two_hdmc_hphiphi_imag_GeV = nan();
+    double g_physical_hphiphi_GeV = nan(), g_physical_hphiphi_abs_GeV = nan();
     double g_hH2H2_GeV = nan();
     std::array<double, 10> widths{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
     std::array<double, 10> brs{{nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan(), nan()}};
@@ -177,6 +179,29 @@ Result evaluate(const Config& c, double mH, double M2) {
         return r;
     }
 
+    std::complex<double> coupling_h1_h2_h2;
+    model.get_coupling_hhh(1, 2, 2, coupling_h1_h2_h2);
+    r.two_hdmc_hphiphi_real_GeV = coupling_h1_h2_h2.real();
+    r.two_hdmc_hphiphi_imag_GeV = coupling_h1_h2_h2.imag();
+    if (!std::isfinite(r.two_hdmc_hphiphi_real_GeV) ||
+        !std::isfinite(r.two_hdmc_hphiphi_imag_GeV)) {
+        r.numerical_ok = 0.0;
+        r.rejection_stage = "coupling";
+        r.rejection_reason = "nonfinite_hphiphi_coupling";
+        return r;
+    }
+    if (r.two_hdmc_hphiphi_real_GeV != 0.0) {
+        r.numerical_ok = 0.0;
+        r.rejection_stage = "coupling";
+        r.rejection_reason = "unknown_hphiphi_coupling_convention";
+        return r;
+    }
+    // 2HDMC returns the Feynman rule c=-i*d^3V; L_int=-V.  Thus the
+    // signed potential coefficient is -Im(c), with no extra 2! factor.
+    r.g_physical_hphiphi_GeV = -r.two_hdmc_hphiphi_imag_GeV;
+    r.g_physical_hphiphi_abs_GeV = std::abs(r.g_physical_hphiphi_GeV);
+    r.g_hH2H2_GeV = r.g_physical_hphiphi_abs_GeV;
+
     Constraints constraints(model);
     r.positivity_ok = constraints.check_positivity() ? 1.0 : 0.0;
     r.unitarity_ok = constraints.check_unitarity() ? 1.0 : 0.0;
@@ -188,10 +213,6 @@ Result evaluate(const Config& c, double mH, double M2) {
     else if (!r.unitarity_ok) { r.rejection_stage = "unitarity"; r.rejection_reason = "check_unitarity_false"; }
     else if (!r.perturbativity_ok) { r.rejection_stage = "perturbativity"; r.rejection_reason = "check_perturbativity_false"; }
     else { r.rejection_stage = "accepted"; r.rejection_reason = "none"; }
-
-    std::complex<double> coupling_h1_h2_h2;
-    model.get_coupling_hhh(1, 2, 2, coupling_h1_h2_h2);
-    r.g_hH2H2_GeV = std::abs(coupling_h1_h2_h2.imag());
 
     DecayTable decays(model);
     r.widths = {{decays.get_gamma_hdd(2, 3, 3), decays.get_gamma_huu(2, 2, 2),
@@ -222,7 +243,9 @@ void header(std::ostream& out) {
         << "lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,tan_beta_reconstructed,"
         << "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
         << "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
-        << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,"
+        << "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,"
+        << "two_hdmc_hphiphi_real_GeV,two_hdmc_hphiphi_imag_GeV,g_physical_hphiphi_GeV,"
+        << "g_physical_hphiphi_abs_GeV,g_hH2H2_GeV,"
         << "width_bb_GeV,width_cc_GeV,width_tt_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,"
         << "width_Zgamma_GeV,width_gg_GeV,width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tt,br_tautau,br_WW,br_ZZ,"
         << "br_gammagamma,br_Zgamma,br_gg,br_hh,width_ok,ctau_mm\n";
@@ -238,7 +261,9 @@ void row(std::ostream& out, const Config& c, const Result& r, const std::string&
         << ',' << r.construction_ok << ',' << r.numerical_ok << ',' << r.rejection_stage << ',' << r.rejection_reason
         << ',' << r.positivity_ok << ',' << r.unitarity_ok << ',' << r.perturbativity_ok << ',' << r.stability_ok
         << ',' << kStabilityAlias << ',' << r.triple_ok << ',' << r.theory_ok << ',' << r.experimental_evaluated
-        << ',' << r.experimental_ok << ',' << r.g_hH2H2_GeV;
+        << ',' << r.experimental_ok << ',' << r.two_hdmc_hphiphi_real_GeV
+        << ',' << r.two_hdmc_hphiphi_imag_GeV << ',' << r.g_physical_hphiphi_GeV
+        << ',' << r.g_physical_hphiphi_abs_GeV << ',' << r.g_hH2H2_GeV;
     for (double value : r.widths) out << ',' << value;
     out << ',' << r.total_width << ',' << r.width_unaccounted;
     for (double value : r.brs) out << ',' << value;

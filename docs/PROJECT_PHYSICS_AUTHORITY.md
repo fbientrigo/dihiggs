@@ -155,14 +155,38 @@ different questions and must never share an unlabeled `coupling` column.
 ### `physical_2HDM`
 
 The model-derived trilinear is obtained from the validated 2HDMC model point
-through `get_coupling_hhh(1,2,2,c)`. The current compatibility field
-`g_hH2H2_GeV` stores an absolute magnitude. It does not preserve the signed
-potential coefficient or the complete Feynman-rule convention.
+through `get_coupling_hhh(1,2,2,c)`. With `h1=h` and `h2=phi`, define the
+signed physical trilinear by
 
-Signed export is deliberately `unresolved` until issue #85 audits the
-potential coefficient, `L_int = -V`, the complex 2HDMC return value, symmetry
-factors, and the UFO vertex. Any sign-sensitive use must fail closed in the
-meantime.
+```text
+V contains       +(g_physical_hphiphi_GeV / 2!) h phi^2,
+L_int = -V       contains -(g_physical_hphiphi_GeV / 2!) h phi^2,
+Feynman rule     = -i g_physical_hphiphi_GeV.
+```
+
+The `2!` accounts for the two identical `phi` fields. Differentiating `V`
+twice with respect to `phi` cancels it, so no further factorial multiplies or
+divides the physical coupling. The vendored 2HDMC implementation returns the
+complete Feynman rule,
+
+```text
+c = -i d^3V/(dh dphi dphi) = -i g_physical_hphiphi_GeV.
+```
+
+The canonical point therefore serializes `two_hdmc_hphiphi_real_GeV=Re(c)`,
+`two_hdmc_hphiphi_imag_GeV=Im(c)`, the signed
+`g_physical_hphiphi_GeV=-Im(c)`, and
+`g_physical_hphiphi_abs_GeV=abs(g_physical_hphiphi_GeV)`. The legacy
+`g_hH2H2_GeV` remains an exact alias of the absolute magnitude and does not
+carry sign semantics. These are derived observables and do not enter
+`point_id`.
+
+The vendored MG/UFO adapter independently maps
+`GH1H2H2=-i*c=Im(c)=-g_physical_hphiphi_GeV`; its scalar vertex convention is
+`+i*GH1H2H2`, reproducing the same `-i*g_physical_hphiphi_GeV` Feynman rule.
+A non-finite component or a nonzero real component under the declared
+CP-conserving convention is rejected before widths are evaluated. A different
+complex convention must be declared and versioned rather than guessed.
 
 ### `effective_mass_only`
 

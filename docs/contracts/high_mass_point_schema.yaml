@@ -98,12 +98,28 @@ fields:
     evaluator_field: yukawa_type_installed
 
   # --- production coupling ---
+  - name: two_hdmc_hphiphi_real_GeV
+    type: float
+    source: dihiggs.point.v2
+    note: Raw real component of THDM::get_coupling_hhh(1,2,2,c); must be zero for the declared CP-conserving convention.
+  - name: two_hdmc_hphiphi_imag_GeV
+    type: float
+    source: dihiggs.point.v2
+    note: Raw imaginary component of THDM::get_coupling_hhh(1,2,2,c).
+  - name: g_physical_hphiphi_GeV
+    type: float
+    source: dihiggs.point.v2
+    note: Signed coefficient d^3V/(dh*dphi*dphi) = -two_hdmc_hphiphi_imag_GeV.
+  - name: g_physical_hphiphi_abs_GeV
+    type: float
+    source: dihiggs.point.v2
+    note: Absolute magnitude of g_physical_hphiphi_GeV.
   - name: g_hH2H2_GeV
     type: float
     source: dihiggs.point.v2
     note: >
-      Owned exclusively by the canonical evaluator. Downstream repositories
-      must not rederive this value from lambda_i by hand.
+      Compatibility alias for g_physical_hphiphi_abs_GeV. New sign-sensitive
+      consumers must use g_physical_hphiphi_GeV.
 
   # --- explicit partial widths (GeV) ---
   - name: width_bb
