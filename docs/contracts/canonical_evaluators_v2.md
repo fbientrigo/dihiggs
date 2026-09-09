@@ -89,24 +89,34 @@ THDM::get_coupling_hhh(1, 2, 2, c)
 ```
 
 on the same `THDM` object used to compute the point's widths and branching
-ratios, and exports
+ratios. It exports the raw components, the signed potential coefficient, and
+its compatibility magnitude:
 
 ```text
-g_hH2H2_GeV = abs(Im(c))
+two_hdmc_hphiphi_real_GeV = Re(c)
+two_hdmc_hphiphi_imag_GeV = Im(c)
+g_physical_hphiphi_GeV     = -Im(c)
+g_physical_hphiphi_abs_GeV = abs(g_physical_hphiphi_GeV)
+g_hH2H2_GeV                = g_physical_hphiphi_abs_GeV
 ```
 
 The frozen convention is
 
 ```text
-2HDMC: c = -i*g
-UFO:   GHphiphi = Im(c) = -g_hH2H2_GeV
+V:     +(g_physical_hphiphi_GeV / 2!) h phi^2
+L_int: -(g_physical_hphiphi_GeV / 2!) h phi^2
+2HDMC: c = -i*g_physical_hphiphi_GeV
+UFO:   GHphiphi = Im(c) = -g_physical_hphiphi_GeV
 ```
 
-There is no factorial or symmetry rescaling. The field is a derived observable,
-not a scan coordinate, so adding it does not change `point_id`. It remains
-`nan` for rows that fail before the coupling can be evaluated. Theory rejection
-alone does not mask the observable: a successfully constructed numerical point
-still carries its model coupling even if a later theory predicate fails.
+The `2!` is for identical `phi` fields; no additional rescaling applies.
+Sign-sensitive consumers must use `g_physical_hphiphi_GeV`, not the legacy
+absolute-magnitude alias. A non-finite component or nonzero real component is
+rejected as an unknown convention. These fields are derived observables, not
+scan coordinates, so adding them does not change `point_id`. They remain `nan`
+for rows that fail before the coupling can be evaluated. Theory rejection alone
+does not mask the observable: a successfully constructed numerical point still
+carries its model coupling even if a later theory predicate fails.
 
 ### Explicit top-pair width (Gate A, high-mass factory)
 
@@ -134,14 +144,16 @@ The benchmark `H2scan_mH150_tb300000` freezes the cross-contract anchor
 
 ```text
 mH = 150 GeV
-g_hH2H2_GeV = 63.5914252007596588 GeV
+g_physical_hphiphi_GeV = 63.5914252007596588 GeV
+g_hH2H2_GeV = 63.5914252007596588 GeV (compatibility magnitude)
 ctau_mm = 4.32622152973311191
 br_bb = 0.756737485808578692
 ```
 
 and the point-v2 tests require the canonical producer to reproduce that anchor
 from the same direct `set_param_phys` construction. Downstream repositories
-must consume `g_hH2H2_GeV`; they must not rederive the coupling convention.
+must consume the signed `g_physical_hphiphi_GeV` when sign matters; they must
+not rederive the coupling convention.
 
 ## Experimental M² tracker
 

@@ -144,8 +144,12 @@ def test_three_trilinear_prescriptions_remain_distinct():
         "effective_m22_shifted",
     }
     assert prescriptions["physical_2HDM"]["category"] == "model_derived"
-    assert prescriptions["physical_2HDM"]["signed_export_status"] == "unresolved"
-    assert prescriptions["physical_2HDM"]["sign_sensitive_use"] == "fail_closed"
+    physical = prescriptions["physical_2HDM"]
+    assert physical["signed_export_status"] == "resolved"
+    assert physical["signed_field"] == "g_physical_hphiphi_GeV"
+    assert physical["magnitude_field"] == "g_physical_hphiphi_abs_GeV"
+    assert physical["current_compatibility_field"] == "g_hH2H2_GeV"
+    assert physical["invalid_output_action"] == "reject"
     assert prescriptions["effective_mass_only"]["formula"] == "8*m_phi^2/v"
     assert prescriptions["effective_m22_shifted"]["formula"] == (
         "8*(m_phi^2-m22_sq)/v"
@@ -217,7 +221,9 @@ def test_human_contract_agrees_with_machine_contract():
         "M2 sin(beta) cos(beta)",
         "8 m_phi^2 / v",
         "8 (m_phi^2 - m22_sq) / v",
-        "Signed export is deliberately `unresolved`",
+        "g_physical_hphiphi_GeV=-Im(c)",
+        "Feynman rule",
+        "The `2!` accounts",
         "source_commit",
         "source_sha256",
         "fail closed",

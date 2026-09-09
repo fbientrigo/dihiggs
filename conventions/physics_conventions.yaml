@@ -156,10 +156,25 @@ trilinear_prescriptions:
     source_repository: fbientrigo/dihiggs
     source_calculator: 2HDMC
     source_call: get_coupling_hhh(1,2,2,c)
+    raw_complex_fields:
+      real: two_hdmc_hphiphi_real_GeV
+      imaginary: two_hdmc_hphiphi_imag_GeV
+    signed_field: g_physical_hphiphi_GeV
+    magnitude_field: g_physical_hphiphi_abs_GeV
     current_compatibility_field: g_hH2H2_GeV
     current_compatibility_semantics: absolute_magnitude
-    signed_export_status: unresolved
-    sign_sensitive_use: fail_closed
+    compatibility_relation: g_hH2H2_GeV = g_physical_hphiphi_abs_GeV
+    potential_term: V contains +(g_physical_hphiphi_GeV/2!)*h*phi^2
+    interaction_term: L_int=-V contains -(g_physical_hphiphi_GeV/2!)*h*phi^2
+    identical_phi_symmetry_factor: "2!"
+    two_hdmc_return: c = -i*g_physical_hphiphi_GeV
+    feynman_rule: -i*g_physical_hphiphi_GeV
+    ufo_parameter_mapping: GH1H2H2 = -i*c = two_hdmc_hphiphi_imag_GeV = -g_physical_hphiphi_GeV
+    ufo_vertex_convention: +i*GH1H2H2
+    signed_export_status: resolved
+    sign_sensitive_use: g_physical_hphiphi_GeV
+    invalid_output_action: reject
+    convention_unknown_when: nonzero real component for the declared CP-conserving convention
     resolution_issue: https://github.com/fbientrigo/dihiggs/issues/85
   effective_mass_only:
     label: project effective mass-only prescription
@@ -300,4 +315,5 @@ failure_policy:
     - a trilinear prescription is absent or unknown
     - a required prescription input is absent
     - an unresolved sign or UFO-vertex mapping is used in a sign-sensitive calculation
+    - the physical 2HDM trilinear is non-finite or has an unknown complex convention
     - downstream convention provenance is absent or its checksum mismatches

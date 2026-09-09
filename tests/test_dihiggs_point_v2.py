@@ -17,7 +17,8 @@ HEADER = (
     "lambda5_reconstructed,lambda6_reconstructed,lambda7_reconstructed,tan_beta_reconstructed,"
     "m12_sq_reconstructed_GeV2,M2_reconstructed_GeV2,construction_ok,numerical_ok,rejection_stage,rejection_reason,"
     "positivity_reported_ok,unitarity_ok,perturbativity_ok,stability_reported_ok,stability_dependency_alias,"
-    "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,g_hH2H2_GeV,width_bb_GeV,width_cc_GeV,"
+    "triple_ok_legacy,theory_ok_v1,experimental_evaluated,experimental_ok,two_hdmc_hphiphi_real_GeV,"
+    "two_hdmc_hphiphi_imag_GeV,g_physical_hphiphi_GeV,g_physical_hphiphi_abs_GeV,g_hH2H2_GeV,width_bb_GeV,width_cc_GeV,"
     "width_tt_GeV,width_tautau_GeV,width_WW_GeV,width_ZZ_GeV,width_gammagamma_GeV,width_Zgamma_GeV,width_gg_GeV,"
     "width_hh_GeV,total_width_GeV,width_unaccounted_GeV,br_bb,br_cc,br_tt,br_tautau,br_WW,br_ZZ,br_gammagamma,br_Zgamma,br_gg,"
     "br_hh,width_ok,ctau_mm"
@@ -118,10 +119,52 @@ def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
         l7=0.0,
     )
     assert row["construction_ok"] == "1"
+    assert row["point_id"] == "point_c7afb83ab8127e47"
+    assert float(row["two_hdmc_hphiphi_real_GeV"]) == 0.0
+    assert float(row["two_hdmc_hphiphi_imag_GeV"]) == pytest.approx(-63.5914252007596588, rel=0.0, abs=1e-10)
+    assert float(row["g_physical_hphiphi_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
+    assert float(row["g_physical_hphiphi_abs_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
     assert float(row["g_hH2H2_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
     assert float(row["total_width_GeV"]) == pytest.approx(4.56118529862185007e-14, rel=0.0, abs=1e-24)
     assert float(row["br_bb"]) == pytest.approx(0.756737485808578692, rel=0.0, abs=1e-12)
     assert float(row["ctau_mm"]) == pytest.approx(4.32622152973311191, rel=0.0, abs=1e-10)
+
+
+def test_frozen_point_matches_analytic_potential_derivative(tmp_path):
+    _, (row,), _ = run_point(
+        tmp_path, "analytic-derivative", mh=125.13, mH=150.0, mA=450.0,
+        mHp=450.0, sba=1.0, tb=300000.0, M2=22499.999999500335,
+        l6=1e-10, l7=0.0,
+    )
+    l1, l2, l3, l4, l5, l6, l7 = (
+        float(row[f"lambda{i}_reconstructed"]) for i in range(1, 8)
+    )
+    beta = math.atan(float(row["tan_beta_reconstructed"]))
+    s2b, c2b = math.sin(2.0 * beta), math.cos(2.0 * beta)
+    lambda345 = l3 + l4 + l5
+    common = 0.25 * s2b**2 * (l1 + l2 - 2.0 * lambda345) - s2b * c2b * (l6 - l7)
+    z345 = (common + l3) + (common + l4) + (common + l5)
+    v = math.sqrt(1.0 / (math.sqrt(2.0) * 1.16637e-5))
+
+    # At exact alignment V contains (Z3+Z4+Z5)(v+h)^2*phi^2/4.
+    # The h*phi^2 coefficient is g/2, so d^3V/(dh dphi dphi)=g.
+    potential_h_phi2_coefficient = 0.5 * v * z345
+    analytic_third_derivative = 2.0 * potential_h_phi2_coefficient
+    assert float(row["g_physical_hphiphi_GeV"]) == pytest.approx(
+        analytic_third_derivative, rel=2e-15
+    )
+
+
+def test_valid_opposite_sign_point_preserves_signed_coupling(tmp_path):
+    _, (row,), _ = run_point(
+        tmp_path, "opposite-sign", mH=250.0, mA=500.0, mHp=500.0, sba=1.0,
+        tb=1.1, M2=75000.0, l6=0.0, l7=0.0,
+    )
+    assert row["theory_ok_v1"] == "1.00000000000000000e+00"
+    assert float(row["two_hdmc_hphiphi_imag_GeV"]) == pytest.approx(37.9435525437830847, rel=0.0, abs=1e-10)
+    assert float(row["g_physical_hphiphi_GeV"]) == pytest.approx(-37.9435525437830847, rel=0.0, abs=1e-10)
+    assert float(row["g_physical_hphiphi_abs_GeV"]) == pytest.approx(37.9435525437830847, rel=0.0, abs=1e-10)
+    assert float(row["g_hH2H2_GeV"]) == float(row["g_physical_hphiphi_abs_GeV"])
 
 
 def test_top_pair_width_is_explicit_and_zero_below_threshold(tmp_path):
@@ -154,7 +197,8 @@ def test_ordering_boundary_emits_success_and_failure_with_nan_masks(tmp_path):
     _, rows, _ = run_point(tmp_path, "ordering", mH=below, mH_max=125.13, n_mH=2)
     assert [row["construction_ok"] for row in rows] == ["0", "1"]
     assert rows[0]["rejection_reason"] == "mh_gt_mH"
-    for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "g_hH2H2_GeV", "total_width_GeV", "width_ok"):
+    for field in ("numerical_ok", "lambda1_reconstructed", "theory_ok_v1", "two_hdmc_hphiphi_imag_GeV",
+                  "g_physical_hphiphi_GeV", "g_physical_hphiphi_abs_GeV", "g_hH2H2_GeV", "total_width_GeV", "width_ok"):
         assert rows[0][field] == "nan"
     assert rows[0]["yukawa_type_installed"] == "nan"
 
@@ -163,7 +207,8 @@ def test_construction_failure_preserves_row_without_decay_evaluation(tmp_path):
     _, (row,), _ = run_point(tmp_path, "construction-failure", mA=-1.0)
     assert row["construction_ok"] == "0"
     assert row["yukawa_type_installed"] == "nan"
-    for field in ("g_hH2H2_GeV", "width_bb_GeV", "width_tautau_GeV", "total_width_GeV", "width_unaccounted_GeV", "ctau_mm"):
+    for field in ("two_hdmc_hphiphi_imag_GeV", "g_physical_hphiphi_GeV", "g_physical_hphiphi_abs_GeV",
+                  "g_hH2H2_GeV", "width_bb_GeV", "width_tautau_GeV", "total_width_GeV", "width_unaccounted_GeV", "ctau_mm"):
         assert row[field] == "nan"
 
 
