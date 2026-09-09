@@ -61,6 +61,35 @@ def _authority_commit() -> str:
     return completed.stdout.strip() if completed.returncode == 0 else "unknown"
 
 
+def _attested_authority_commit(source_commit: Optional[str], authority_path: str) -> str:
+    """Return a commit only when it contains the authority bytes in use.
+
+    A provenance manifest is an immutable claim: its commit and SHA-256 must
+    identify the same authority file.  In particular, never let an edited
+    working-tree authority masquerade as the bytes at ``HEAD``.
+    """
+    commit = source_commit or _authority_commit()
+    if not commit or commit == "unknown":
+        raise RuntimeError("new production requires a Git commit for physics-authority provenance")
+    try:
+        completed = subprocess.run(
+            ["git", "show", f"{commit}:{authority_path}"],
+            cwd=_REPOSITORY_ROOT,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise RuntimeError("cannot verify physics authority against source_commit") from exc
+    if completed.returncode != 0:
+        raise RuntimeError("cannot read physics authority from source_commit")
+    if completed.stdout != _CONVENTIONS_PATH.read_bytes():
+        raise RuntimeError(
+            "physics authority bytes do not match source_commit; "
+            "commit the authority change or restore the committed contract"
+        )
+    return commit
+
+
 def convention_provenance(
     *, source_commit: Optional[str], requested_mass_gev: Optional[float] = None
 ) -> Dict[str, Any]:
@@ -74,6 +103,7 @@ def convention_provenance(
             "historical replay requires an explicit historical interface"
         )
     authority = contract["authority"]
+    source_commit = _attested_authority_commit(source_commit, authority["path"])
     digest = hashlib.sha256(_CONVENTIONS_PATH.read_bytes()).hexdigest()
     return {
         "convention_id": active["id"],
@@ -86,7 +116,7 @@ def convention_provenance(
         "source_url": active["external_source"]["url"],
         "schema_version": contract["schema_version"],
         "source_repository": authority["repository"],
-        "source_commit": source_commit or _authority_commit(),
+        "source_commit": source_commit,
         "source_path": authority["path"],
         "source_sha256": digest,
     }

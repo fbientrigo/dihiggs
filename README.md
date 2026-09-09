@@ -16,7 +16,15 @@ It is not a maintained ML or campaign-results repository.
 - dihiggs/app/Phys_M2BandTracker: experimental bounded-pilot boundary helper;
   its intervals are not canonical point-production evidence.
 
-The frozen contract is docs/contracts/canonical_evaluators_v2.md.
+The frozen contract is docs/contracts/canonical_evaluators_v2.md. New
+production follows [the project physics authority](docs/PROJECT_PHYSICS_AUTHORITY.md):
+`mh_125p13_pdg_2026`, serialized as `"125.13"` GeV. Historical values remain
+replay-only under their named convention IDs.
+
+The direct `DihiggsPointV2Evaluator` requires its named `--mh` argument. The
+Python `--engine m2` wrapper resolves an omitted `--mh` from that authority and
+writes convention ID, decimal mass text, schema, repository, commit, path, and
+SHA-256 into `run_manifest.json`; it rejects an unlabelled mass override.
 
 ## Canonical schemas
 

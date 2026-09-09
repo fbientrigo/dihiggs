@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from dihiggs.app.orchestrator.io_utils import detect_git_info
+from dihiggs.app.orchestrator.physics_authority import convention_provenance
 
 INPUT_HEADER = (
     "point_id", "mh_gev", "mH_gev", "mA_gev", "mHp_gev",
@@ -92,6 +93,14 @@ def write_input_csv(path: Path, rows: Sequence[dict[str, str]]) -> str:
     return sha256(path)
 
 
+def _single_requested_mass(rows: Sequence[dict[str, str]]) -> float:
+    """Reject a mixed-mass new-production manifest before evaluation."""
+    values = {float(row["mh_gev"]) for row in rows}
+    if len(values) != 1:
+        raise ValueError("new lambda1-v2 production must declare one Higgs-mass convention")
+    return values.pop()
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -148,8 +157,13 @@ def run_lambda1_v2(
     )
     if run_dir.exists() and not force and manifest_path.exists():
         raise FileExistsError(f"run already exists: {run_dir}; use --force to overwrite")
-    input_sha = write_input_csv(input_csv, rows)
     git = detect_git_info(repo_root)
+    requested_mass_gev = _single_requested_mass(rows)
+    mass_convention = convention_provenance(
+        source_commit=git.get("commit"),
+        requested_mass_gev=requested_mass_gev,
+    )
+    input_sha = write_input_csv(input_csv, rows)
     command = build_command(executable, input_csv, output_csv)
     manifest: dict[str, object] = {
         "schema_version": "orchestrator.lambda1_v2",
@@ -166,6 +180,7 @@ def run_lambda1_v2(
         "git": git,
         "repository_commit": git.get("commit"),
         "dirty_state": git.get("is_dirty"),
+        "mass_convention": mass_convention,
         "twohdmc_provenance": _twohdmc_provenance(repo_root),
         "status": "dry_run" if dry_run else "planned",
     }

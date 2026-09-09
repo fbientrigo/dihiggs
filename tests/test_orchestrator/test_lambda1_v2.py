@@ -87,6 +87,27 @@ def test_run_preserves_manifest_provenance_and_row_count(tmp_path: Path) -> None
     assert manifest["row_count"] == 4
     assert manifest["requested_row_count"] == 4
     assert len(manifest["input_sha256"]) == 64
+    assert manifest["mass_convention"]["convention_id"] == "mh_125p13_pdg_2026"
+    assert manifest["mass_convention"]["m_h_GeV_text"] == "125.13"
+    assert manifest["mass_convention"]["schema_version"] == "physics_conventions_v3"
+    assert len(manifest["mass_convention"]["source_sha256"]) == 64
     saved = json.loads((tmp_path / "out/campaign=pilot/run-1/run_manifest.json").read_text())
     assert saved["command"][0] == str(executable)
     assert saved["twohdmc_provenance"] == "unknown"
+
+
+def test_new_lambda1_production_rejects_an_unlabelled_historical_mass(tmp_path: Path) -> None:
+    historical_rows = cartesian_rows(
+        fixed=Lambda1Fixed(125.09, 300.0, 310.0, 0.995, 0.1, 0.0),
+        mH_values=[130.0], lambda1_values=[1.0], tan_beta_values=[50.0],
+    )
+    with pytest.raises(RuntimeError, match="historical replay requires"):
+        run_lambda1_v2(
+            executable=tmp_path / "unused",
+            rows=historical_rows,
+            outdir=tmp_path / "out",
+            campaign="new-production",
+            run_name="historical-override",
+            repo_root=tmp_path,
+        )
+    assert not (tmp_path / "out/campaign=new-production/historical-override/input_v2.csv").exists()

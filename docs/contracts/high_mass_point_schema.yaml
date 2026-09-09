@@ -11,10 +11,12 @@ description: >
   evaluator fields, and are recomputed (never re-measured) on replay.
 upstream_schema: dihiggs.point.v2
 not_owned_by_this_schema:
-  - MadGraph cross sections (sigma_production_fb and similar): downstream
+  - >-
+    MadGraph cross sections (sigma_production_fb and similar): downstream
     enrichment only, never emitted by the canonical calculator or this
     schema. See HIGH_MASS_H2_CONTRACT.md section 8.
-  - HiggsBounds/HiggsSignals experimental_ok: remains nan until a
+  - >-
+    HiggsBounds/HiggsSignals experimental_ok: remains nan until a
     deterministic dihiggs_boundary handoff enriches it.
 
 fields:
@@ -213,6 +215,16 @@ fields:
     type: string
     source: derived
     formula: sha256 of the exact CLI argument vector passed to the evaluator
+  - name: physics_convention
+    type: object
+    source: campaign_manifest
+    required: true
+    required_fields: [convention_id, m_h_GeV_text, schema_version,
+                      source_repository, source_commit, source_path, source_sha256]
+    note: >-
+      Copied without reinterpretation from the v3 campaign manifest. The
+      numeric m_h_GeV coordinate must equal float(m_h_GeV_text); absent or
+      mismatched provenance rejects a new point handoff.
 
 invariants:
   - name: hierarchy
