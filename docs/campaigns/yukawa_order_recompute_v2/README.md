@@ -6,6 +6,10 @@ historical points seed neighborhoods; two independent families test behavior
 away from those seeds. Seed values are metadata only and do not constrain
 acceptance.
 
+The recorded 102-point run contains accepted observations in both off-seed
+families; rejected neighbors and construction failures remain in the output as
+evidence rather than being filtered out.
+
 Run after building the evaluator:
 
 ```bash
