@@ -40,7 +40,9 @@ def main() -> None:
         raise SystemExit("build dihiggs/app/DihiggsPointV2Evaluator first")
     spec = json.loads(INPUT.read_text(encoding="utf-8"))
     commit = git("rev-parse", "HEAD")
-    dirty = "yes" if git("status", "--short", "--untracked-files=no") else "no"
+    # Campaign outputs are expected mutations; only evaluator source trees
+    # determine the producer's dirty state.
+    dirty = "yes" if git("status", "--short", "--untracked-files=no", "--", "2hdmc", "dihiggs") else "no"
     started = datetime.now(timezone.utc).isoformat()
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "DIHIGGS_GIT_COMMIT": commit, "DIHIGGS_GIT_DIRTY": dirty,
