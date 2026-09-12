@@ -71,7 +71,9 @@ def main() -> None:
         raise SystemExit("build dihiggs/app/DihiggsPointV2Evaluator first")
     spec = json.loads(INPUT.read_text(encoding="utf-8"))
     commit = git("rev-parse", "HEAD")
-    dirty = "yes" if git("status", "--short", "--untracked-files=no", "--", "2hdmc", "dihiggs") else "no"
+    dirty_paths = ("2hdmc", "dihiggs", str(INPUT.relative_to(ROOT)),
+                   "scripts/run_yukawa_order_recompute_v2.py")
+    dirty = "yes" if git("status", "--short", "--untracked-files=no", "--", *dirty_paths) else "no"
     started = datetime.now(timezone.utc).isoformat()
     OUTPUTS.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "DIHIGGS_GIT_COMMIT": commit, "DIHIGGS_GIT_DIRTY": dirty,
@@ -135,9 +137,10 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
     ended = datetime.now(timezone.utc).isoformat()
+    process_failures = sum("error" in case for case in cases)
     manifest = {
         "schema": "dihiggs.issue62.yukawa_order_recompute.v2",
-        "status": "completed_fresh_seed_informed",
+        "status": "completed_fresh_seed_informed" if not process_failures else "incomplete_process_failure",
         "evaluator": "dihiggs/app/DihiggsPointV2Evaluator",
         "producer_commit": commit, "producer_dirty": dirty,
         "corrected_yukawa_order": {"fix_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
@@ -151,6 +154,7 @@ def main() -> None:
         "construction_failures": sum(c.get("construction_failures", 0) for c in cases),
         "theory_failures": sum(c.get("theory_failures", 0) for c in cases),
         "width_failures": sum(c.get("width_failures", 0) for c in cases),
+        "process_failures": process_failures,
         "accepted_rows": sum(c.get("accepted", 0) for c in cases), "families": cases,
         "validation": ["current schema and row cardinality", "unique point IDs", "finite accepted widths/BRs",
                        "ctau_mm = hbarc/width", "width accounting", "post-construction Type-I installation"],
@@ -159,6 +163,8 @@ def main() -> None:
     }
     (CAMPAIGN / "campaign_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: manifest[k] for k in ("status", "attempted_rows", "accepted_rows", "construction_failures", "theory_failures", "width_failures")}, sort_keys=True))
+    if process_failures:
+        raise SystemExit("campaign incomplete: evaluator process failure(s), see manifest")
 
 
 if __name__ == "__main__":
