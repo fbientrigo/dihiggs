@@ -2,7 +2,7 @@
   "schema": "dihiggs.issue62.yukawa_order_recompute.v2",
   "status": "completed_fresh_seed_informed",
   "evaluator": "dihiggs/app/DihiggsPointV2Evaluator",
-  "producer_commit": "05a1ab23cf9ff8da82f9216526920d4832a1311f",
+  "producer_commit": "c4fc29fc3593d4a537089e22e43504bfb9ed4a87",
   "producer_dirty": "no",
   "corrected_yukawa_order": {
     "fix_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
@@ -10,20 +10,20 @@
   },
   "input": {
     "path": "docs/campaigns/yukawa_order_recompute_v2/input_grid.json",
-    "sha256": "2390e0ea7ad9891f106785ee8fb13d3513194d67ce9f9d45b6100c26a583960a",
+    "sha256": "c07fbc737c065cdd52426486c74e1f7e3f4930effbf69c94e5671186e4f7aa4d",
     "schema": "dihiggs.issue62.input_grid.v2",
     "grid": "fresh current-schema neighborhoods around two known physical seeds plus two independent off-seed families"
   },
   "output": {
     "path": "docs/campaigns/yukawa_order_recompute_v2/fresh_point_v2.csv",
-    "sha256": "a42cf0051c9556aecee38bcfb5bb2e91cfad1aca63140444c273de41603fd8fd",
+    "sha256": "513472ef2dc798b9dd2826ad833b1aa83baf359dd741b63e4443bbad8f7d5bb8",
     "schema_version": "dihiggs.point.v2"
   },
-  "started_utc": "2026-09-12T16:40:43.805858+00:00",
-  "ended_utc": "2026-09-12T16:40:44.325365+00:00",
-  "attempted_rows": 38,
-  "construction_failures": 3,
-  "theory_failures": 32,
+  "started_utc": "2026-09-12T16:43:29.165090+00:00",
+  "ended_utc": "2026-09-12T16:43:30.215818+00:00",
+  "attempted_rows": 102,
+  "construction_failures": 5,
+  "theory_failures": 94,
   "width_failures": 0,
   "accepted_rows": 3,
   "families": [
@@ -83,7 +83,7 @@
       "theory_failures": 0,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/known_seed_low_mass.csv",
-      "output_sha256": "e8bca7ff6bfd05f16697f271018e80f4c05c436b216a1fcde30aad487ecc1353"
+      "output_sha256": "43060a77ed99db91a7f0fefcc82d16106651ed282e8b940dc3839eb6520e48a5"
     },
     {
       "family": "known_seed_llp",
@@ -141,7 +141,7 @@
       "theory_failures": 0,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/known_seed_llp.csv",
-      "output_sha256": "cda4413e4c55c2f7b8750414858eddd0d179e55483702d3ef3c88601f66f6ffc"
+      "output_sha256": "f65faa825219b84e515e37398b8e3b9b567a3fadd7b7eaefd4eabe6e4e51d85c"
     },
     {
       "family": "seed_low_mass_neighborhood",
@@ -169,7 +169,7 @@
         "--mH-max",
         "160",
         "--n-mH",
-        "3",
+        "5",
         "--mA",
         "300",
         "--mHp",
@@ -183,7 +183,7 @@
         "--M2-max",
         "17500",
         "--n-M2",
-        "3",
+        "5",
         "--lambda6",
         "0.1",
         "--lambda7",
@@ -193,13 +193,13 @@
       ],
       "stdout_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_low_mass_neighborhood.stdout.log",
       "stderr_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_low_mass_neighborhood.stderr.log",
-      "attempted": 9,
+      "attempted": 25,
       "accepted": 0,
-      "construction_failures": 3,
-      "theory_failures": 6,
+      "construction_failures": 5,
+      "theory_failures": 20,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_low_mass_neighborhood.csv",
-      "output_sha256": "80cde5bd4a21d1edca2c113ccb3f3348006509d8be95e8052ddccd67ac6d492b"
+      "output_sha256": "5a3ae7cfbf9635ce3a97d614b99dcf309c8e66f71ff792baef65d934485ef214"
     },
     {
       "family": "seed_llp_neighborhood",
@@ -227,7 +227,7 @@
         "--mH-max",
         "220",
         "--n-mH",
-        "3",
+        "5",
         "--mA",
         "500",
         "--mHp",
@@ -241,7 +241,7 @@
         "--M2-max",
         "42000",
         "--n-M2",
-        "3",
+        "5",
         "--lambda6",
         "1e-10",
         "--lambda7",
@@ -251,13 +251,13 @@
       ],
       "stdout_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_llp_neighborhood.stdout.log",
       "stderr_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_llp_neighborhood.stderr.log",
-      "attempted": 9,
+      "attempted": 25,
       "accepted": 1,
       "construction_failures": 0,
-      "theory_failures": 8,
+      "theory_failures": 24,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_llp_neighborhood.csv",
-      "output_sha256": "aad784cfb071bb3e8498fce96f5a94a43da8f4314ff00b42d9e9854550b89a1e"
+      "output_sha256": "3808369dcd2858b753254099702b5ad7e2b4d3ed2577f60f6705696e395728cc"
     },
     {
       "family": "off_seed_moderate_tanbeta",
@@ -285,7 +285,7 @@
         "--mH-max",
         "250",
         "--n-mH",
-        "3",
+        "5",
         "--mA",
         "450",
         "--mHp",
@@ -299,7 +299,7 @@
         "--M2-max",
         "24000",
         "--n-M2",
-        "3",
+        "5",
         "--lambda6",
         "0.05",
         "--lambda7",
@@ -309,13 +309,13 @@
       ],
       "stdout_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_moderate_tanbeta.stdout.log",
       "stderr_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_moderate_tanbeta.stderr.log",
-      "attempted": 9,
+      "attempted": 25,
       "accepted": 0,
       "construction_failures": 0,
-      "theory_failures": 9,
+      "theory_failures": 25,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_moderate_tanbeta.csv",
-      "output_sha256": "10204ee57899ea263fc6e8f7b5f426c34c18ed0746b80ca111cf1340f547af70"
+      "output_sha256": "d8d35082c7373ffb49dc55f5717ac1ace28ea812e18c9af3c60f3ab36b602f28"
     },
     {
       "family": "off_seed_high_tanbeta",
@@ -343,7 +343,7 @@
         "--mH-max",
         "280",
         "--n-mH",
-        "3",
+        "5",
         "--mA",
         "400",
         "--mHp",
@@ -357,7 +357,7 @@
         "--M2-max",
         "30000",
         "--n-M2",
-        "3",
+        "5",
         "--lambda6",
         "0.005",
         "--lambda7",
@@ -367,13 +367,13 @@
       ],
       "stdout_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_high_tanbeta.stdout.log",
       "stderr_log": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_high_tanbeta.stderr.log",
-      "attempted": 9,
+      "attempted": 25,
       "accepted": 0,
       "construction_failures": 0,
-      "theory_failures": 9,
+      "theory_failures": 25,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_high_tanbeta.csv",
-      "output_sha256": "d2bd406a869154be05c2250c0f426b3b4d72a8a4c921058fe0fe4c51b36a47a8"
+      "output_sha256": "706b424ea10abbe0dadc870585ff3cfb5796fab1fdb04407abae5830e775044d"
     }
   ],
   "validation": [
