@@ -125,9 +125,9 @@ def test_validated_h2_benchmark_exports_frozen_coupling(tmp_path):
     assert float(row["g_physical_hphiphi_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
     assert float(row["g_physical_hphiphi_abs_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
     assert float(row["g_hH2H2_GeV"]) == pytest.approx(63.5914252007596588, rel=0.0, abs=1e-10)
-    assert float(row["total_width_GeV"]) == pytest.approx(4.56118529862185007e-14, rel=0.0, abs=1e-24)
-    assert float(row["br_bb"]) == pytest.approx(0.756737485808578692, rel=0.0, abs=1e-12)
-    assert float(row["ctau_mm"]) == pytest.approx(4.32622152973311191, rel=0.0, abs=1e-10)
+    assert float(row["total_width_GeV"]) == pytest.approx(4.56119375332081875e-14, rel=0.0, abs=1e-24)
+    assert float(row["br_bb"]) == pytest.approx(0.756737108997119989, rel=0.0, abs=1e-12)
+    assert float(row["ctau_mm"]) == pytest.approx(4.32621351058227432, rel=0.0, abs=1e-10)
 
 
 def test_frozen_point_matches_analytic_potential_derivative(tmp_path):

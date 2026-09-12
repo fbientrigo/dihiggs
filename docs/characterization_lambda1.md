@@ -177,23 +177,19 @@ serialization artifact, and its best candidates are the ones most likely to be
 discarded. **Not repaired here** (mission stop condition: characterize existing
 defects, do not fix them during characterization).
 
-### 3. The lambda1 round-trip warning never rejects, and never reaches the CSV
+### 3. Lambda1 diagnostic and retained input
 
-`set_param_phys_lam1` recomputes lambda1 after construction, stores the residual
-in `lam1_validation_*`, and warns on stderr when it exceeds `THDM::EPS`. But
-`PhysLam1Scan` never reads those fields, so:
+Before `eed9b38`, `set_param_phys_lam1` overwrote its caller-supplied
+`lambda1` with an ill-conditioned reconstruction. The historical fixture had
+`|lam1 - computed_lam1| = 2.06e-09` for `L06` and `5.82e-07` for `L07`; those
+pre-correction rows remain recoverable from git history and are not current
+physics output.
 
-| Case | `|lam1 − computed_lam1|` | vs EPS=1e-9 | Outcome |
-|---|---|---|---|
-| `L01` | < 1e-12 | ok | silent |
-| `L06` | `2.06e-09` | ~2× | stderr warning; **still triple-OK** |
-| `L07` | `5.82e-07` | **~580×** | stderr warning; **still triple-OK** |
-
-The `GEMINI.md` "current best state" point (`L07`) carries a lambda1
-reconstruction error ~580× the fork's own threshold, is emitted with all flags
-set, and is counted in `TRIPLE_OK_POINTS`. The warning exists only in stderr;
-no CSV column records it. The residual *is* recomputable post-hoc from
-`lam1` − `computed_lam1`, which is how the golden test asserts it.
+The corrected constructor retains the exact input in `computed_lam1`. It still
+emits the existing stderr warning when the intermediate reconstruction exceeds
+`THDM::EPS`, and `PhysLam1Scan` still neither records that diagnostic in the
+CSV nor rejects the point. Consequently `L07` remains triple-OK, but its CSV
+residual is now zero rather than evidence of a wrong stored coupling.
 
 ### 4. Schema semantics
 

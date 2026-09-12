@@ -13,6 +13,7 @@ DEBUG=
 VPATH=src
 
 CFLAGS= -std=c++11 -Wall $(DEBUG) $(OPT) -fopenmp
+DEPFLAGS=-MMD -MP
 
 OBJDIR=lib
 LIBDIR=$(OBJDIR)
@@ -49,9 +50,12 @@ endif
 
 all: lib $(PROG)
 
-$(OBJDIR)/%.o : %.cpp %.h
+# Track transitive headers so a THDM layout change rebuilds every client.
+$(OBJDIR)/%.o : %.cpp
 	@mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
+	$(CC) $(CFLAGS) $(DEPFLAGS) $(INCLUDE) -c $< -o $@
+
+-include $(addprefix $(OBJDIR)/, $(OBJECTS:.o=.d))
 
 lib: $(addprefix $(LIBDIR)/, $(LIB))
 
@@ -66,6 +70,7 @@ $(addprefix $(LIBDIR)/, $(LIB)): $(addprefix $(OBJDIR)/, $(OBJECTS))
 clean:
 	@ echo "Cleaning library"
 	@ rm -f $(addprefix $(OBJDIR)/, *.o)
+	@ rm -f $(addprefix $(OBJDIR)/, *.d)
 	@ rm -f $(addprefix $(LIBDIR)/, $(LIB))
 
 distclean:
