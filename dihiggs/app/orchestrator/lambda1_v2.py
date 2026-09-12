@@ -139,6 +139,15 @@ def _twohdmc_provenance(repo_root: Path) -> str:
         return "unknown"
 
 
+def _write_logs(run_dir: Path, stdout: str | bytes | None, stderr: str | bytes | None) -> None:
+    for name, stream in (("stdout.log", stdout), ("stderr.log", stderr)):
+        path = run_dir / name
+        if isinstance(stream, bytes):
+            path.write_bytes(stream)
+        else:
+            path.write_text(stream or "", encoding="utf-8")
+
+
 def run_lambda1_v2(
     *,
     executable: Path,
@@ -194,12 +203,22 @@ def run_lambda1_v2(
         "DIHIGGS_GIT_COMMIT": str(git.get("commit") or "unknown"),
         "DIHIGGS_GIT_DIRTY": str(git.get("is_dirty") or "unknown"),
     }
-    completed = subprocess.run(
-        command, cwd=repo_root, env=environment, capture_output=True, text=True,
-        timeout=timeout_s, check=False,
-    )
-    (run_dir / "stdout.log").write_text(completed.stdout, encoding="utf-8")
-    (run_dir / "stderr.log").write_text(completed.stderr, encoding="utf-8")
+    try:
+        completed = subprocess.run(
+            command, cwd=repo_root, env=environment, capture_output=True, text=True,
+            timeout=timeout_s, check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        _write_logs(run_dir, error.stdout, error.stderr)
+        manifest.update({
+            "status": "timed_out",
+            "returncode": None,
+            "timeout_s": timeout_s,
+            "timeout_error": str(error),
+        })
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        raise
+    _write_logs(run_dir, completed.stdout, completed.stderr)
     manifest["returncode"] = completed.returncode
     if completed.returncode != 0:
         manifest["status"] = "failed"
