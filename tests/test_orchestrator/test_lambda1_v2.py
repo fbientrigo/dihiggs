@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -94,6 +95,33 @@ def test_run_preserves_manifest_provenance_and_row_count(tmp_path: Path) -> None
     saved = json.loads((tmp_path / "out/campaign=pilot/run-1/run_manifest.json").read_text())
     assert saved["command"][0] == str(executable)
     assert saved["twohdmc_provenance"] == "unknown"
+
+
+def test_timeout_preserves_logs_and_writes_timed_out_manifest(tmp_path: Path) -> None:
+    executable = tmp_path / "slow-evaluator"
+    executable.write_text(
+        "#!/bin/sh\n"
+        "printf 'partial stdout\\n'\n"
+        "printf 'partial stderr\\n' >&2\n"
+        "sleep 2\n",
+        encoding="utf-8",
+    )
+    executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+    with pytest.raises(subprocess.TimeoutExpired):
+        run_lambda1_v2(
+            executable=executable, rows=rows(), outdir=tmp_path / "out",
+            campaign="pilot", run_name="timeout", repo_root=tmp_path, timeout_s=0.1,
+        )
+
+    run_dir = tmp_path / "out/campaign=pilot/timeout"
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert manifest["status"] == "timed_out"
+    assert manifest["returncode"] is None
+    assert manifest["timeout_s"] == 0.1
+    assert "partial stdout" in (run_dir / "stdout.log").read_text()
+    assert "partial stderr" in (run_dir / "stderr.log").read_text()
+    assert "output_sha256" not in manifest
 
 
 def test_new_lambda1_production_rejects_an_unlabelled_historical_mass(tmp_path: Path) -> None:
