@@ -1,5 +1,10 @@
 # Issue #62 bounded replay
 
+This v1 replay is retained as historical engineering evidence only. It is
+superseded for scientific recomputation by
+`docs/campaigns/yukawa_order_recompute_v2/`, which uses fresh neighborhoods and
+does not treat cross-schema historical comparisons as constraints.
+
 This campaign replays the five canonical `dihiggs.point.v2` engineering-anchor
 cases whose exact post-fix inputs are versioned in `input_grid.json`. It calls
 the maintained `DihiggsPointV2Evaluator` and records a new output path and
