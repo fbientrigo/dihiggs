@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_gemini_md_exists_and_has_guardrails() -> None:
-    p = Path("/home/fabi/dihiggs/GEMINI.md")
+    p = Path(__file__).resolve().parents[2] / "GEMINI.md"
     assert p.exists()
     text = p.read_text(encoding="utf-8")
     assert "Never run broad scans" in text

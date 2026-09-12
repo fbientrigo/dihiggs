@@ -46,10 +46,14 @@ claim.
   boundary evidence.
 - `theory_ok_v1` currently equals the three theory predicates (positivity, unitarity,
   perturbativity); no experimental viability is implied by any theory-only flag.
-- Several pre-existing test files carry honest skips for components removed or never committed
-  prior to this closure (`tests/test_recompute_readiness.py`, `tests/test_run_quarantine.py`,
-  legacy comparison-fixture tests) — see the PR #60 skip-classification table in
-  `docs/audits/closure_2026-07/pr60_merge_gate_review.md`. None hide currently-maintained behavior.
+- The obsolete recompute-readiness/quarantine test suites and the platform-specific
+  `run_quarantine_night.sh` runner were retired in #68. Their implementations were deleted in
+  `34ba02c7`; no supported workflow imports them, and restoring unreviewed legacy campaign code
+  would not support the corrected canonical v2 evaluators. Their full tracked history and the
+  original skip audit remain available in git and
+  `docs/audits/closure_2026-07/pr60_merge_gate_review.md`.
+- Legacy comparison-fixture tests carry honest skips where their frozen fixtures are absent; none
+  hide currently-maintained behavior.
 
 ## Build and test commands
 
