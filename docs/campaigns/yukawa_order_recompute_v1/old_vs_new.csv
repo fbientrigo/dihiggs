@@ -1,0 +1,11 @@
+case,quantity,historical_pre_fix,historical_post_fix,new_replay,relative_difference_to_post_fix,reason
+L01,total_width_GeV,3.29976630039622283e-06,5.44093329247643563e-06,5.44093329247645681e-06,3.89194694054397267e-15,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L01,width_bb_GeV,0.00000000000000000e+00,1.68923454963338956e-06,1.68923454963338999e-06,2.50715019840829631e-16,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L01,width_tautau_GeV,0.00000000000000000e+00,1.64557991401996309e-07,1.64557991401996388e-07,4.82561424872419237e-16,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L01,br_gammagamma,7.20599999999999973e-03,4.37072735717628467e-03,4.37072735717628467e-03,0.00000000000000000e+00,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L01,ctau_mm,5.98000000000000061e-08,3.62671199576841017e-08,3.62671199576839627e-08,-3.83174465110690770e-15,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L06,total_width_GeV,1.10178135764866426e-17,5.80801813354687673e-11,5.80801814246648160e-11,1.53573984487301490e-09,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L06,width_bb_GeV,0.00000000000000000e+00,3.92309076675650660e-11,3.92309077037458490e-11,9.22251999990165351e-10,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L06,width_tautau_GeV,0.00000000000000000e+00,4.14221289016167297e-12,4.14221289487724465e-12,1.13841847642310057e-09,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L06,br_gammagamma,6.85127951799999968e-01,4.96465589482382474e-04,4.96465590671577701e-04,2.39532255983076111e-09,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main
+L06,ctau_mm,1.79098129599999993e+04,3.39749249852109442e-03,3.39749249330342958e-03,-1.53573991528200846e-09,pre/post values are historical verification evidence; replay uses corrected Yukawa order and current main

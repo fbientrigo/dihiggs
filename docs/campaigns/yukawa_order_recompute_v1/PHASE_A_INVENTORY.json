@@ -1,0 +1,65 @@
+{
+  "schema": "dihiggs.issue62.phase_a.inventory.v1",
+  "fix_boundary": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
+  "authority": "No historical pre-fix observable is treated as a current physics result.",
+  "artifacts": [
+    {
+      "id": "canonical_point_v2_anchor_series",
+      "classification": "ALREADY_POST_FIX",
+      "paths": ["docs/pilots/dihiggs_point_v2_v1/L01_accepted_anchor.csv", "docs/pilots/dihiggs_point_v2_v1/L05_theory_rejected_anchor.csv", "docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv", "docs/pilots/dihiggs_point_v2_v1/ordering_boundary.csv", "docs/pilots/dihiggs_point_v2_v1/construction_failure.csv"],
+      "input_reproducible": true,
+      "consumer": "bounded verification only; not a broad scan",
+      "action": "replayed in this campaign's new versioned output path"
+    },
+    {
+      "id": "canonical_lambda1_v2_yukawa_fix_pilot",
+      "classification": "ALREADY_POST_FIX",
+      "paths": ["docs/pilots/lambda1_v2_yukawa_fix_v1/input.csv", "docs/pilots/lambda1_v2_yukawa_fix_v1/lambda1_v2_pilot.csv"],
+      "input_reproducible": true,
+      "consumer": "verification report",
+      "action": "retained as post-fix evidence; no replacement needed for #62"
+    },
+    {
+      "id": "lambda1_v1_golden_fixture",
+      "classification": "QUARANTINE",
+      "paths": ["tests/golden/lambda1_v1/expected.csv"],
+      "input_reproducible": true,
+      "consumer": "legacy characterization tests only",
+      "action": "excluded from physics claims; pre-correction values remain in git history"
+    },
+    {
+      "id": "lambda1_lifetime_recovered_audit_payload",
+      "classification": "UNRESOLVABLE_PROVENANCE",
+      "paths": ["docs/audits/lambda1_lifetime_recovered_v1.csv"],
+      "input_reproducible": false,
+      "missing": ["Git-LFS payload", "per-row coordinate/file manifest", "external run root"],
+      "action": "quarantine; do not infer a replacement grid"
+    },
+    {
+      "id": "autoresearch_ctau_evolution_logs",
+      "classification": "UNRESOLVABLE_PROVENANCE",
+      "paths": ["autoresearch/results/logs/ctau_discoveries.csv", "autoresearch/results/logs/ctau_frontier_events.csv"],
+      "input_reproducible": false,
+      "missing": ["Git-LFS payload", "external boulder/stage artifacts"],
+      "action": "frozen workflow; no active consumer"
+    },
+    {
+      "id": "legacy_scan_matrices_and_revisions",
+      "classification": "UNRESOLVABLE_PROVENANCE",
+      "member_count": 215,
+      "input_reproducible": false,
+      "missing": ["final Git-LFS CSV payloads", "exact row coordinates", "run manifests"],
+      "action": "retrieve and checksum-match primary artifacts before any recomputation"
+    },
+    {
+      "id": "deleted_scratch_and_derived_observables",
+      "classification": "OBSOLETE",
+      "input_reproducible": false,
+      "consumer": "none",
+      "action": "retain git history only"
+    }
+  ],
+  "recompute_ready": ["canonical_point_v2_anchor_series"],
+  "active_consumers_of_pre_fix_values": [],
+  "result": "No broad historical grid is replay-ready locally; exact canonical anchors are bounded-replay ready."
+}
