@@ -107,6 +107,9 @@ def main() -> None:
             reader = csv.DictReader(handle)
             fields = reader.fieldnames or []
             family_rows = list(reader)
+        expected = int(family["n_mH"]) * int(family["n_M2"])
+        if len(family_rows) != expected:
+            raise SystemExit(f"{name}: expected {expected} rows, got {len(family_rows)}")
         if header is None:
             header = fields
         if fields != header:

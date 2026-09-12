@@ -2,7 +2,7 @@
   "schema": "dihiggs.issue62.yukawa_order_recompute.v2",
   "status": "completed_fresh_seed_informed",
   "evaluator": "dihiggs/app/DihiggsPointV2Evaluator",
-  "producer_commit": "20f4470a0b532c3379153cd49ddddc3642f7bf98",
+  "producer_commit": "05a1ab23cf9ff8da82f9216526920d4832a1311f",
   "producer_dirty": "no",
   "corrected_yukawa_order": {
     "fix_commit": "6bfad7662fd87750d838bf2fe0bd7ac00ee2326a",
@@ -16,11 +16,11 @@
   },
   "output": {
     "path": "docs/campaigns/yukawa_order_recompute_v2/fresh_point_v2.csv",
-    "sha256": "f38c5ee68b5dc3d39600d00b6e87d8220aaa66deada45180234450a18fce3f3b",
+    "sha256": "a42cf0051c9556aecee38bcfb5bb2e91cfad1aca63140444c273de41603fd8fd",
     "schema_version": "dihiggs.point.v2"
   },
-  "started_utc": "2026-09-12T16:37:37.647577+00:00",
-  "ended_utc": "2026-09-12T16:37:38.199128+00:00",
+  "started_utc": "2026-09-12T16:40:43.805858+00:00",
+  "ended_utc": "2026-09-12T16:40:44.325365+00:00",
   "attempted_rows": 38,
   "construction_failures": 3,
   "theory_failures": 32,
@@ -83,7 +83,7 @@
       "theory_failures": 0,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/known_seed_low_mass.csv",
-      "output_sha256": "4c77a9e3ee67b7c11075ea3c1b89c3f4cdd35f72b7f4313945343ab221781028"
+      "output_sha256": "e8bca7ff6bfd05f16697f271018e80f4c05c436b216a1fcde30aad487ecc1353"
     },
     {
       "family": "known_seed_llp",
@@ -141,7 +141,7 @@
       "theory_failures": 0,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/known_seed_llp.csv",
-      "output_sha256": "61fae767ccab694d7615bc15ce04d0a46289a2460af1a6ffeb13e1c5857445c0"
+      "output_sha256": "cda4413e4c55c2f7b8750414858eddd0d179e55483702d3ef3c88601f66f6ffc"
     },
     {
       "family": "seed_low_mass_neighborhood",
@@ -199,7 +199,7 @@
       "theory_failures": 6,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_low_mass_neighborhood.csv",
-      "output_sha256": "3ef3c3113e3a37bd7684f5f5bf2711d817dc7bf500b63238b787866cd5f6c218"
+      "output_sha256": "80cde5bd4a21d1edca2c113ccb3f3348006509d8be95e8052ddccd67ac6d492b"
     },
     {
       "family": "seed_llp_neighborhood",
@@ -257,7 +257,7 @@
       "theory_failures": 8,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/seed_llp_neighborhood.csv",
-      "output_sha256": "7ea607b28435b52b039333a42d9b4322f8f5c43fa99644a7bff95b23b286ab77"
+      "output_sha256": "aad784cfb071bb3e8498fce96f5a94a43da8f4314ff00b42d9e9854550b89a1e"
     },
     {
       "family": "off_seed_moderate_tanbeta",
@@ -315,7 +315,7 @@
       "theory_failures": 9,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_moderate_tanbeta.csv",
-      "output_sha256": "95e4062b5c93bca823d999005fba3f86ffcded7ea170083286a83b22693c3940"
+      "output_sha256": "10204ee57899ea263fc6e8f7b5f426c34c18ed0746b80ca111cf1340f547af70"
     },
     {
       "family": "off_seed_high_tanbeta",
@@ -373,7 +373,7 @@
       "theory_failures": 9,
       "width_failures": 0,
       "output": "docs/campaigns/yukawa_order_recompute_v2/outputs/off_seed_high_tanbeta.csv",
-      "output_sha256": "18766ad0590885fa46be6f42f18479b89d7775dd0bc7306d9fbc12fd0e784e1d"
+      "output_sha256": "d2bd406a869154be05c2250c0f426b3b4d72a8a4c921058fe0fe4c51b36a47a8"
     }
   ],
   "validation": [
