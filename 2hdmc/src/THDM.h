@@ -900,6 +900,10 @@ class THDM {
   double      sinba;
   bool        params_set;
   double      v2;
+
+  // Exact physical-basis input, retained across a lossy generic conversion.
+  bool        phys_cache_valid;
+  double      phys_mh, phys_mH, phys_mA, phys_mHp, phys_m12_2, phys_tan_beta;
   bool        lam1_validation_available;
   double      lam1_validation_input;
   double      lam1_validation_recomputed;

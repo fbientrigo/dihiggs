@@ -16,6 +16,31 @@ static bool nearly_equal(double a, double b, double rtol, double atol) {
   return diff <= (atol + rtol * scale);
 }
 
+static int physical_input_round_trip() {
+  const double tan_beta = 4e7;
+  const double beta = std::atan(tan_beta);
+  const double m12_2 = 250.0 * 250.0 * std::sin(beta) * std::cos(beta);
+  THDM model;
+  if (!model.set_param_phys(125.13, 250.0, 300.0, 300.0, 1.0, 1e-10, 0.0, m12_2, tan_beta)) {
+    std::cout << "Case physical-input-large-tanbeta: FAIL (set_param_phys returned false)\n";
+    return 1;
+  }
+
+  double mh, mH, mA, mHp, sba, l6, l7, m12_out, tb_out;
+  model.get_param_phys(mh, mH, mA, mHp, sba, l6, l7, m12_out, tb_out);
+  bool ok = nearly_equal(mh, 125.13, 0.0, 0.0)
+         && nearly_equal(mH, 250.0, 0.0, 0.0)
+         && nearly_equal(mA, 300.0, 0.0, 0.0)
+         && nearly_equal(mHp, 300.0, 0.0, 0.0)
+         && nearly_equal(m12_out, m12_2, 0.0, 0.0)
+         && nearly_equal(tb_out, tan_beta, 0.0, 0.0);
+  ok &= model.set_param_gen(1.0, 2.0, 0.1, -0.2, -0.1, 0.0, 0.0, 1.0, 2.0);
+  model.get_param_phys(mh, mH, mA, mHp, sba, l6, l7, m12_out, tb_out);
+  ok &= nearly_equal(tb_out, 2.0, 1e-12, 0.0);
+  std::cout << "Case physical-input-large-tanbeta: " << (ok ? "PASS\n" : "FAIL\n");
+  return ok ? 0 : 1;
+}
+
 static int run_case(const char* name,
                     double m_h, double m_H, double m_A, double m_Hp,
                     double sba, double lambda6, double lambda7,
@@ -96,6 +121,8 @@ int main() {
   const double atol = 1e-12;
 
   int rc = 0;
+
+  rc |= physical_input_round_trip();
 
   // double m_h, double m_H, double m_A, double m_Hp,
                   // double sba, double lambda6, double lambda7,

