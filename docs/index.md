@@ -71,4 +71,6 @@ audits/closure_2026-07/pr58_phase3_review
 audits/closure_2026-07/pr60_merge_gate_review
 audits/lambda1_lifetime_audit_v1
 campaigns/yukawa_order_recompute_v1/PHASE_A_INVENTORY
+site/SITE_SPEC
+site/DESIGN_SPEC
 ```
