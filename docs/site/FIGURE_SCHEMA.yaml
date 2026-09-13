@@ -1,0 +1,70 @@
+# Every rendered scientific figure must have one registry record conforming to
+# this contract. A PNG/SVG without this sidecar is not eligible for a result page.
+schema: dihiggs.site.figure.v1
+record_contract:
+  required:
+    - id
+    - title
+    - scientific_status
+    - producer
+    - source_data
+    - script
+    - convention_id
+    - repository_commit
+    - reproduction_command
+    - generated_outputs
+  properties:
+    id: "Stable catalog ID; must also exist as an ENTITY_SCHEMA figure record."
+    scientific_status: "CANONICAL, EXPERIMENTAL, HISTORICAL, or REPLAY_ONLY; copied to the visible badge."
+    producer:
+      required: [name, version_or_commit]
+      name: "Evaluator, script, or deterministic build target that made the data/figure."
+    source_data:
+      min_items: 1
+      item_required: [path, sha256_or_manifest_selector, role]
+      role: "input, authoritative_manifest, verification_evidence, or derived_data."
+    script:
+      required: [path, sha256_or_commit]
+      rule: "A notebook alone is insufficient; a noninteractive script or build target is required."
+    convention_id:
+      rule: "Exactly one declared convention set per figure. Mixed conventions require separate panels and records."
+    repository_commit:
+      pattern: "^[0-9a-f]{40}$"
+      rule: "The checkout used to generate the output; never a branch name."
+    reproduction_command:
+      rule: "Runnable from a clean checkout; arguments must name all non-default source records."
+    generated_outputs:
+      min_items: 2
+      item_required: [path, format, sha256, role]
+      role: "visual or machine_readable_sidecar."
+  validation_rules:
+    - "A figure with missing provenance is rejected from the published gallery."
+    - "A figure may not be marked CANONICAL when any source datum is EXPERIMENTAL, HISTORICAL, or REPLAY_ONLY."
+    - "The site renders the strongest non-canonical source status beside the figure."
+    - "Captions name the observable, units, selections, convention ID, and status; visual legend text does not replace the caption."
+    - "If a selected data row has width_ok != 1, it is excluded or explicitly annotated; it is never silently used for ctau."
+
+required_mvp_record:
+  id: lifetime-width-closure-v2
+  title: "Lifetime-width closure for v2 point records"
+  scientific_status: EXPERIMENTAL
+  producer:
+    name: DihiggsPointV2Evaluator plus static figure builder
+    version_or_commit: "Resolved by the build from provenance-bearing verification metadata"
+  source_data:
+    - {path: "docs/pilots/dihiggs_point_v2_v1/L01_accepted_anchor.csv", sha256_or_manifest_selector: "docs/verification/dihiggs_point_v2_verification_v1.json#pilot[case=L01_accepted_anchor].output_sha256", role: input}
+    - {path: "docs/pilots/dihiggs_point_v2_v1/L05_theory_rejected_anchor.csv", sha256_or_manifest_selector: "docs/verification/dihiggs_point_v2_verification_v1.json#pilot[case=L05_theory_rejected_anchor].output_sha256", role: input}
+    - {path: "docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv", sha256_or_manifest_selector: "docs/verification/dihiggs_point_v2_verification_v1.json#pilot[case=L06_llp_anchor].output_sha256", role: input}
+  script:
+    path: docs/site/scripts/build_lifetime_width_closure.py
+    sha256_or_commit: "Resolved from the clean build checkout"
+  convention_id: mh_125p13_high_mass_v1
+  repository_commit: "Resolved from the clean build checkout"
+  reproduction_command: "python3 docs/site/scripts/build_lifetime_width_closure.py --registry docs/site/ENTITY_SCHEMA.yaml"
+  generated_outputs:
+    - {path: "docs/site/_generated/figures/lifetime-width-closure-v2.svg", format: svg, sha256: "Generated during the build", role: visual}
+    - {path: "docs/site/_generated/figures/lifetime-width-closure-v2.json", format: json, sha256: "Generated during the build", role: machine_readable_sidecar}
+  caption_requirements:
+    - "Show total width and ctau_mm, with the declared conversion invariant."
+    - "Identify the bounded verification input rows; do not imply scan coverage or a population measurement."
+    - "Show EXPERIMENTAL and the historical convention badge."
