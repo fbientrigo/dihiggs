@@ -1,0 +1,78 @@
+schema: dihiggs.site.content-map.v1
+build_policy:
+  source_of_rendered_values: ENTITY_SCHEMA.yaml#records[*].value_bindings
+  prohibited: ["hand-copied numerical values in MyST pages", "implicit mass conventions", "unlabelled coupling prescriptions"]
+  missing_or_conflicting_provenance: "fail build for a CANONICAL page; render a blocked provenance callout for non-canonical research material."
+
+pages:
+  - route: /concepts/lifetime/
+    page_type: physics_concept
+    entity: lifetime
+    sections: ["Definition", "Evaluation chain", "Partial-width table", "Verification evidence", "Related entities", "Reproduce"]
+    graph:
+      nodes: ["model point", "DecayTable", "partial widths", "total width", "ctau_mm"]
+      edges: ["constructs", "computes", "sums", "derives"]
+    related: [dihiggs-point-v2-evaluator, lambda1-v2-evaluator, dihiggs-point-v2-verification-v1, lifetime-width-closure-v2]
+
+  - route: /concepts/physical-h-phi-phi-coupling/
+    page_type: physics_concept
+    entity: physical-h-phi-phi-coupling
+    sections: ["Convention", "Higgs-basis expression", "2HDMC serialization", "UFO mapping", "Benchmark evidence", "Reproduce"]
+    graph:
+      nodes: ["canonical appendix", "Higgs-basis expression", "2HDMC coupling", "DihiggsPointV2Evaluator serialization", "benchmark"]
+      edges: ["defines", "maps to", "serializes", "is checked by"]
+    related: [physics-conventions-v3, dihiggs-point-v2-evaluator, h2scan-mh150-tb300000]
+
+  - route: /benchmarks/h2scan-mh150-tb300000/
+    page_type: benchmark
+    entity: h2scan-mh150-tb300000
+    sections: ["Status and scope", "Declared inputs", "Evidence", "Coupling serialization", "Numerical representation check", "Reproduce", "Related entities"]
+    fixed_callout: "REPLAY_ONLY — this high-mass-v1 anchor is retained for regression and exact replay, never as a new-production result."
+    related: [physical-h-phi-phi-coupling, lambda1-v2-evaluator, high-mass-h2-v1, lifetime-width-closure-v2]
+
+  - route: /figures/lifetime-width-closure-v2/
+    page_type: figure
+    entity: lifetime-width-closure-v2
+    sections: ["Figure", "Caption and scope", "Data and producer", "Reproduce", "Machine-readable output"]
+    related: [lifetime, dihiggs-point-v2-evaluator, dihiggs-point-v2-verification-v1]
+
+  - route: /evaluators/dihiggs-point-v2/
+    page_type: evaluator
+    entity: dihiggs-point-v2-evaluator
+    sections: ["Contract", "Inputs", "Outputs", "Acceptance layers", "Code", "Verification", "Reproduce"]
+    related: [canonical-evaluators-v2, lifetime, physical-h-phi-phi-coupling, dihiggs-point-v2-verification-v1]
+
+  - route: /contracts/physics-conventions-v3/
+    page_type: contract
+    entity: physics-conventions-v3
+    sections: ["Authority", "Fixed basis and state names", "Mass conventions", "Trilinear registry", "Machine contract", "Consumers"]
+    related: [physical-h-phi-phi-coupling, lifetime, canonical-evaluators-v2]
+
+  - route: /verifications/dihiggs-point-v2-v1/
+    page_type: verification
+    entity: dihiggs-point-v2-verification-v1
+    sections: ["Scope", "Checks", "Evidence artifacts", "Known limits", "Reproduce"]
+    related: [dihiggs-point-v2-evaluator, lifetime-width-closure-v2]
+
+  - route: /campaigns/high-mass-h2-v1/
+    page_type: campaign
+    entity: high-mass-h2-v1
+    sections: ["Status", "Manifest", "Artifacts", "Related benchmark", "Replay"]
+    related: [h2scan-mh150-tb300000]
+
+collections:
+  - {route: /concepts/, title: "Physics concepts", filter: "kind=physics_concept"}
+  - {route: /evaluators/, title: "Code", filter: "kind=evaluator"}
+  - {route: /benchmarks/, title: "Benchmarks", filter: "kind=benchmark"}
+  - {route: /figures/, title: "Figures", filter: "kind=figure"}
+  - {route: /verifications/, title: "Verification", filter: "kind=verification"}
+  - {route: /campaigns/, title: "Campaigns and data", filter: "kind=campaign"}
+  - {route: /tasks/, title: "Scientific questions", filter: "curated task pages"}
+
+task_pages:
+  - route: /tasks/how-is-proper-lifetime-derived/
+    title: "How is proper lifetime derived and verified?"
+    answer_path: [lifetime, dihiggs-point-v2-evaluator, dihiggs-point-v2-verification-v1, lifetime-width-closure-v2]
+  - route: /tasks/what-is-the-physical-h-phi-phi-coupling/
+    title: "What is the physical h-phi-phi coupling and how is its sign preserved?"
+    answer_path: [physics-conventions-v3, physical-h-phi-phi-coupling, dihiggs-point-v2-evaluator, h2scan-mh150-tb300000]

@@ -1,0 +1,270 @@
+# Registry contract for the static scientific catalog.  This is a schema and
+# seed registry, not a second source of numerical physics values.
+schema: dihiggs.site.entities.v1
+authority:
+  physics:
+    human: docs/PROJECT_PHYSICS_AUTHORITY.md
+    machine: conventions/physics_conventions.yaml
+  evaluator: docs/contracts/canonical_evaluators_v2.md
+  campaign_currency:
+    human: ../dihiggs_hep_cross/docs/CURRENT_DATA_AUTHORITY.md
+    machine: ../dihiggs_hep_cross/state/CURRENT_CAMPAIGN.yaml
+
+enums:
+  scientific_status: [CANONICAL, EXPERIMENTAL, HISTORICAL, REPLAY_ONLY]
+  entity_kind: [physics_concept, evaluator, benchmark, figure, contract, verification, campaign]
+  relationship_type:
+    - defines
+    - implements
+    - evaluates
+    - serializes
+    - verifies
+    - benchmarks
+    - derives
+    - visualizes
+    - reproduces
+    - governed_by
+    - supersedes
+    - uses_data_from
+
+record_contract:
+  required:
+    - id
+    - kind
+    - title
+    - scientific_status
+    - summary
+    - provenance
+    - relations
+  properties:
+    id: "Stable lowercase kebab-case catalog ID; never a display label."
+    kind: "One of enums.entity_kind."
+    scientific_status: "Controls the site-wide badge and default search/filter behavior."
+    summary: "A claim-free one-sentence description; values remain in the cited artifact."
+    provenance:
+      required: [source_repository, source_path, source_commit]
+      source_commit: "Full 40-character SHA, or null only for a source resolved during the build."
+      source_sha256: "SHA-256 of a frozen source artifact when supplied by that artifact."
+    relations:
+      item_required: [type, target]
+      target: "Another catalog ID, not a URL."
+    value_bindings:
+      description: >-
+        Optional selectors used by the build to extract displayed values from
+        one source artifact. A page must render these bindings, never duplicate
+        the selected value in hand-authored MyST.
+      item_required: [label, source_path, selector]
+
+kind_contracts:
+  physics_concept:
+    required: [convention_id, authority_section, canonical_expression]
+  evaluator:
+    required: [executable, source_files, input_contract, output_contract]
+  benchmark:
+    required: [benchmark_class, evidence, reproduction]
+  figure:
+    required: [figure_schema_ref, source_data, reproduction]
+  contract:
+    required: [contract_schema, authority_level]
+  verification:
+    required: [verification_scope, evidence, reproduction]
+  campaign:
+    required: [campaign_status, manifest, data_status]
+
+records:
+  - id: lifetime
+    kind: physics_concept
+    title: Proper lifetime
+    scientific_status: CANONICAL
+    summary: "The proper lifetime is derived from the model-point total width after width validation."
+    convention_id: physics_conventions_v3
+    authority_section: "PROJECT_PHYSICS_AUTHORITY.md#8-repository-ownership"
+    canonical_expression: "ctau_mm = hbar_c_GeV_mm / total_width_GeV"
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: conventions/physics_conventions.yaml
+      source_commit: null
+    relations:
+      - {type: governed_by, target: physics-conventions-v3}
+      - {type: visualizes, target: lifetime-width-closure-v2}
+    value_bindings:
+      - {label: "hbar c", source_path: "dihiggs/src/DihiggsPointV2Evaluator.cpp", selector: "kHbarCGeVmm"}
+
+  - id: physical-h-phi-phi-coupling
+    kind: physics_concept
+    title: Physical h-phi-phi coupling
+    scientific_status: CANONICAL
+    summary: "The signed physical trilinear is the CP-conserving 2HDMC observable with an explicit potential, Feynman-rule, and UFO mapping."
+    convention_id: physical_2HDM
+    authority_section: "PROJECT_PHYSICS_AUTHORITY.md#7-trilinear-prescription-registry"
+    canonical_expression: "g_physical_hphiphi_GeV = -Im(THDM::get_coupling_hhh(1,2,2,c))"
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: conventions/physics_conventions.yaml
+      source_commit: null
+    relations:
+      - {type: governed_by, target: physics-conventions-v3}
+      - {type: serializes, target: dihiggs-point-v2-evaluator}
+
+  - id: dihiggs-point-v2-evaluator
+    kind: evaluator
+    title: DihiggsPointV2Evaluator
+    scientific_status: CANONICAL
+    summary: "The canonical rectangular M² point evaluator constructs a 2HDMC point and exports model, decay, lifetime, and signed-coupling observables."
+    executable: dihiggs/app/DihiggsPointV2Evaluator
+    source_files: [dihiggs/src/DihiggsPointV2Evaluator.cpp]
+    input_contract: "docs/contracts/canonical_evaluators_v2.md#canonical-m-producer"
+    output_contract: "dihiggs.point.v2"
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/contracts/canonical_evaluators_v2.md
+      source_commit: null
+    relations:
+      - {type: implements, target: lifetime}
+      - {type: implements, target: physical-h-phi-phi-coupling}
+      - {type: governed_by, target: canonical-evaluators-v2}
+
+  - id: lambda1-v2-evaluator
+    kind: evaluator
+    title: Lambda1EvaluatorV2
+    scientific_status: CANONICAL
+    summary: "The canonical fixed-lambda1 producer preserves every attempted row and exports the same width and lifetime family for its declared input contract."
+    executable: dihiggs/app/Lambda1EvaluatorV2
+    source_files: [dihiggs/src/Lambda1EvaluatorV2.cpp]
+    input_contract: "docs/contracts/canonical_evaluators_v2.md#canonical-lambda1-producer"
+    output_contract: "dihiggs.lambda1.v2"
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/contracts/canonical_evaluators_v2.md
+      source_commit: null
+    relations:
+      - {type: governed_by, target: canonical-evaluators-v2}
+      - {type: reproduces, target: h2scan-mh150-tb300000}
+
+  - id: h2scan-mh150-tb300000
+    kind: benchmark
+    title: H2scan_mH150_tb300000
+    scientific_status: REPLAY_ONLY
+    summary: "A frozen 150 GeV H2 scan anchor retained for provenance-complete replay and benchmark regression, not for a new-production claim."
+    benchmark_class: frozen_regression_anchor
+    evidence:
+      - benchmarks/FIRST_H2_RECAST_CANDIDATE.json
+      - benchmarks/H2scan_mH150_tb300000_production_coupling.json
+      - benchmarks/H2scan_mH150_tb300000_numerical_check.md
+    reproduction:
+      command: "python3 benchmarks/check_H2scan_mH150_tb300000.py"
+      expected_artifacts:
+        - benchmarks/H2scan_mH150_tb300000_numerical_check.csv
+        - benchmarks/H2scan_mH150_tb300000_numerical_check.md
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: benchmarks/FIRST_H2_RECAST_CANDIDATE.json
+      source_commit: null
+    relations:
+      - {type: benchmarks, target: physical-h-phi-phi-coupling}
+      - {type: reproduces, target: lambda1-v2-evaluator}
+      - {type: governed_by, target: mh-125p13-high-mass-v1}
+      - {type: visualizes, target: lifetime-width-closure-v2}
+      - {type: uses_data_from, target: high-mass-h2-v1}
+    value_bindings:
+      - {label: "benchmark status", source_path: "benchmarks/FIRST_H2_RECAST_CANDIDATE.json", selector: "$.status"}
+      - {label: "coupling serialization", source_path: "benchmarks/H2scan_mH150_tb300000_production_coupling.json", selector: "$.coupling"}
+
+  - id: lifetime-width-closure-v2
+    kind: figure
+    title: Lifetime-width closure for v2 point records
+    scientific_status: EXPERIMENTAL
+    summary: "A generated closure plot of total width and derived proper lifetime for the bounded v2 verification inputs; it is evidence for the evaluator path, not a population result."
+    figure_schema_ref: FIGURE_SCHEMA.yaml#/record_contract
+    source_data:
+      - docs/pilots/dihiggs_point_v2_v1/L01_accepted_anchor.csv
+      - docs/pilots/dihiggs_point_v2_v1/L05_theory_rejected_anchor.csv
+      - docs/pilots/dihiggs_point_v2_v1/L06_llp_anchor.csv
+    reproduction:
+      command: "python3 docs/site/scripts/build_lifetime_width_closure.py --registry docs/site/ENTITY_SCHEMA.yaml"
+      expected_artifacts: ["docs/site/_generated/figures/lifetime-width-closure-v2.svg", "docs/site/_generated/figures/lifetime-width-closure-v2.json"]
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/verification/dihiggs_point_v2_verification_v1.json
+      source_commit: null
+    relations:
+      - {type: derives, target: dihiggs-point-v2-evaluator}
+      - {type: uses_data_from, target: dihiggs-point-v2-verification-v1}
+      - {type: visualizes, target: lifetime}
+
+  - id: physics-conventions-v3
+    kind: contract
+    title: Project physics conventions v3
+    scientific_status: CANONICAL
+    contract_schema: physics_conventions_v3
+    authority_level: primary_physics_authority
+    summary: "The machine-readable project convention contract for the fixed Type-I basis, state names, mass conventions, and trilinear prescriptions."
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: conventions/physics_conventions.yaml
+      source_commit: null
+    relations:
+      - {type: defines, target: lifetime}
+      - {type: defines, target: physical-h-phi-phi-coupling}
+
+  - id: canonical-evaluators-v2
+    kind: contract
+    title: Canonical evaluator contract v2
+    scientific_status: CANONICAL
+    contract_schema: canonical_evaluators_v2
+    authority_level: production_semantics
+    summary: "The maintained evaluation-core contract defining evaluator ownership, acceptance layers, serialization, and width/lifetime semantics."
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/contracts/canonical_evaluators_v2.md
+      source_commit: null
+    relations:
+      - {type: defines, target: dihiggs-point-v2-evaluator}
+      - {type: defines, target: lambda1-v2-evaluator}
+
+  - id: mh-125p13-high-mass-v1
+    kind: contract
+    title: High-mass v1 mass convention
+    scientific_status: REPLAY_ONLY
+    contract_schema: mass_convention
+    authority_level: historical_replay_only
+    summary: "The named historical mass convention retained exclusively to reproduce its already-provenanced high-mass artifacts."
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: conventions/physics_conventions.yaml
+      source_commit: null
+    relations:
+      - {type: governed_by, target: physics-conventions-v3}
+
+  - id: dihiggs-point-v2-verification-v1
+    kind: verification
+    title: DiHiggs Point v2 verification v1
+    scientific_status: EXPERIMENTAL
+    verification_scope: "Bounded engineering pilot; no campaign-level scientific conclusion."
+    evidence:
+      - docs/verification/dihiggs_point_v2_verification_v1.json
+      - docs/verification/dihiggs_point_v2_verification_v1.md
+    reproduction:
+      command: "python3 scripts/run_dihiggs_point_v2_pilot.py"
+      expected_artifacts: [docs/pilots/dihiggs_point_v2_v1]
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/verification/dihiggs_point_v2_verification_v1.json
+      source_commit: null
+    relations:
+      - {type: verifies, target: dihiggs-point-v2-evaluator}
+
+  - id: high-mass-h2-v1
+    kind: campaign
+    title: High-mass H2 v1 pilot
+    scientific_status: REPLAY_ONLY
+    campaign_status: frozen
+    manifest: docs/pilots/high_mass_h2_v1/pilot_validation.json
+    data_status: "Frozen provenance-bearing pilot data; excluded from current production and cross-section claims."
+    summary: "A frozen high-mass pilot retained as linked evidence for the replay-only 150 GeV benchmark."
+    provenance:
+      source_repository: fbientrigo/dihiggs
+      source_path: docs/pilots/high_mass_h2_v1/pilot_validation.json
+      source_commit: null
+    relations:
+      - {type: benchmarks, target: h2scan-mh150-tb300000}
