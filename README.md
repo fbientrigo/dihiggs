@@ -120,6 +120,16 @@ skip explicitly when their components are absent.
 - docs/handoffs/REPO_TO_TEX_NOTES_V3.md
 - docs/verification/
 
+## Sphinx documentation
+
+The repository documentation is buildable as one Sphinx site:
+
+    python -m pip install -r docs/requirements.txt
+    python -m sphinx -b html -W --keep-going docs docs/_build/html
+
+The landing page is `docs/index.md`. It separates current production contracts
+from experimental and replay-only material.
+
 ## Current non-claims
 
 The maintained core currently claims no LHS production, SHAP, Bayesian
