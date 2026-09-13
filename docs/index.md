@@ -51,6 +51,8 @@ DOWNSTREAM_INTERFACE_GAP_REPORT
 :caption: Project records
 
 WORKSPACE_ARCHITECTURE_2026
+COMPUTE_SCALE_PLAN
+inter_repo_communication_assessment
 scan_harness_architecture_v2
 characterization_lambda1
 verification/dihiggs_point_v2_verification_v1
@@ -63,4 +65,10 @@ legacy_and_experimental
 autoresearch_frozen
 REPOSITORY_CLOSURE_V2
 audits/closure_2026-07/REPOSITORY_CLOSURE_INVENTORY_2026-07
+audits/closure_2026-07/boundary_alignment_report
+audits/closure_2026-07/postmerge_verification
+audits/closure_2026-07/pr58_phase3_review
+audits/closure_2026-07/pr60_merge_gate_review
+audits/lambda1_lifetime_audit_v1
+campaigns/yukawa_order_recompute_v1/PHASE_A_INVENTORY
 ```
