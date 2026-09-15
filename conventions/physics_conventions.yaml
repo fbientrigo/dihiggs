@@ -22,33 +22,27 @@ constants:
 
 mass_conventions:
   active:
-    id: mh_125p13_pdg_2026
+    id: mh_125p20_active_2026
     state: h
-    value_GeV: "125.13"
+    value_GeV: "125.20"
     serialization: decimal_string
     status: active_new_production
-    authority_kind: external_measurement
+    authority_kind: project_convention
     decision_issue: https://github.com/fbientrigo/dihiggs/issues/83
-    external_measurement_claim: true
-    external_source:
-      publisher: Particle Data Group
-      edition: 2026
-      url: https://pdg.lbl.gov/2026/listings/rpp2026-list-higgs-boson.pdf
-      central_value_GeV: "125.13"
-      uncertainty_GeV: "0.11"
+    source_label: corrected project convention
+    source_url: https://github.com/fbientrigo/dihiggs/issues/83
     note: >-
-      This is the PDG 2026 world-average central value adopted as the
-      project's frozen production convention.
+      Corrected project convention for new production. It is deliberately
+      distinct from external-measurement values and is serialized exactly.
   historical:
-    - id: mh_125p20_project_pre_v3
-      value_GeV: "125.20"
-      status: superseded_pending_consumer_migration
+    - id: mh_125p13_pdg_2026_historical_replay
+      value_GeV: "125.13"
+      status: historical_replay_only
       new_production_allowed: false
       preserve_for_replay: true
       scope: >-
-        Former project convention still present in identified downstream
-        code, configuration, campaign state, documentation, and tests; see
-        migration.pending_125p20_uses. It must not seed a new run after v3.
+        Completed adaptive M2 boundary campaign and explicit regression
+        fixtures. It must never seed a new production run.
     - id: mh_125p13_high_mass_v1
       value_GeV: "125.13"
       status: historical
@@ -223,10 +217,9 @@ stage_ownership:
 migration:
   pending_125p20_uses:
     purpose: >-
-      Closed inventory of exact 125.20 convention uses found on audited main
-      branches. It is a migration queue, not authority. New production must
-      not read any pending entry after this contract is adopted.
-    required_before_new_production: true
+      Historical inventory retained for provenance. The active 125.20
+      convention is not a migration target.
+    required_before_new_production: false
     discovery_rule: >-
       Search exact convention token 125.20 in active code, configuration,
       documentation, and tests. Do not classify unrelated longer numerical
