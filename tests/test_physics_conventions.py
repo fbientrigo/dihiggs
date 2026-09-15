@@ -61,29 +61,33 @@ def test_v3_schema_and_single_authority():
 def test_active_and_historical_higgs_mass_conventions():
     masses = _load_conventions()["mass_conventions"]
     active = masses["active"]
-    assert active["id"] == "mh_125p13_pdg_2026"
-    assert active["value_GeV"] == "125.13"
+    assert active["id"] == "mh_125p20_active_2026"
+    assert active["value_GeV"] == "125.20"
     assert isinstance(active["value_GeV"], str)
-    assert Decimal(active["value_GeV"]) == Decimal("125.13")
+    assert Decimal(active["value_GeV"]) == Decimal("125.20")
     assert active["status"] == "active_new_production"
-    assert active["authority_kind"] == "external_measurement"
-    assert active["external_measurement_claim"] is True
-    assert active["external_source"]["central_value_GeV"] == "125.13"
-    assert active["external_source"]["uncertainty_GeV"] == "0.11"
+    assert active["authority_kind"] == "project_convention"
 
     historical = {item["id"]: item for item in masses["historical"]}
     assert set(historical) == {
-        "mh_125p20_project_pre_v3",
+        "mh_125p13_pdg_2026_historical_replay",
         "mh_125p13_high_mass_v1",
         "mh_125p09_lambda1_boundary_legacy",
         "mh_125p0_ufo_autoresearch_legacy",
     }
-    assert historical["mh_125p20_project_pre_v3"]["value_GeV"] == "125.20"
-    assert historical["mh_125p20_project_pre_v3"]["status"] == (
-        "superseded_pending_consumer_migration"
-    )
+    assert historical["mh_125p13_pdg_2026_historical_replay"]["value_GeV"] == "125.13"
+    assert historical["mh_125p13_pdg_2026_historical_replay"]["status"] == "historical_replay_only"
     assert all(item["new_production_allowed"] is False for item in historical.values())
     assert all(item["preserve_for_replay"] is True for item in historical.values())
+
+
+def test_new_production_accepts_12520_and_rejects_12513():
+    from dihiggs.app.orchestrator.physics_authority import active_mass_gev, convention_provenance
+
+    assert active_mass_gev() == 125.20
+    assert convention_provenance(source_commit=None, requested_mass_gev=125.20)["convention_id"] == "mh_125p20_active_2026"
+    with pytest.raises(RuntimeError, match="active v3 Higgs-mass convention"):
+        convention_provenance(source_commit=None, requested_mass_gev=125.13)
 
 
 def test_state_identity_and_pdg_map():
@@ -192,7 +196,7 @@ def test_stage_ownership_and_migration_fail_closed():
 def test_pending_125p20_migration_inventory_is_actionable():
     migration = _load_conventions()["migration"]
     pending = migration["pending_125p20_uses"]
-    assert pending["required_before_new_production"] is True
+    assert pending["required_before_new_production"] is False
     occurrences = {(item["repository"], item["path"]): item for item in pending["occurrences"]}
     assert ("fbientrigo/dihiggs_hep_cross", "src/llp_recast/constants.py") in occurrences
     assert ("fbientrigo/dihiggs_hep_cross", "state/CURRENT_CAMPAIGN.yaml") in occurrences
@@ -208,9 +212,9 @@ def test_human_contract_agrees_with_machine_contract():
         human = fh.read()
     required_literals = [
         "physics_conventions_v3",
-        'm_h = "125.13" GeV',
-        "mh_125p13_pdg_2026",
-        "mh_125p20_project_pre_v3",
+        'm_h = "125.20" GeV',
+        "mh_125p20_active_2026",
+        "mh_125p13_pdg_2026_historical_replay",
         "mh_125p13_high_mass_v1",
         "mh_125p09_lambda1_boundary_legacy",
         "mh_125p0_ufo_autoresearch_legacy",
@@ -281,7 +285,7 @@ def test_new_production_rejects_authority_bytes_not_in_source_commit(tmp_path, m
     altered = tmp_path / "physics_conventions.yaml"
     altered.write_text(
         physics_authority._CONVENTIONS_PATH.read_text(encoding="utf-8").replace(
-            'value_GeV: "125.13"', 'value_GeV: "125.14"', 1
+            'value_GeV: "125.20"', 'value_GeV: "125.21"', 1
         ),
         encoding="utf-8",
     )
@@ -291,7 +295,7 @@ def test_new_production_rejects_authority_bytes_not_in_source_commit(tmp_path, m
         with pytest.raises(RuntimeError, match="bytes do not match source_commit"):
             physics_authority.convention_provenance(
                 source_commit=physics_authority._authority_commit(),
-                requested_mass_gev=125.14,
+                requested_mass_gev=125.21,
             )
     finally:
         physics_authority._load_contract.cache_clear()

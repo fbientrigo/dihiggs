@@ -81,13 +81,13 @@ fail closed rather than infer the state from a mass ordering.
 The active project convention for new production is the decimal string
 
 ```text
-m_h = "125.13" GeV
+m_h = "125.20" GeV
 ```
 
-This adopts the PDG 2026 Higgs world-average central value, reported as
-`125.13 +/- 0.11 GeV`, as the project convention. `125.20 GeV` was a prior
-project convention and remains a named, replay-only convention while its
-downstream consumers are migrated. It is not the PDG 2026 central value.
+This is the project's corrected production convention. It is a project
+decision, not a claim about an external-measurement central value. `125.13`
+remains a named, replay-only convention for completed campaigns and explicit
+regression fixtures.
 
 The decimal string is authoritative. Producers may convert it for numerical
 calculation, but card writers must not reconstruct the original decimal text
@@ -95,18 +95,17 @@ from a binary float.
 
 | Convention ID | Value [GeV] | Status | Permitted use |
 |---|---:|---|---|
-| `mh_125p13_pdg_2026` | `"125.13"` | active | New production and new handoffs |
-| `mh_125p20_project_pre_v3` | `"125.20"` | superseded / pending migration | Exact replay of already-provenanced work only |
+| `mh_125p20_active_2026` | `"125.20"` | active | New production and new handoffs |
+| `mh_125p13_pdg_2026_historical_replay` | `"125.13"` | historical replay only | Completed campaigns and explicit replay fixtures |
 | `mh_125p13_high_mass_v1` | `"125.13"` | historical | High-mass v1, 150 GeV benchmark, point-v2 replay |
 | `mh_125p09_lambda1_boundary_legacy` | `"125.09"` | historical | Lambda1 characterization and legacy boundary replay |
 | `mh_125p0_ufo_autoresearch_legacy` | `"125.0"` | historical | Frozen UFO defaults and replay-only legacy paths |
 
 Historical artifacts retain their original value and checksum. They are not
 silently recalculated, renamed as active, or mixed across convention IDs. A
-recalculation at another `m_h` is a new point with new provenance. The exact
-locations still using `125.20` are enumerated in
-`migration.pending_125p20_uses` in the machine contract and in the discrepancy
-ledger; they are a required migration queue, not an authorization to produce.
+recalculation at another `m_h` is a new point with new provenance. The
+historical inventory in `migration.pending_125p20_uses` is provenance only;
+it is not an authorization to mix historical rows with new production.
 
 For `dihiggs.point.v2` new production, the orchestrator reads the active mass
 from the YAML and emits `convention_id`, decimal mass text, schema version,

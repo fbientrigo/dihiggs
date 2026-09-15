@@ -13,16 +13,16 @@ constants_GeV:
   m_W: 80.36951   # 2HDMC 1.8.0 SM default (SM::MW)
   m_Z: 91.15349   # 2HDMC 1.8.0 SM default (SM::MZ)
   m_t_pole: 172.5 # 2HDMC 1.8.0 SM default (SM::mt_p)
-  m_h: 125.13     # numeric threshold coordinate; v3 provenance is below
+  m_h: 125.20     # numeric threshold coordinate; v3 provenance is below
 
 physics_convention:
-  convention_id: mh_125p13_pdg_2026
-  m_h_GeV_text: "125.13"
+  convention_id: mh_125p20_active_2026
+  m_h_GeV_text: "125.20"
   schema_version: physics_conventions_v3
   source_repository: fbientrigo/dihiggs
-  source_commit: 83a05f8faa7bbe63c394e640cc4a561e126f5225
+  source_commit: caafb7239ea5960bcc185ee9df5df57705bc14df
   source_path: conventions/physics_conventions.yaml
-  source_sha256: f7cea46d28f328f9b66a5de3b9d76fbbb65948c384f813828fb1462dfe1ee147
+  source_sha256: 4f3a938ed54dbc779d25f691ce1dd06fe17af69751105dc3b69ccb6b7d92fff6
 
 flag_groups:
   forbidden_in_no_heavy_cascade_study:

@@ -6,8 +6,8 @@ The current maintained core has two canonical production paths:
 - `DihiggsPointV2Evaluator`: rectangular `(mH, M2)` inputs with reconstructed
   `lambda1`.
 
-The active SM-like Higgs-mass convention for new production is **125.13 GeV**.
-Do not silently reuse older 125.20, 125.09, or 125.0 conventions.
+The active SM-like Higgs-mass convention for new production is **125.20 GeV**.
+Do not silently reuse historical 125.13, 125.09, or 125.0 conventions.
 
 ## Build
 
@@ -31,7 +31,7 @@ python -m dihiggs.app.orchestrator \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --axis-min 1.0 --axis-max 1.0 --n-axis 1 \
   --mA 300 --mHp 300 \
-  --mh 125.13 \
+  --mh 125.20 \
   --sin-ba 0.995 \
   --lambda6 0.1 --lambda7 0.0 \
   --tanbeta 50
@@ -48,7 +48,7 @@ python -m dihiggs.app.orchestrator \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --axis-min 15000 --axis-max 15000 --n-axis 1 \
   --mA 300 --mHp 300 \
-  --mh 125.13 \
+  --mh 125.20 \
   --yukawa-type 1 \
   --sin-ba 0.995 \
   --lambda6 0.1 --lambda7 0.0 \
@@ -61,7 +61,7 @@ python -m dihiggs.app.orchestrator \
 dihiggs/app/DihiggsPointV2Evaluator \
   --campaign-id smoke \
   --run-id m2 \
-  --mh 125.13 \
+  --mh 125.20 \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --mA 300 --mHp 300 \
   --yukawa-type 1 \

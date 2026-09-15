@@ -83,13 +83,13 @@ position; all use name-keyed access (verified by repo-wide grep).
 | `model_family` | General CP-conserving 2HDM. `m12_sq` is the soft Z2-breaking coefficient; nonzero `lambda6` or `lambda7` is hard Z2 breaking. | `THDM::set_param_phys` physical-basis parameterization; `physics_conventions_v3` |
 | Yukawa type | Type I (`yukawa_type=1`) is the default control point; Types I-IV (`1..4`, hep-ph/0504050 convention) are all supported and must be recorded per point, never assumed | `dihiggs/include/YukawaType.hpp`, `2hdmc/src/THDM.cpp:757-773` |
 | `sin(beta-alpha)` | Campaign choice, not a model identity. Benchmark anchors choose `sin_ba in {0.999, 1.0}`; every point records its value. | CLI `--sin-ba` |
-| `m_h` | New high-mass production uses `mh_125p13_pdg_2026`, decimal text `"125.13"` GeV, with v3 commit/SHA-256 provenance. `125.09` belongs to the older lambda1-characterization line and remains replay-only. | `physics_conventions_v3`; see "Conflict resolution" below |
+| `m_h` | New high-mass production uses `mh_125p20_active_2026`, decimal text `"125.20"` GeV, with v3 commit/SHA-256 provenance. `125.09` belongs to the older lambda1-characterization line and remains replay-only. | `physics_conventions_v3`; see "Conflict resolution" below |
 | `lambda7` | Campaign coordinate, not fixed by the model. An anchor may choose `0.0` or a documented numerical value such as `1e-10`; any nonzero `lambda7` is hard Z2 breaking, not a soft scale. | CLI `--lambda7`; per-point manifest |
 | `mHp = mA` | Campaign choice required by this high-mass factory, not a general-model identity or evaluator invariant. Tooling must pass equal values and record the choice; cascade checks provide a second guard. | `high_mass_campaign_template.yaml`; `cascade_contract.yaml` |
 | 2HDMC | Vendored source, not a submodule. Version `1.8.0` (2020-02-10) per `2hdmc/README:159`, with a local patch aliasing `check_stability` to `check_positivity` (`kStabilityAlias` in the evaluator; see `docs/contracts/canonical_evaluators_v2.md`). Provenance is this repository's own commit (evaluator output already records `producer_commit`/`producer_dirty`); there is no separate upstream 2HDMC commit hash to track. | `2hdmc/README`, `DihiggsPointV2Evaluator.cpp` |
 | SM inputs | `GF=1.16637e-5`, `MZ=91.15349`, `MW=80.36951`, `alpha_s=0.119`, `alpha_em=1/127.934`, `m_t^pole=172.5`, `m_b^pole=4.75`, `m_c^pole=1.42`, `m_tau=1.77684`, full CKM as listed in `2hdmc/src/SM.h:18-89`. These are 2HDMC 1.8.0 defaults, unmodified by this contract. | `2hdmc/src/SM.h` |
 
-### Convention boundary: historical `125.09` versus active `125.13`
+### Convention boundary: historical `125.13` and `125.09` versus active `125.20`
 
 Both values exist in this repository's history for different purposes:
 
@@ -98,14 +98,16 @@ Both values exist in this repository's history for different purposes:
   `scripts/lambda1_mh_eps_sensitivity.py`, `tests/test_golden_lambda1.py`).
   This line of work is **not** part of the high-mass H2 point factory and is
   left untouched.
-- `125.13 GeV` — the active `mh_125p13_pdg_2026` convention for new production.
-  The direct evaluator receives it explicitly via `--mh`; the Python
-  orchestrator records the complete v3 convention provenance in its manifest.
+- `125.13 GeV` — `mh_125p13_pdg_2026_historical_replay`, retained for
+  completed work and explicit replay fixtures only.
+- `125.20 GeV` — the active `mh_125p20_active_2026` convention for new
+  production. The direct evaluator receives it explicitly via `--mh`; the
+  Python orchestrator records the complete v3 convention provenance.
   Existing point-v2 pilots and regression tests at that value retain their
   original provenance.
 
 **Decision for this contract: new high-mass points use
-`mh_125p13_pdg_2026` and include the v3 convention provenance, for both
+`mh_125p20_active_2026` and include the v3 convention provenance, for both
 `MASS_CONTROL` and `PHYSICAL_POINT_SCAN` classes and both study variants.**
 Do not mix historical `125.09` results into a new high-mass plot, table, or
 theory-validity pilot.
@@ -224,7 +226,7 @@ anchor coordinates).
 | Pilot | m_H2 | Delta_heavy | Purpose | theory_ok | width_tt_GeV | br_hh |
 |---|---:|---:|---|:-:|---:|---:|
 | P0_anchor_150 | 150 | 300 | existing 150 GeV anchor reproduction | 1 | 0 | 0 |
-| P1_below_hh | 200 | 300 | below `hh` threshold (`2*125.13=250.26`) | 0 | 0 | 0 |
+| P1_below_hh | 200 | 300 | below `hh` threshold (`2*125.20=250.40`) | 0 | 0 | 0 |
 | P2_above_hh | 300 | 500 | above `hh` threshold | 0 | 2.35e-07 | 0.286 |
 | P3_below_tt | 330 | 470 | below `tt` threshold region | 0 | 3.22e-06 | 0.310 |
 | P4_above_tt | 400 | 400 | above `tt` threshold | 0 | 2.56e-03 | 0.318 |
