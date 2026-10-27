@@ -11,15 +11,21 @@ Do not silently reuse historical 125.13, 125.09, or 125.0 conventions.
 
 ## Build
 
-From the repository root:
+From the repository root, build only the library and two maintained evaluators
+first. This avoids the separate HiggsTools path required by legacy/HBHS
+executables and does not remove or clean existing build outputs.
 
 ```bash
-make -C 2hdmc -j2
-make -C dihiggs clean
-make -C dihiggs -j2
+make -C 2hdmc lib -j2
+make -C dihiggs app/Lambda1EvaluatorV2 app/DihiggsPointV2Evaluator -j2
 ```
 
 The canonical binaries are written under `dihiggs/app/`.
+
+The full `make -C dihiggs -j2` target builds all configured executables and
+may require the separately installed HiggsTools library. Use it only when
+those legacy/HBHS programs are needed; no clean target is required for the
+canonical evaluator workflow.
 
 ## Lambda1 v2 through the orchestrator
 

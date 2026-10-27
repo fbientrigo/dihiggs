@@ -46,19 +46,10 @@ TRIPLE_OK/triple_ok_legacy is theory-only. theory_ok_v1 currently equals
 those three predicates. No experimental acceptance is inferred from these
 flags.
 
-## Build prerequisites
+## Build and validation
 
-Linux or WSL, a C++17 compiler, GNU Make, GSL, and the repository's patched
-2HDMC checkout under 2hdmc/ are required. HiggsTools is not needed for the
-three v2 2HDMC-only executables.
-
-## Build commands
-
-    make -C 2hdmc -j2
-    make -C dihiggs clean
-    make -C dihiggs -j2
-
-The v2 binaries are written under dihiggs/app/.
+See the [quickstart](docs/quickstart.md) for prerequisites, build commands,
+smoke evaluations, and repository validation.
 
 ## Lambda1 v2 smoke test
 
