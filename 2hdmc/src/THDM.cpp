@@ -206,6 +206,8 @@ void THDM::init() {
 
   phys_cache_valid = false;
   phys_mh = phys_mH = phys_mA = phys_mHp = phys_m12_2 = phys_tan_beta = 0.;
+  gen_cache_valid = false;
+  gen_m12_2 = gen_tan_beta = 0.;
 
   kappa_D = gsl_matrix_alloc(3,3);
   kappa_U = gsl_matrix_alloc(3,3);
@@ -225,6 +227,10 @@ void THDM::init() {
 }
 
 void THDM::clear_param_phys_lam1_validation() {
+  // Any subsequent model/SM parameter mutation invalidates the opt-in exact
+  // generic-input cache. set_param_gen_exact re-establishes it only after a
+  // successful call to set_param_gen.
+  gen_cache_valid = false;
   lam1_validation_available = false;
   lam1_validation_input = 0.;
   lam1_validation_recomputed = 0.;
@@ -239,6 +245,7 @@ bool THDM::set_param_gen(double lambda1, double lambda2, double lambda3,
 
   clear_param_phys_lam1_validation();
   phys_cache_valid = false;
+  gen_cache_valid = false;
 
   // tan(beta) must be greater than 0 for valid basis
   if (tan_beta<=0) {
@@ -291,11 +298,25 @@ bool THDM::set_param_gen(double lambda1, double lambda2, double lambda3,
   return params_set;
 }
 
+bool THDM::set_param_gen_exact(double lambda1, double lambda2, double lambda3,
+                               double lambda4, double lambda5, double lambda6,
+                               double lambda7, double m12_2, double tan_beta) {
+  const bool ok=set_param_gen(lambda1,lambda2,lambda3,lambda4,lambda5,lambda6,
+                              lambda7,m12_2,tan_beta);
+  if (ok) {
+    gen_cache_valid=true;
+    gen_m12_2=m12_2;
+    gen_tan_beta=tan_beta;
+  }
+  return ok;
+}
+
 
 bool THDM::set_param_HHG(double Lambda1, double Lambda2, double Lambda3,
 			 double Lambda4, double Lambda5, double Lambda6,
 			 double tan_beta) {
 
+  clear_param_phys_lam1_validation();
   if (tan_beta<=0) {
     params_set=false;
     return params_set;
@@ -499,6 +520,7 @@ bool THDM::set_param_higgs(double Lambda1, double Lambda2, double Lambda3,
 bool THDM::set_param_hybrid(double mh, double mH, double cba, double Z4,
 			   double Z5, double Z7, double tanb) {
 
+  clear_param_phys_lam1_validation();
   bool params_set = true;
 
   double vsmall = 1E-10;
@@ -523,6 +545,7 @@ bool THDM::set_param_hybrid(double mh, double mH, double cba, double Z4,
 bool THDM::set_param_hybrid_sba(double mh, double mH, double sba, double Z4,
 			   double Z5, double Z7, double tanb) {
 
+  clear_param_phys_lam1_validation();
   double Lambda1,Lambda2,Lambda3,Lambda4,Lambda5,Lambda6,Lambda7,mHp;
 
   bool params_set = true;
@@ -587,6 +610,7 @@ bool THDM::set_param_hybrid_sba(double mh, double mH, double sba, double Z4,
 
 bool THDM::set_inert(double m_h,double m_H, double m_A, double m_Hp, double lambda2, double lambda3) {
 
+  clear_param_phys_lam1_validation();
   phys_cache_valid = false;
 
   if ((m_h<=0)||(m_H<=0)||(m_A<=0)||(m_Hp<=0)) {
@@ -621,6 +645,8 @@ bool THDM::set_inert(double m_h,double m_H, double m_A, double m_Hp, double lamb
 
 bool THDM::set_param_sm(double mh) {
 
+   clear_param_phys_lam1_validation();
+
    double mA = 1000.;
    if (mA <= mh) mA = mh+1000;
 
@@ -638,6 +664,7 @@ bool THDM::set_param_sm(double mh) {
 bool THDM::set_MSSM(double mA, double tan_beta) {
 
   if ((mA<=0)||(tan_beta<=0)) {
+    clear_param_phys_lam1_validation();
     params_set = false;
     return params_set;
   }
@@ -671,6 +698,7 @@ bool THDM::set_MSSM(double mA, double tan_beta) {
 bool THDM::set_hMSSM(double mh, double mA, double tan_beta) {
 
   if ((mA<=0)||(tan_beta<=0)) {
+    clear_param_phys_lam1_validation();
     params_set = false;
     return params_set;
   }
@@ -1060,7 +1088,7 @@ void THDM::get_param_gen(double &lambda1, double &lambda2, double &lambda3,
   lambda5=lambda[5];
   lambda6=lambda[6];
   lambda7=lambda[7];
-  tan_beta=tan(beta);
+  tan_beta=gen_cache_valid ? gen_tan_beta : tan(beta);
   m12_2=get_m12_2();
 }
 
@@ -1202,6 +1230,7 @@ void THDM::get_param_hybrid(double &m_h, double &m_H, double &cba,
 
 void THDM::recalc_tan_beta(double tan_beta) {
 
+  clear_param_phys_lam1_validation();
   phys_cache_valid = false;
 
 	// Only positive tan(beta) allowed
@@ -1764,10 +1793,19 @@ void THDM::get_coupling_hhhh(int h1,int h2,int h3,int h4,complex <double> &c) {
 
 double THDM::calc_unitarity() {
 
+  double s20[1], s21[3], s01[4], s00[4];
+  return calc_unitarity_spectrum(s20,s21,s01,s00);
+}
+
+
+double THDM::calc_unitarity_spectrum(double s20[1], double s21[3],
+                                     double s01[4], double s00[4]) {
+
   double egmax=0;
 
   // S-Matrices from Ginzburg and Ivanov, hep-ph/0508020
   double S20 = lambda[3]-lambda[4];
+  s20[0]=S20;
   if (abs(S20) > abs(egmax)) egmax = S20;
 
   double s2 = sqrt(2.);
@@ -1802,19 +1840,25 @@ double THDM::calc_unitarity() {
   for (int i=0;i<3;i++) {
     eg = gsl_vector_get(eval3,i);
     if (abs(eg)>abs(egmax)) egmax = eg;
+    s21[i] = eg;
   }
+  std::sort(s21,s21+3);
 
   gsl_eigen_symm(&S01.matrix,eval4,w4);
   for (int i=0;i<4;i++) {
     eg = gsl_vector_get(eval4,i);
     if (abs(eg)>abs(egmax)) egmax = eg;
+    s01[i] = eg;
   }
+  std::sort(s01,s01+4);
 
   gsl_eigen_symm(&S00.matrix,eval4,w4);
   for (int i=0;i<4;i++) {
     eg = gsl_vector_get(eval4,i);
     if (abs(eg)>abs(egmax)) egmax = eg;
+    s00[i] = eg;
   }
+  std::sort(s00,s00+4);
 
   gsl_eigen_symm_free(w3);
   gsl_eigen_symm_free(w4);
@@ -2811,6 +2855,7 @@ void THDM::print_param_higgs() {
 
 
 double THDM::get_m12_2() {
+  if (gen_cache_valid) return gen_m12_2;
   //hep-ph/0207010
   // This inversion loses precision for extreme tan(beta); physical-basis
   // callers should use get_param_phys(), which retains their exact input.

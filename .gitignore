@@ -163,3 +163,15 @@ scripts/out/
 /chris/chris_points_to_bronze
 /chris/chris_points_to_hybrid
 /chris/diag_roundtrip
+
+# campaigns: bulk data/binaries live in the lake (dihiggs/campaigns/* rows of lake/sources.tsv); track only code and status docs
+campaigns/*
+!campaigns/t2_t4_20261008T043858Z/
+campaigns/t2_t4_20261008T043858Z/*
+!campaigns/t2_t4_20261008T043858Z/*.md
+!campaigns/t2_t4_20261008T043858Z/scripts/
+campaigns/t2_t4_20261008T043858Z/scripts/*
+!campaigns/t2_t4_20261008T043858Z/scripts/*.py
+!campaigns/t2_t4_20261008T043858Z/scripts/*.cpp
+# compiled analytic bridge (source: 2hdmc/src/AnalyticBridge.cpp)
+2hdmc/analytic-bridge

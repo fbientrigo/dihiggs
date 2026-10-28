@@ -50,6 +50,11 @@ endif
 
 all: lib $(PROG)
 
+# Additive analytic-mode bridge; normal `all` and legacy executables are unchanged.
+.PHONY: analytic-bridge
+analytic-bridge: lib
+	$(CC) src/AnalyticBridge.cpp -Isrc $(CFLAGS) $(LDFLAGS) -o analytic-bridge
+
 # Track transitive headers so a THDM layout change rebuilds every client.
 $(OBJDIR)/%.o : %.cpp
 	@mkdir -p $(OBJDIR)
