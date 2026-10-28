@@ -155,7 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--engine",
         type=str,
         default="lambda1_v2",
-        choices=["lambda1_v2", "lambda1_legacy", "lambda1", "m2", "m2_tracker", "gen_fixings"],
+        choices=["lambda1_v2", "lambda1_legacy", "lambda1", "m2", "m2_tracker", "gen_fixings", "t4"],
         help=(
             "Canonical 'lambda1_v2' → Lambda1EvaluatorV2 (explicit lambda1_target); "
             "legacy 'lambda1_legacy'/'lambda1' → PhysScanWithFixings; "
@@ -165,6 +165,12 @@ def build_parser() -> argparse.ArgumentParser:
             "chris/CalcLambda1ScanFixings bronze shard against 2HDMC). "
         ),
     )
+    p.add_argument("--t4-mode", choices=["legacy","explicit","analytic"], default="legacy",
+                   help="Constructor route for the additive single-point T4 engine.")
+    p.add_argument("--point-json", type=str, default=None,
+                   help="Stable aligned-family point JSON for --engine t4.")
+    p.add_argument("--output", type=str, default=None,
+                   help="Output JSON path for --engine t4.")
 
     # Executable
     p.add_argument(
@@ -392,6 +398,49 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.engine == "t4":
+        if not args.point_json:
+            print("[ERROR] --point-json is required for --engine t4.", file=sys.stderr)
+            return 2
+        if not args.output:
+            print("[ERROR] --output is required for --engine t4.", file=sys.stderr)
+            return 2
+        try:
+            import json
+            from dihiggs.app.orchestrator.analytic_bridge import (
+                _MODES, evaluate_t4, validate_family_point,
+            )
+            point_path=Path(args.point_json).expanduser().resolve()
+            point=validate_family_point(json.loads(point_path.read_text()))
+            output_path=Path(args.output).expanduser().resolve()
+            if args.dry_run:
+                result={
+                    "mode":args.t4_mode,
+                    "requested_mode":args.t4_mode,
+                    "constructor_route":_MODES[args.t4_mode],
+                    "constructor_ok":False,
+                    "backend_constructor_status":"NOT_TESTED",
+                    "family_constructor_agreement_status":"NOT_TESTED",
+                    "constructor_status":"NOT_TESTED",
+                    "status":"NOT_TESTED",
+                    "dry_run":True,
+                    "dry_run_reason":"--dry-run requested; calculator backend was not executed",
+                    "inputs_decimal":dict(point["inputs"]),
+                    "values_decimal":dict(point["values"]),
+                    "widths":"NOT_TESTED",
+                    "branching_fractions":"NOT_TESTED",
+                    "lifetime":"NOT_TESTED",
+                }
+            else:
+                result=evaluate_t4(point,mode=args.t4_mode,executable=args.exec_path)
+            output_path.parent.mkdir(parents=True,exist_ok=True)
+            output_path.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+        except (OSError,ValueError,RuntimeError) as error:
+            print(f"[ERROR] {error}",file=sys.stderr)
+            return 2
+        print(f"[t4] {result.get('constructor_status','NOT_TESTED')} mode={args.t4_mode} output={output_path}")
+        return 0
 
     if args.engine == "lambda1_v2":
         if args.lambda1 is not None:
