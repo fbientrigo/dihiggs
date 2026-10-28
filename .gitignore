@@ -103,6 +103,7 @@ mlpython/lake_pipeline/parallel_plots/
 2hdmc/CalcRoundTrip
 2hdmc/CalcLam1Scan
 2hdmc/CalcLam1ScanFromLake
+2hdmc/GeneralProbe
 2hdmc/working/ParamScan*
 2hdmc/working/paralelscan
 
