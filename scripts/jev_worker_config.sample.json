@@ -1,0 +1,40 @@
+{
+  "baseline_best_ctau_mm": 0.5389973954118694,
+  "target_ctau_mm": 1.0779947908237388,
+  "baseline_provenance": {
+    "kind": "canonical_replay_of_declared_reference_anchor",
+    "historical_best": false,
+    "note": "No historical-best artifact for ctau_mm=0.5390644846600711 could be recovered from runs/, the dihiggs_lake data lake, git history, or scripts/out. This baseline instead replays the declared reference anchor from GEMINI.md section 4 / golden case L07 (mphi=200, mA=mHp=500, sin_ba=1, tan_beta=126904, lambda1=1, lambda6=0.0019, lambda7=0) through the active canonical evaluator.",
+    "historical_source_ctau_mm": 0.5390644846600711,
+    "historical_source_status": "unrecoverable_provenance",
+    "superseded_unverified_ctau_mm": 0.5389973717365447,
+    "replay_manifest_path": "/home/fabian/atlas_dihiggs/runs/jev_harness/baseline_replay_L07_mh_125p20_active_2026/campaign=baseline_replay_L07/microrun/run_manifest.json",
+    "replay_input_sha256": "bf18e4ed7b57dd4d2a1359ba0cc8edc02c24d3b6f826304bd650d99282365776",
+    "replay_point_id": "lambda1_9e8ddc3fa4588698",
+    "mass_convention_id": "mh_125p20_active_2026",
+    "source_commit": "087ba246e9a9fa34b16249b52629a62703893b5c"
+  },
+  "max_iterations": 3,
+  "max_walltime_minutes": 60,
+  "max_points_total": 9000,
+  "min_points_per_subrun": 1000,
+  "max_points_per_subrun": 3000,
+  "allowed_actions": ["run_template", "summarize_only", "stop"],
+  "forbidden_actions": [
+    "edit_cpp",
+    "edit_scoring",
+    "edit_triple_ok",
+    "delete_artifacts",
+    "widen_envelope",
+    "broad_scan"
+  ],
+  "envelope": {
+    "sin_ba": [1.0, 1.0],
+    "lambda7": [0.0, 0.0],
+    "lambda1": [1.0, 1.0],
+    "lambda6": [0.0003, 0.0060],
+    "tan_beta": [30000, 500000],
+    "mphi": [160, 350],
+    "mA": [300, 500]
+  }
+}

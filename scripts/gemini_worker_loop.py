@@ -11,13 +11,13 @@ import sys
 import uuid
 
 try:
-    from scripts.gemini_contract_templates import materialize_template
+    from scripts.gemini_contract_templates import DEFAULT_LAMBDA6_CENTER, DEFAULT_TAN_BETA_CENTER, materialize_template
 except ModuleNotFoundError:
-    sys.path.insert(0, '/home/fabi/dihiggs/scripts')
-    from gemini_contract_templates import materialize_template
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from gemini_contract_templates import DEFAULT_LAMBDA6_CENTER, DEFAULT_TAN_BETA_CENTER, materialize_template
 
-ROOT = Path('/home/fabi/dihiggs')
-HARNESS_DIR = ROOT / 'scripts' / 'out' / 'gemini_harness'
+ROOT = Path(__file__).resolve().parents[1]
+HARNESS_DIR = ROOT.parent / 'runs' / 'gemini_harness'
 
 SCHEMA_ACTIONS = {"run_template", "run_contract", "summarize_only", "stop"}
 FORBIDDEN_KEYWORDS = {
@@ -219,7 +219,7 @@ def _run_plancheck(contract_path: Path, plan_dir: Path) -> tuple[bool, dict[str,
             if p.is_file():
                 p.unlink()
     plan_dir.mkdir(parents=True, exist_ok=True)
-    cmd = ['python', '-m', 'autoresearch.harness.bounded_adaptive_search', '--contract', str(contract_path), '--output-dir', str(plan_dir), '--plan-only']
+    cmd = [sys.executable, '-m', 'autoresearch.harness.bounded_adaptive_search', '--contract', str(contract_path), '--output-dir', str(plan_dir), '--plan-only']
     proc = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
     summary = _extract_plancheck_summary(plan_dir)
     return proc.returncode == 0, summary, proc.stderr[-2000:]
@@ -275,8 +275,8 @@ def _materialize_from_action(obj: dict[str, Any], cfg: dict[str, Any], it: int, 
             max_points=int(cfg['max_points_per_subrun']),
             iteration=it,
             max_total_points=int(cfg['max_points_total']),
-            tan_beta_center_default=float(cfg.get('tan_beta_center', 124416.0)),
-            lambda6_center_default=float(cfg.get('lambda6_center', 0.0019683)),
+            tan_beta_center_default=float(cfg.get('tan_beta_center', DEFAULT_TAN_BETA_CENTER)),
+            lambda6_center_default=float(cfg.get('lambda6_center', DEFAULT_LAMBDA6_CENTER)),
             cycle_id=cycle_id,
             iteration_id=iteration_id,
         )
@@ -430,7 +430,7 @@ def run_worker(config_path: Path, *, dry_run: bool, iterations_override: int | N
             run_dir = out_dir / f'worker_run_{state.get("cycle_id")}_{iteration_id}'
             cpath = out_dir / f'worker_contract_iter{it:02d}_{iteration_id}.json'
             cpath.write_text(json.dumps(contract, indent=2), encoding='utf-8')
-            cmd = ['python', '-m', 'autoresearch.harness.bounded_adaptive_search', '--contract', str(cpath), '--output-dir', str(run_dir), '--execute', '--max-iterations', '1']
+            cmd = [sys.executable, '-m', 'autoresearch.harness.bounded_adaptive_search', '--contract', str(cpath), '--output-dir', str(run_dir), '--execute', '--max-iterations', '1']
             proc = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
             run_result = 'executed' if proc.returncode == 0 else 'execution_failed'
             append_jsonl(events_path, {'timestamp': now_iso(), 'iteration': it, 'iteration_id': iteration_id, 'cycle_id': state.get('cycle_id'), 'event': 'run_contract', 'return_code': proc.returncode, 'stdout_tail': proc.stdout[-2000:], 'stderr_tail': proc.stderr[-2000:]})
