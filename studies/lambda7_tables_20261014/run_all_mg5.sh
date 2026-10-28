@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Sequential production runs at mphi=200 GeV (one per distinct physical coupling g).
+set -uo pipefail
+s="$(dirname "$0")/run_mg5.sh"
+"$s" A_g0_s107      325.203252032520325 5.8186186870881274e-09 107
+"$s" B13_g0p5_s101  162.601626016260163 5.818298016962014e-09  101
+"$s" B14_g1p4_s101  455.284552845528455 5.818886836212297e-09  101
+"$s" B02L7Z_s101    63.6489057860414634 5.818110764662383e-09  101
+"$s" B17L7Z_s101    63.6484426181228452 1.9697114155965847e-15 101
+echo ALL_DONE
