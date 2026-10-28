@@ -43,6 +43,7 @@ docs/_build/
 *.csv
 !docs/pilots/dihiggs_point_v2_v1/*.csv
 !docs/pilots/high_mass_h2_v1/*.csv
+!tests/bfb_negative_trilinear_audit/*.csv
 *.parquet
 *.pdf
 *.joblib
