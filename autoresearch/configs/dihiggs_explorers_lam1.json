@@ -1,8 +1,7 @@
 {
   "campaign_id": "dihiggs-explorers-lam1-dev-2026-04-01",
   "paths": {
-    "repo_root": "/home/fabi/dihiggs",
-    "outdir": "/home/fabi/dihiggs/runs/autoresearch-dihiggs-explorers-lam1",
+    "outdir": "{repo_root}/runs/autoresearch-dihiggs-explorers-lam1",
     "lake_name": "events.jsonl"
   },
   "runtime": {

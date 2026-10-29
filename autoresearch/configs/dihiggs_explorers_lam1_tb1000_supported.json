@@ -1,8 +1,7 @@
 {
   "campaign_id": "dihiggs-explorers-lam1-tb1000-supported",
   "paths": {
-    "repo_root": "/home/fabi/dihiggs",
-    "outdir": "/home/fabi/dihiggs/runs/lam1-tb1000-mphi130-supported",
+    "outdir": "{repo_root}/runs/lam1-tb1000-mphi130-supported",
     "lake_name": "events.jsonl"
   },
   "runtime": {

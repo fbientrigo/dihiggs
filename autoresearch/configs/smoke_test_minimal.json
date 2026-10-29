@@ -1,7 +1,6 @@
 {
   "campaign_id": "smoke-test-001",
   "paths": {
-    "repo_root": "{repo_root}",
     "lake_name": "events.jsonl"
   },
   "runtime": {

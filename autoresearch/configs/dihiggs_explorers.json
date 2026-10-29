@@ -1,8 +1,7 @@
 {
   "campaign_id": "dihiggs-explorers-dev-2026-04-01",
   "paths": {
-    "repo_root": "/home/user/dihiggs",
-    "outdir": "/home/user/dihiggs/runs/autoresearch-dihiggs-explorers",
+    "outdir": "{repo_root}/runs/autoresearch-dihiggs-explorers",
     "lake_name": "events.jsonl"
   },
   "runtime": {
