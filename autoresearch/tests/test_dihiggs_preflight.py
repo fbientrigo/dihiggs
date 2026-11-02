@@ -7,6 +7,7 @@ from unittest.mock import patch
 from ..harness.dihiggs_preflight import (
     check_2hdmc_lib,
     check_datasets,
+    check_golden,
     check_phys_exec,
     run_all_preflight_checks,
 )
@@ -41,7 +42,7 @@ def test_check_phys_exec_fail_when_binary_missing() -> None:
     assert result == {
         "check": "phys_exec",
         "status": "fail",
-        "message": "PhysScanWithFixings not found at /repo/dihiggs/app/PhysScanWithFixings",
+        "message": "evaluator (dihiggs_boundary evaluate_point) not found at /repo/dihiggs/app/PhysScanWithFixings",
     }
 
 
@@ -80,16 +81,15 @@ def test_check_datasets_pass_when_both_env_set_and_dirs_exist(monkeypatch: Monke
     assert result["status"] == "pass"
 
 
-def test_check_datasets_warn_when_env_missing(monkeypatch: MonkeyPatch) -> None:
+def test_check_datasets_falls_back_to_boundary_dirs_and_fails_when_absent(monkeypatch: MonkeyPatch) -> None:
     cfg = _base_config()
     monkeypatch.delenv("HB_DATASET", raising=False)
     monkeypatch.delenv("HS_DATASET", raising=False)
+    monkeypatch.delenv("DHB_ROOT", raising=False)
 
     result = check_datasets(cfg)
-    assert result["check"] == "datasets"
-    assert result["status"] == "warn"
-    assert "HB_DATASET" in result["message"]
-    assert "HS_DATASET" in result["message"]
+    assert result["status"] == "fail"
+    assert "/dataset/hbdataset-v1.7" in result["message"]
 
 
 def test_check_datasets_fail_when_env_set_but_path_missing(monkeypatch: MonkeyPatch) -> None:
@@ -145,7 +145,7 @@ def test_check_2hdmc_lib_warn_when_missing() -> None:
         result = check_2hdmc_lib(cfg)
 
     assert result["check"] == "2hdmc_lib"
-    assert result["status"] == "warn"
+    assert result["status"] == "fail"
     assert "not found" in result["message"]
 
 
@@ -167,18 +167,13 @@ def test_run_all_preflight_checks_aggregates_with_fail_priority(monkeypatch: Mon
     assert result["overall"] == "fail"
     checks = result["checks"]
     assert isinstance(checks, list)
-    assert [check["check"] for check in checks] == ["phys_exec", "datasets", "2hdmc_lib"]
+    assert [check["check"] for check in checks] == ["phys_exec", "datasets", "2hdmc_lib", "golden"]
 
 
-def test_run_all_preflight_checks_aggregates_warn_when_no_fail(monkeypatch: MonkeyPatch) -> None:
-    cfg = _base_config()
-    monkeypatch.delenv("HB_DATASET", raising=False)
-    monkeypatch.delenv("HS_DATASET", raising=False)
-
-    with patch("os.path.exists", return_value=True), patch("os.access", return_value=True):
-        result = run_all_preflight_checks(cfg)
-
-    assert result["overall"] == "warn"
+def test_check_golden_fails_when_boundary_checkout_missing() -> None:
+    result = check_golden(_base_config())
+    assert result["check"] == "golden"
+    assert result["status"] == "fail"
 
 
 def test_run_all_preflight_checks_pass_when_all_checks_pass(monkeypatch: MonkeyPatch) -> None:
@@ -199,6 +194,10 @@ def test_run_all_preflight_checks_pass_when_all_checks_pass(monkeypatch: MonkeyP
     def isdir_side_effect(path: object) -> bool:
         return isinstance(path, str) and path in {"/datasets/HBDataset", "/datasets/HSDataset"}
 
+    monkeypatch.setattr(
+        "autoresearch.harness.dihiggs_preflight.check_golden",
+        lambda config: {"check": "golden", "status": "pass", "message": "stub"},
+    )
     with (
         patch("os.path.exists", side_effect=exists_side_effect),
         patch("os.path.isdir", side_effect=isdir_side_effect),
@@ -208,4 +207,4 @@ def test_run_all_preflight_checks_pass_when_all_checks_pass(monkeypatch: MonkeyP
 
     assert result["overall"] == "pass"
     statuses = [entry["status"] for entry in result["checks"]]
-    assert statuses == ["pass", "pass", "pass"]
+    assert statuses == ["pass", "pass", "pass", "pass"]

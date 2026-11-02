@@ -11,7 +11,7 @@
     "max_empty_rounds": 2
   },
   "dihiggs": {
-    "phys_exec": "{repo_root}/dihiggs/app/PhysLam1Scan",
+    "phys_exec": "{repo_root}/../dihiggs_boundary/build/bin/evaluate_point",
     "hb_dataset_env": "HB_DATASET",
     "hs_dataset_env": "HS_DATASET"
   },
