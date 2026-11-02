@@ -22,7 +22,7 @@ from autoresearch.benchmarks.score import (
     compute_diversity,
     compute_metrics,
 )
-from autoresearch.harness import boundary_actions
+from autoresearch.harness import boundary_actions, policy
 from autoresearch.harness.journal import BudgetExhausted, Journal
 from autoresearch.harness.dihiggs_adaptation import (
     BanditState,
@@ -458,7 +458,7 @@ class DiHiggsRunner:
                   "attempt": attempt, "menu_digest": self.menu_digest, "fresh_rows": fresh, "valid_rows": valid,
                   "seeded_rows": int((manifest.get("explored_seed") or {}).get("seeded_attempts", 0)), "lake_commit": lake_commit,
                   "reconciled": reconcile}
-        self.journal.close(attempt, actual, {k: v for k, v in result.items() if k not in ("events_emitted", "menu_digest")})
+        self.journal.close(attempt, actual, {"arm_id": arm_id, "status": status, **{k: v for k, v in result.items() if k not in ("events_emitted", "menu_digest")}})
         if disk_mb > intent["reserved"]["disk_mb"]:  # timeout bounds cpu and wall; disk is only measured, so an overrun stops the daemon
             raise BudgetExhausted(f"{attempt} used {disk_mb} MB > reserved {intent['reserved']['disk_mb']} MB (raise runtime.disk_mb_per_action)")
         return result
@@ -523,6 +523,13 @@ class DiHiggsRunner:
             attempt = open_attempts[0]
             arm_id = self.journal.get(f"intent:{attempt}")["arm_id"]
             result = self._settle(attempt, update_bandit=True, reconcile=True)
+        elif self.menu:  # one journaled decision per attempt; a crash before its intent reuses it (no second agy call)
+            attempt = self._next_attempt()
+            decision = self.journal.get(f"decision:{attempt}") or self.journal.append(f"decision:{attempt}", "decision", policy.choose(
+                self.config, self.bandit_state, [c for _, _, c in self.journal.events("closed")],
+                policy.agy_calls([d for _, _, d in self.journal.events("decision")])))
+            arm_id = decision["arm_id"]
+            result = self.run_single_round(arm_id, update_bandit=True)
         else:
             arm_id = select_arm_ucb1(self.bandit_state, self.config)
             result = self.run_single_round(arm_id, update_bandit=True)

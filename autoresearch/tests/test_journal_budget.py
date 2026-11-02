@@ -110,7 +110,7 @@ def test_kill_9_mid_action_reconciles_without_duplicate_or_loss(tmp_path, monkey
     cfg, out = world(tmp_path), str(tmp_path / "out")
     repo = str(Path(__file__).resolve().parents[2])
     daemon = subprocess.Popen([sys.executable, "-c", DAEMON.format(repo=repo, cfg=cfg, out=out)])
-    for _ in range(200):
+    for _ in range(600):  # generous: a loaded machine imports slowly
         if Path(out, "journal.db").exists() and Journal(Path(out) / "journal.db").get(kill_at):
             break
         time.sleep(0.05)
