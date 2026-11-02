@@ -17,7 +17,9 @@ local-dir lake (`LAKE_REMOTE`/`LAKE_CACHE` in a temp dir; the real lake is untou
 boundary (lambda7 = 0.01, tan_beta = 1e7, 32 points), commits to the lake; a second campaign over the same lake computes
 0 fresh rows (32 seeded) and adds no commit; a daemon `kill -9`'d mid-action is restarted and ends with the attempt closed,
 32 rows and exactly 1 commit; finally the TUI is mounted headless (Textual pilot) and its Overview text is printed.
-Result of the last local run: all 8 checks `ok`, `autoresearch-smoke TESTED`.
+Verified 2026-11-02 from a fresh `git clone --recursive` of atlas_dihiggs with no env vars: workspace `make setup && make smoke`
+on Debian/Python 3.13.5 and in CI ([Fresh-clone smoke](https://github.com/fbientrigo/atlas_dihiggs/actions/workflows/smoke.yml),
+ubuntu/Python 3.13, run 41531514883): 215 unit tests pass, all smoke checks `ok`, `autoresearch-smoke TESTED`.
 
 Trimmed in #18: the pre-journal modules nothing reached (bounded_adaptive_search, campaign_state, run_health,
 safe_automation_layer, mvp_graph, proposal_registry, ...; net -14.6k lines with their tests) and the eight loose guides were removed; they remain in
