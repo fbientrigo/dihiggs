@@ -149,8 +149,6 @@ python ctau_vs_br_multislice_patched.py \
 | File | Purpose |
 |------|---------|
 | `test_nulls.py` | Check for null values in flags |
-| `lake_explorer.py` | Explore data lake structure |
-| `subset_unique_values_to_json.py` | Export unique parameter values |
 
 ---
 
