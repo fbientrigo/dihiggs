@@ -104,8 +104,20 @@ def explored_export(lake: list[str], regime: dict, path: str | Path) -> bool:
     raise RuntimeError(f"lake explored failed, not launching: {result.stderr.strip()}")
 
 
-def lake_commit(lake: list[str], run_dir: str | Path, action: dict) -> str:
-    result = subprocess.run([*lake, "commit", str(run_dir), "-m", f"autoresearch {action['key']}", "--authority", "candidate",
+def lake_commit(lake: list[str], run_dir: str | Path, action: dict, tag: str, on_start=lambda pid: None) -> str:
+    """`tag` (campaign/attempt) goes in the message so a restart can find a commit whose journal row was lost;
+    `on_start(pid)` lets the caller journal the running commit, which outlives a killed daemon."""
+    proc = subprocess.Popen([*lake, "commit", str(run_dir), "-m", f"autoresearch {tag} {action['key']}", "--authority", "candidate",
                              "--table", STRATEGIES[action["strategy"]]["table"], "--producer-manifest", str(Path(run_dir) / "manifest.json")],
-                            capture_output=True, text=True, check=True)
-    return result.stdout.split()[1].rstrip(":")  # "committed <cid>: ..."
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    on_start(proc.pid)
+    out, err = proc.communicate()
+    if proc.returncode:
+        raise subprocess.CalledProcessError(proc.returncode, proc.args, out, err)
+    return out.split()[1].rstrip(":")  # "committed <cid>: ..."
+
+
+def find_commit(lake: list[str], tag: str) -> str | None:
+    """The cid of a commit made for this attempt (`lake ls` message field), or None."""
+    out = subprocess.run([*lake, "ls"], capture_output=True, text=True, check=True).stdout
+    return next((line.split("\t")[0] for line in out.splitlines() if f"autoresearch {tag} " in line), None)

@@ -35,10 +35,14 @@ def main() -> int:
     parser.add_argument("config", help="Path to the JSON config file")
     parser.add_argument("--preflight-only", action="store_true", help="Run only preflight checks and exit")
     parser.add_argument("--status", action="store_true", help="Print compact status after the run")
+    for flag in ("cpu-hours", "disk-gb", "wall-hours"):
+        parser.add_argument(f"--{flag}", type=float, help=f"budget: {flag} of boundary actions (journal.db; never exceeded)")
     args = parser.parse_args()
 
     config_path = Path(args.config).resolve()
     config = _load_config(config_path)
+    budget = config.setdefault("budget", {})
+    budget.update({k: v for k, v in (("cpu_hours", args.cpu_hours), ("disk_gb", args.disk_gb), ("wall_hours", args.wall_hours)) if v is not None})
     paths = config.get("paths")
     outdir_value = paths.get("outdir") if isinstance(paths, dict) else None
     outdir = Path(str(outdir_value)).resolve() if outdir_value else config_path.parent.resolve()
