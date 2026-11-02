@@ -38,7 +38,6 @@ plots/
 outputs/
 results/
 graphify-out/
-docs/_build/
 
 *.csv
 !docs/pilots/dihiggs_point_v2_v1/*.csv
@@ -74,7 +73,6 @@ mlpython/img/
 mlpython/branching_ratio_plots/
 mlpython/graphing/*.png
 mlpython/outs/
-mlpython/docs/_build/
 mlpython/presentaciones/
 mlpython/lake_pipeline/outputs/
 mlpython/lake_pipeline/ctau_plots/
