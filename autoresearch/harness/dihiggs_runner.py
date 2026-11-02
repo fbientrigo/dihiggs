@@ -1,12 +1,14 @@
 from __future__ import annotations
 # pyright: reportImplicitRelativeImport=false, reportUnannotatedClassAttribute=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownMemberType=false, reportAttributeAccessIssue=false, reportArgumentType=false, reportUnusedCallResult=false, reportAny=false, reportUnnecessaryIsInstance=false
 
+import csv
 import hashlib
 import json
 import logging
 import os
 import subprocess
 import sys
+import yaml
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +19,7 @@ from autoresearch.benchmarks.score import (
     compute_diversity,
     compute_metrics,
 )
+from autoresearch.harness import boundary_actions
 from autoresearch.harness.dihiggs_adaptation import (
     BanditState,
     compute_arm_reward,
@@ -50,6 +53,15 @@ class DiHiggsRunner:
 
         self._ensure_outdir_layout()
         self._load_existing_state()
+        self.menu: list[dict] = []
+        arms = self.config.get("arms")
+        action_keys = [arm["action"] for arm in arms if isinstance(arm, Mapping) and "action" in arm] if isinstance(arms, list) else []
+        if action_keys:
+            self.boundary_root = Path(str(paths_cfg.get("boundary_root") or Path(str(paths_cfg.get("repo_root", "."))).parent / "dihiggs_boundary"))
+            self.menu = boundary_actions.build_menu(self.boundary_root)
+            self.menu_digest = boundary_actions.register(Path(outdir) / "action_menu.json", self.menu)
+            for key in action_keys:  # an arm outside the menu is refused before anything runs
+                boundary_actions.lookup(self.menu, str(key))
 
     def _ensure_outdir_layout(self) -> None:
         Path(self.outdir).mkdir(parents=True, exist_ok=True)
@@ -216,6 +228,8 @@ class DiHiggsRunner:
             }
 
         arm_cfg, runtime_ctx, _ = self._resolve_arm(arm_id)
+        if "action" in arm_cfg:
+            return {**self._run_action(arm_id, arm_cfg, update_bandit), "preflight": preflight}
 
         cmd_raw = arm_cfg.get("cmd", [])
         if not isinstance(cmd_raw, list):
@@ -327,6 +341,42 @@ class DiHiggsRunner:
             "preflight": preflight,
             "subprocess_status": subprocess_status,
         }
+
+    def _run_action(self, arm_id: str, arm_cfg: Mapping[str, object], update_bandit: bool) -> dict[str, object]:
+        """One menu action: boundary computes; the runner records fresh rows and the valid fraction."""
+        action = boundary_actions.lookup(self.menu, str(arm_cfg["action"]))
+        runtime_cfg = self._mapping(self.config.get("runtime"), "runtime")
+        round_num = self._round_counter.get(arm_id, 0)
+        work = Path(self.outdir) / "actions" / f"{arm_id}_round_{round_num}"
+        work.mkdir(parents=True, exist_ok=True)
+        cfg = boundary_actions.boundary_config(action, self.boundary_root, runtime_cfg.get("boundary_overrides"))
+        cfg_path = work / "boundary_config.yaml"
+        cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+        cmd = boundary_actions.command(action, cfg_path, work / "out", sys.executable)
+        timeout_sec = int(arm_cfg.get("timeout_sec", runtime_cfg.get("timeout_sec", 3600)))
+        try:
+            result = subprocess.run(cmd, cwd=self.boundary_root, capture_output=True, text=True, timeout=timeout_sec, check=False)
+            status = "success" if result.returncode == 0 else "nonzero_exit"
+            (work / "stdout.txt").write_text(result.stdout, encoding="utf-8")
+            (work / "stderr.txt").write_text(result.stderr, encoding="utf-8")
+        except subprocess.TimeoutExpired:
+            status = "timeout"
+        manifest_path = work / "out" / str(cfg["campaign_id"]) / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        fresh = int(manifest.get("budget", {}).get("fresh_rows", 0))
+        valid = sum(row.get("theory_ok_v1") == "1" for raw in manifest_path.parent.glob("raw_*points.csv")
+                    for row in csv.DictReader(raw.open(encoding="utf-8"))) if fresh else 0
+        axes = {"tb": action["tan_beta"] or 0}
+        scores = {"yield": valid / fresh if fresh else 0.0, "coverage": 0.0, "diversity": 0.0}
+        attempt_id = self.make_attempt_id(str(self.config.get("campaign_id", "")), arm_id, action["key"], str(work))
+        emitted = self.emit_attempt_event(attempt_id=attempt_id, arm_id=arm_id, cell_id=action["key"], eval_status=status,
+                                          scores=scores, axes_binned=axes, axes_raw=axes)
+        if emitted and update_bandit:
+            attempt_data = {"cell_id": action["key"], "axes_binned": axes, "axes_raw": axes, **scores}
+            update_state(self.bandit_state, arm_id, compute_arm_reward([attempt_data], self.config), attempt_data)
+        self._round_counter[arm_id] = round_num + 1
+        return {"discoveries": fresh, "events_emitted": int(emitted), "subprocess_status": status,
+                "action": action["key"], "menu_digest": self.menu_digest, "fresh_rows": fresh, "valid_rows": valid}
 
     def evaluate_run_dir(self, run_dir: str, axes_binned: Mapping[str, object]) -> dict[str, float]:
         metrics_result = compute_metrics(run_dir, axes_binned, self.config)

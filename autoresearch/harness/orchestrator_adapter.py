@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -72,10 +74,11 @@ def normalize_runtime_config(raw: Mapping[str, Any] | None = None) -> dict[str, 
     if effective_threads is None or effective_threads < 1:
         effective_threads = 1
 
-    outdir = str(cfg.get("outdir", "/home/fabi/dihiggs/scripts/out"))
+    repo_root = os.environ.get("DIHIGGS_ROOT") or str(Path(__file__).resolve().parents[2])  # as run_supervisor (#12)
+    outdir = str(cfg.get("outdir", f"{repo_root}/scripts/out"))
     lake_name = str(cfg.get("lake_name", "dihiggs_lake"))
     campaign = str(cfg.get("campaign", "autoresearch_campaign"))
-    exec_path = str(cfg.get("exec_path", "/home/fabi/dihiggs/dihiggs/app/PhysScanWithFixings"))
+    exec_path = str(cfg.get("exec_path", f"{repo_root}/dihiggs/app/PhysScanWithFixings"))
 
     return {
         "exec_path": exec_path,

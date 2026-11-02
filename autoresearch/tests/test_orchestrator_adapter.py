@@ -93,3 +93,10 @@ def test_build_orchestrator_command_lambda1_fixed_contract() -> None:
     assert cmd[cmd.index("--lam1-min") + 1] in {"1.0", "1"}
     assert cmd[cmd.index("--lam1-max") + 1] in {"1.0", "1"}
     assert cmd[cmd.index("--n-lam1") + 1] == "1"
+
+
+def test_runtime_defaults_follow_repo_root(monkeypatch):
+    from autoresearch.harness.orchestrator_adapter import normalize_runtime_config
+    monkeypatch.setenv("DIHIGGS_ROOT", "/r")
+    cfg = normalize_runtime_config({})
+    assert cfg["outdir"] == "/r/scripts/out" and cfg["exec_path"] == "/r/dihiggs/app/PhysScanWithFixings"
