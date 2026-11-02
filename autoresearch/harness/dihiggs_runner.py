@@ -83,6 +83,8 @@ class DiHiggsRunner:
                 boundary_actions.lookup(self.menu, str(key))
             self.journal = Journal(Path(outdir) / "journal.db")
             self.limits = budget_limits(self._mapping(self.config.get("budget"), "budget"))
+            # the TUI shows remaining = limits - ledger; a changed limit is a new event, the latest one wins
+            self.journal.append("limits:" + hashlib.sha256(json.dumps(self.limits, sort_keys=True).encode()).hexdigest()[:12], "limits", self.limits)
 
     def _ensure_outdir_layout(self) -> None:
         Path(self.outdir).mkdir(parents=True, exist_ok=True)

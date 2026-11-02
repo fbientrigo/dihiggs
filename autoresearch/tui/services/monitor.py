@@ -1,5 +1,5 @@
 """
-Monitoring service - adapts live_monitor.py for TUI use.
+Monitoring service: polls the campaign output directory for the TUI.
 """
 import json
 from pathlib import Path
@@ -30,6 +30,9 @@ class CampaignStatus:
     last_activity: Optional[datetime] = None
     consecutive_empty_rounds: int = 0
     
+    # Journal view (journal.db + action_menu.json): budget left, per-action runs, menu coverage
+    journal: Optional[Dict[str, Any]] = None
+
     # Errors
     error: Optional[str] = None
     
@@ -52,6 +55,39 @@ class CampaignStatus:
             "PREFLIGHT_BLOCKED": "🚫",
             "UNKNOWN": "❓",
         }.get(self.state, "❓")
+
+
+def journal_view(outdir: Path) -> Optional[Dict[str, Any]]:
+    """What the journal knows: budget remaining (None = unlimited), runs per menu action, and menu coverage."""
+    db = Path(outdir) / "journal.db"
+    if not db.exists():
+        return None
+    from autoresearch.harness.journal import Journal
+
+    j = Journal(db)
+    limits = next((p for _, _, p in reversed(j.events("limits"))), {})
+    used = j.ledger()
+    menu = json.loads((Path(outdir) / "action_menu.json").read_text())["actions"] if (Path(outdir) / "action_menu.json").exists() else []
+    actions = {a["key"]: {"runs": 0, "fresh_rows": 0, "last": "-"} for a in menu}
+    for _, _, c in j.events("closed"):
+        row = actions.setdefault(c["action"], {"runs": 0, "fresh_rows": 0, "last": "-"})
+        row["runs"] += 1
+        row["fresh_rows"] += int(c.get("fresh_rows", 0))
+        row["last"] = c.get("status", "-")
+    # an arm is not 'covered' until it brought fresh rows: re-running an explored regime adds nothing
+    covered = sum(1 for a in actions.values() if a["fresh_rows"] > 0)
+    return {"remaining": {r: lim - used[r] for r, lim in limits.items()}, "limits": limits, "actions": actions,
+            "covered": covered, "menu_size": len(actions), "open_attempts": j.open_attempts()}
+
+
+def journal_text(v: Optional[Dict[str, Any]]) -> str:
+    if not v:
+        return "No journal yet (run_supervisor with --cpu-hours/--disk-gb/--wall-hours writes journal.db)."
+    left = ", ".join(f"{r}: {v['remaining'][r]}/{lim}" for r, lim in v["limits"].items()) or "unlimited"
+    lines = [f"Budget remaining: {left}", f"Coverage: {v['covered']}/{v['menu_size']} menu actions brought fresh rows"
+             + (f"  (open attempts: {', '.join(v['open_attempts'])})" if v["open_attempts"] else "")]
+    lines += [f"  {k}  runs={a['runs']} fresh_rows={a['fresh_rows']} last={a['last']}" for k, a in v["actions"].items()]
+    return "\n".join(lines)
 
 
 class MonitoringService:
@@ -124,6 +160,8 @@ class MonitoringService:
             except Exception:
                 pass
         
+        status.journal = journal_view(self.outdir)
+
         # Check staleness (files not modified in 5+ minutes)
         try:
             import time
