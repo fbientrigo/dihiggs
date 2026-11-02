@@ -75,9 +75,10 @@ def boundary_config(action: dict, boundary_root: str | Path, overrides: dict | N
     cfg["physics"].update(action["regime"])
     # the copy lives outside boundary: its config-relative paths become absolute
     cfg["dihiggs_root"] = str((path.parent / cfg["dihiggs_root"]).resolve())
-    for key in ("raw_csv", "manifest"):
-        if key in cfg.get("seed", {}):
-            cfg["seed"][key] = str((path.parent / cfg["seed"][key]).resolve())
+    for section, keys in (("seed", ("raw_csv", "manifest")), ("historical_hint", ("manifest", "state", "archive_manifest"))):
+        for key in keys:
+            if key in cfg.get(section, {}):
+                cfg[section][key] = str((path.parent / cfg[section][key]).resolve())
     for section, values in (overrides or {}).items():
         if section == "physics":
             raise ValueError("runtime overrides may not set physics; the action's regime owns it")
