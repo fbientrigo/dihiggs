@@ -20,7 +20,7 @@ boundary (lambda7 = 0.01, tan_beta = 1e7, 32 points), commits to the lake; a sec
 Result of the last local run: all 8 checks `ok`, `autoresearch-smoke TESTED`.
 
 Trimmed in #18: the pre-journal modules nothing reached (bounded_adaptive_search, campaign_state, run_health,
-safe_automation_layer, mvp_graph, proposal_registry, ... ~12k lines) and the eight loose guides were removed; they remain in
+safe_automation_layer, mvp_graph, proposal_registry, ...; net -14.6k lines with their tests) and the eight loose guides were removed; they remain in
 git history. The sections below describe the older explorer-based harness and are kept for the modules that still exist.
 
 A Python harness for orchestrating adaptive parameter space exploration using the DiHiggs explorers. Wraps `adaptive_explorer.py` and `branch_continuation_explorer_v2.py` as black-box subprocesses with checkpoint parsing, multi-axis metrics, and bandit-based arm selection.
