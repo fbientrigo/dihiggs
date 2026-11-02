@@ -1,6 +1,7 @@
 """The finite, registered action menu over dihiggs_boundary strategies.
 
-An action is (strategy, tan_beta slice, regime). autoresearch only picks a key from this menu (RPE ADR-020): the
+An action is (strategy, tan_beta slice, regime). The lake is the memory: before a launch `lake explored --export`
+for the action's exact regime feeds boundary's --explored, and afterwards the output is `lake commit`ted. autoresearch only picks a key from this menu (RPE ADR-020): the
 regime (lambda7, mh, mass convention) is the only physics the action sets; every other number comes from the
 boundary config, and a runtime override may never touch `physics`.
 """
@@ -9,15 +10,18 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import yaml
 
-# strategy -> boundary module, its config (relative to the boundary checkout), and whether it takes --tan-beta
+# strategy -> boundary module, its config (relative to the boundary checkout), whether it takes --tan-beta, and the
+# lake table its points go to (None: it cannot read --explored yet, so launching it would repeat lake points)
 STRATEGIES = {
-    "adaptive_m2_mesh": {"module": "dhb.adaptive_m2_mesh", "config": "configs/adaptive_m2_boundary_v1.yaml", "slices": False},
-    "profiled_m2": {"module": "dhb.profiled_m2_scan", "config": "configs/profiled_m2_boundary_v1.yaml", "slices": True},
-    "survivor_v2": {"module": "dhb.survivor_adaptive_campaign", "config": "campaigns/survivor_adaptive_12520_tanbeta_v2/campaign.yaml", "slices": True},
+    "adaptive_m2_mesh": {"module": "dhb.adaptive_m2_mesh", "config": "configs/adaptive_m2_boundary_v1.yaml", "slices": False, "table": None},
+    "profiled_m2": {"module": "dhb.profiled_m2_scan", "config": "configs/profiled_m2_boundary_v1.yaml", "slices": True, "table": None},
+    "survivor_v2": {"module": "dhb.survivor_adaptive_campaign", "config": "campaigns/survivor_adaptive_12520_tanbeta_v2/campaign.yaml",
+                    "slices": True, "table": "survivor_points=raw_fresh_12520_tanbeta_v2_points.csv@compact"},
 }
 # lambda7 = 0 is superseded: the default menu offers lambda7 != 0 only
 REGIMES = {
@@ -87,3 +91,21 @@ def boundary_config(action: dict, boundary_root: str | Path, overrides: dict | N
 def command(action: dict, config_path: str | Path, output_dir: str | Path, python: str) -> list[str]:
     cmd = [python, "-m", STRATEGIES[action["strategy"]]["module"], "--config", str(config_path), "--output-dir", str(output_dir)]
     return cmd + (["--tan-beta", repr(float(action["tan_beta"]))] if action["tan_beta"] is not None else [])
+
+
+def explored_export(lake: list[str], regime: dict, path: str | Path) -> bool:
+    """`lake explored --export` for this regime (boundary re-checks it exactly); False only for a lake with no points yet."""
+    result = subprocess.run([*lake, "explored", "--lambda7", repr(regime["lambda7"]), "--mh", repr(regime["mh_GeV"]), "--export", str(path)],
+                            capture_output=True, text=True, check=False)
+    if result.returncode == 0:
+        return True
+    if "no point tables" in result.stderr or '"commits/*.json"' in result.stderr:  # no table / no commit at all
+        return False
+    raise RuntimeError(f"lake explored failed, not launching: {result.stderr.strip()}")
+
+
+def lake_commit(lake: list[str], run_dir: str | Path, action: dict) -> str:
+    result = subprocess.run([*lake, "commit", str(run_dir), "-m", f"autoresearch {action['key']}", "--authority", "candidate",
+                             "--table", STRATEGIES[action["strategy"]]["table"], "--producer-manifest", str(Path(run_dir) / "manifest.json")],
+                            capture_output=True, text=True, check=True)
+    return result.stdout.split()[1].rstrip(":")  # "committed <cid>: ..."

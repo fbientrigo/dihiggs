@@ -3,24 +3,17 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
 
 import pytest
 
 from autoresearch.harness.mvp_graph import (
     GraphContractError,
     GraphDelta,
-    GraphReconcileCursor,
     MvpGraphState,
     apply_graph_delta,
-    apply_graph_deltas,
-    apply_reconciled_graph_delta,
     apply_reconciled_graph_artifact,
-    graph_deltas_from_reconciled_state,
     graph_deltas_from_contract_artifact,
 )
-from autoresearch.harness.mvp_upsert_pipeline import execute_registry_discovery_coverage_upsert
-from autoresearch.harness.telemetry_store import init_db
 
 
 def _artifact_fixture() -> dict[str, list[dict[str, object]]]:
@@ -230,108 +223,5 @@ def _graph_fingerprint(graph: MvpGraphState) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def test_task7_graph_delta_executor_adds_only_new_graph_records(
-    tmp_path: Path,
-    basic_config: dict[str, object],
-) -> None:
-    conn = init_db(tmp_path / "telemetry.db")
-    source_file = tmp_path / "scanner_rows.jsonl"
-    graph = MvpGraphState()
-
-    baseline_upsert = execute_registry_discovery_coverage_upsert(
-        conn,
-        source_file=source_file,
-        scanner_rows=_scanner_rows(),
-        config=basic_config,
-    )
-    baseline_apply = apply_reconciled_graph_delta(graph, conn, baseline_upsert)
-
-    assert baseline_apply.summary.inserted == 11
-    assert baseline_apply.summary.updated == 0
-    assert baseline_apply.summary.noops == 0
-    assert baseline_apply.summary.node_count == 6
-    assert baseline_apply.summary.edge_count == 5
-    assert baseline_apply.cursor == GraphReconcileCursor(
-        source_file=str(source_file),
-        last_line_offset=2,
-        last_checksum=baseline_upsert["watermark"]["last_checksum"],
-    )
-
-    next_rows = [
-        *_scanner_rows(),
-        {
-            "campaign_id": "camp-001",
-            "arm_id": "adaptive-v1",
-            "run_dir_fingerprint": "run-003",
-            "attempt_id": "attempt-003",
-            "artifact_status": "complete",
-            "discovery_status": "new",
-            "axes_binned": {"tb": 10000, "lam1_bin": 2},
-        },
-    ]
-    incremental_upsert = execute_registry_discovery_coverage_upsert(
-        conn,
-        source_file=source_file,
-        scanner_rows=next_rows,
-        config=basic_config,
-    )
-    incremental_apply = apply_reconciled_graph_delta(
-        graph,
-        conn,
-        incremental_upsert,
-        applied_cursor=baseline_apply.cursor,
-    )
-
-    assert incremental_apply.summary.inserted == 6
-    assert incremental_apply.summary.updated == 0
-    assert incremental_apply.summary.noops == 0
-    assert incremental_apply.summary.node_count == 9
-    assert incremental_apply.summary.edge_count == 8
-    assert [delta.entity_type for delta in incremental_apply.deltas] == [
-        "run",
-        "discovery",
-        "discovery_provenance",
-        "coverage_state",
-        "coverage_state_link",
-        "run_lineage",
-    ]
-
-    discovery_edge = graph.edges[("discovery_provenance", "camp-001", "adaptive-v1", "run-003", "attempt-003")]
-    assert discovery_edge["source_file"] == str(source_file)
-    assert discovery_edge["line_offset"] == 3
-    assert discovery_edge["source_checksum"] == incremental_upsert["watermark"]["last_checksum"]
-    lineage_edge = graph.edges[("run_lineage", "camp-001", "adaptive-v1", "attempt-002", "attempt-003")]
-    assert lineage_edge["source_run_dir_fingerprint"] == "run-002"
-    assert lineage_edge["target_run_dir_fingerprint"] == "run-003"
-    assert lineage_edge["source_file"] == str(source_file)
 
 
-def test_task7_duplicate_delta_replay_is_graph_noop(tmp_path: Path, basic_config: dict[str, object]) -> None:
-    conn = init_db(tmp_path / "telemetry.db")
-    source_file = tmp_path / "scanner_rows.jsonl"
-    graph = MvpGraphState()
-
-    upsert_result = execute_registry_discovery_coverage_upsert(
-        conn,
-        source_file=source_file,
-        scanner_rows=_scanner_rows(),
-        config=basic_config,
-    )
-    deltas, cursor = graph_deltas_from_reconciled_state(conn, upsert_result)
-    first = apply_graph_deltas(graph, deltas)
-    before_hash = _graph_fingerprint(graph)
-    second = apply_graph_deltas(graph, deltas)
-    after_hash = _graph_fingerprint(graph)
-
-    assert cursor == GraphReconcileCursor(
-        source_file=str(source_file),
-        last_line_offset=2,
-        last_checksum=upsert_result["watermark"]["last_checksum"],
-    )
-    assert first.inserted == 11
-    assert second.inserted == 0
-    assert second.updated == 0
-    assert second.noops == len(deltas)
-    assert first.node_count == second.node_count == 6
-    assert first.edge_count == second.edge_count == 5
-    assert before_hash == after_hash

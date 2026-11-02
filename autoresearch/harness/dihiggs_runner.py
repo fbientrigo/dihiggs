@@ -60,6 +60,7 @@ class DiHiggsRunner:
             self.boundary_root = Path(str(paths_cfg.get("boundary_root") or Path(str(paths_cfg.get("repo_root", "."))).parent / "dihiggs_boundary"))
             self.menu = boundary_actions.build_menu(self.boundary_root)
             self.menu_digest = boundary_actions.register(Path(outdir) / "action_menu.json", self.menu)
+            self.lake = [sys.executable, str(paths_cfg.get("lake") or self.boundary_root.parent / "lake" / "lake.py")]
             for key in action_keys:  # an arm outside the menu is refused before anything runs
                 boundary_actions.lookup(self.menu, str(key))
 
@@ -343,8 +344,10 @@ class DiHiggsRunner:
         }
 
     def _run_action(self, arm_id: str, arm_cfg: Mapping[str, object], update_bandit: bool) -> dict[str, object]:
-        """One menu action: boundary computes; the runner records fresh rows and the valid fraction."""
+        """One menu action: lake explored -> boundary --explored -> lake commit; boundary computes every number."""
         action = boundary_actions.lookup(self.menu, str(arm_cfg["action"]))
+        if boundary_actions.STRATEGIES[action["strategy"]]["table"] is None:
+            raise ValueError(f"{action['strategy']} cannot read --explored: launching it would repeat lake points")
         runtime_cfg = self._mapping(self.config.get("runtime"), "runtime")
         round_num = self._round_counter.get(arm_id, 0)
         work = Path(self.outdir) / "actions" / f"{arm_id}_round_{round_num}"
@@ -353,6 +356,8 @@ class DiHiggsRunner:
         cfg_path = work / "boundary_config.yaml"
         cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
         cmd = boundary_actions.command(action, cfg_path, work / "out", sys.executable)
+        if boundary_actions.explored_export(self.lake, action["regime"], work / "explored.csv"):
+            cmd += ["--explored", str(work / "explored.csv")]
         timeout_sec = int(arm_cfg.get("timeout_sec", runtime_cfg.get("timeout_sec", 3600)))
         try:
             result = subprocess.run(cmd, cwd=self.boundary_root, capture_output=True, text=True, timeout=timeout_sec, check=False)
@@ -366,6 +371,7 @@ class DiHiggsRunner:
         fresh = int(manifest.get("budget", {}).get("fresh_rows", 0))
         valid = sum(row.get("theory_ok_v1") == "1" for raw in manifest_path.parent.glob("raw_*points.csv")
                     for row in csv.DictReader(raw.open(encoding="utf-8"))) if fresh else 0
+        lake_commit = boundary_actions.lake_commit(self.lake, manifest_path.parent, action) if status == "success" and fresh else None
         axes = {"tb": action["tan_beta"] or 0}
         scores = {"yield": valid / fresh if fresh else 0.0, "coverage": 0.0, "diversity": 0.0}
         attempt_id = self.make_attempt_id(str(self.config.get("campaign_id", "")), arm_id, action["key"], str(work))
@@ -376,7 +382,8 @@ class DiHiggsRunner:
             update_state(self.bandit_state, arm_id, compute_arm_reward([attempt_data], self.config), attempt_data)
         self._round_counter[arm_id] = round_num + 1
         return {"discoveries": fresh, "events_emitted": int(emitted), "subprocess_status": status,
-                "action": action["key"], "menu_digest": self.menu_digest, "fresh_rows": fresh, "valid_rows": valid}
+                "action": action["key"], "menu_digest": self.menu_digest, "fresh_rows": fresh, "valid_rows": valid,
+                "seeded_rows": int((manifest.get("explored_seed") or {}).get("seeded_attempts", 0)), "lake_commit": lake_commit}
 
     def evaluate_run_dir(self, run_dir: str, axes_binned: Mapping[str, object]) -> dict[str, float]:
         metrics_result = compute_metrics(run_dir, axes_binned, self.config)
