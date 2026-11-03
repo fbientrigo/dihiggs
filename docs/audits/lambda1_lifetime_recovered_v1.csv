@@ -1,3 +1,2 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:996581429b7ae19d5d74748a35118c33384744bf54ff02c9b533cc5ba081ed06
-size 768
+recovery_schema_version,source_file,source_sha256,point_id,mh_gev,mH_gev,mA_gev,mHp_gev,sin_beta_minus_alpha,tan_beta,lambda1_target,lambda6_input,lambda7_input,legacy_total_width_gev,recovered_total_width_gev,recovered_br_gammagamma,recovered_ctau_mm,replay_scope
+dihiggs.lambda1-lifetime-recovery.v1,tests/golden/lambda1_v1/expected.csv,00d831dc9e6e81c5bb9de4042d4b2ed52f9708862707d3e2570a81c0f3e90950,L06_llp_regime_small_l6_large_tb,1.25000000000000000e+02,2.00000000000000000e+02,5.00000000000000000e+02,5.00000000000000000e+02,1.00000000000000000e+00,1.00000000000000000e+04,1.00000000000000000e+00,1.00000000000000004e-10,0.00000000000000000e+00,0.000000000000000,1.21439831103527398e-17,6.85127951342607067e-01,1.62489504972860886e+04,affected_golden_row_only

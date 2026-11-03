@@ -11,7 +11,7 @@ import pandas as pd
 
 DEFAULT_MERGED_CSV = Path("scripts/out/refactor_colab_compare/real_run/colab_vs_2hdmc_merged_comparison.csv")
 DEFAULT_FALLBACK_MERGED_CSV = Path("scripts/out/current_baseline/colab_vs_2hdmc_merged_comparison.csv")
-DEFAULT_CAMPAIGN_ROOT = Path("/mnt/c/Users/Asus/cern_db/dihiggs_lake/campaign=christopher_fixed_lam1_2026apr")
+DEFAULT_CAMPAIGN_ROOT = Path.home() / "cern_db/dihiggs_lake/campaign=christopher_fixed_lam1_2026apr"
 DEFAULT_SUMMARY_CSV = Path("scripts/out/christopher_fixed_lam1_2026apr/summary.csv")
 DEFAULT_OUT_DIR = Path("scripts/out/christopher_fixed_lam1_2026apr/comparison")
 

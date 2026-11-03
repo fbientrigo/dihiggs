@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List
 
 DEFAULT_CAMPAIGN = "christopher_fixed_lam1_2026apr"
-DEFAULT_LAKE_ROOT = Path("/mnt/c/Users/Asus/cern_db/dihiggs_lake")
+DEFAULT_LAKE_ROOT = Path.home() / "cern_db/dihiggs_lake"
 EPS = 1e-9
 
 REQUIRED_COLUMNS = {
