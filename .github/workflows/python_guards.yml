@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y libgsl-dev
       - run: make -C 2hdmc
+      - run: make -C 2hdmc analytic-bridge
       - run: bash scripts/build_lambda1_characterization.sh
       - run: make -C dihiggs app/Lambda1EvaluatorV2
       - run: make -C dihiggs app/DihiggsPointV2Evaluator
