@@ -97,8 +97,6 @@ def test_strict_replay_accepts_complete_real_point(complete_point, tmp_path, mon
 
 
 @needs_campaign_data
-@needs_campaign_data
-@needs_campaign_data
 @pytest.mark.parametrize("mutation,reason", [
     (lambda r: r["constraints"].pop("target.BFB_general"), "required physics constraint set"),
     (lambda r: r["source_decimal80_lambda_Z"].pop("lambda7"), "source decimal80 lambda/Z"),
@@ -117,6 +115,7 @@ def test_strict_replay_rejects_rechecksummed_scientific_mutations(
         runner._load_existing(rows, identity, t4_records)
 
 
+@needs_campaign_data
 def test_strict_replay_rejects_duplicate_and_join_mismatch(complete_point, tmp_path, monkeypatch):
     rows, t4_records, _row, _key, identity, _record = complete_point
     _install_replay_files(tmp_path, monkeypatch, complete_point)
@@ -132,6 +131,7 @@ def test_strict_replay_rejects_duplicate_and_join_mismatch(complete_point, tmp_p
         runner._load_existing(rows, identity, bad_t4)
 
 
+@needs_campaign_data
 def test_checkpoint_identity_schema_and_pending_state_are_strict(complete_point, tmp_path, monkeypatch):
     rows, t4_records, _row, _key, identity, _record = complete_point
     _install_replay_files(tmp_path, monkeypatch, complete_point)
