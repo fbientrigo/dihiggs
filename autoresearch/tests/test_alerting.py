@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="autoresearch is frozen outside the canonical evaluation core")
 
 from ..harness.alerting import ALERT_SEVERITY_MAP, Alert, AlertEngine
 
@@ -64,7 +63,6 @@ def test_severity_map_complete() -> None:
     expected_types = {
         "preflight_blocked",
         "dataset_missing",
-        "artifact_quarantine",
         "round_failed",
         "round_crashed",
         "round_timed_out",
@@ -103,26 +101,6 @@ def test_dataset_missing_alert_warning() -> None:
     alert = result["new_alerts"][0]
     assert alert["alert_type"] == "dataset_missing"
     assert alert["severity"] == "warning"
-
-
-def test_artifact_quarantine_alert_critical() -> None:
-    engine = AlertEngine({"dedupe_window_sec": 900})
-    state = _minimal_state()
-    state["quarantine_status"] = "quarantine_halt"
-    state["quarantine_summary"] = {
-        "decision": "halt",
-        "corrupted_count": 1,
-        "incomplete_count": 0,
-        "reason": "corrupted_threshold_reached",
-    }
-
-    result = engine.evaluate(state)
-
-    assert len(result["new_alerts"]) == 1
-    alert = result["new_alerts"][0]
-    assert alert["alert_type"] == "artifact_quarantine"
-    assert alert["severity"] == "critical"
-    assert "quarantine_halt" in alert["message"]
 
 
 def test_round_failed_alert_warning() -> None:

@@ -1236,15 +1236,8 @@ Test coverage:
 - `test_dihiggs_axis_contract.py` - Cell encoding/decoding
 - `test_score.py` - Metrics computation
 - `test_dihiggs_resume.py` - State reconstruction
-- `test_e2e_smoke.py` - End-to-end smoke test (gated)
 
-**Gated E2E Test** (requires real binaries):
-
-```bash
-export DIHIGGS_E2E_TEST=1
-export PHYS_SCAN_EXEC=/path/to/dihiggs/app/PhysScanWithFixings
-pytest tests/test_e2e_smoke.py -v -s
-```
+End-to-end: `make autoresearch-smoke`.
 
 ### Adding New Explorers
 

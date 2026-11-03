@@ -2,7 +2,6 @@ from __future__ import annotations
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnannotatedClassAttribute=false, reportIndexIssue=false, reportUnknownArgumentType=false, reportUnusedCallResult=false, reportUnknownMemberType=false, reportUnusedParameter=false, reportAny=false, reportArgumentType=false
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -167,17 +166,6 @@ def _preflight_pass(config: dict[str, object]) -> dict[str, object]:
     return {"overall": "pass", "checks": []}
 
 
-def _load_lam1_supervisor_config(tmp_path: Path) -> dict[str, object]:
-    repo_root = Path(__file__).resolve().parents[2]
-    config_path = repo_root / "autoresearch" / "configs" / "dihiggs_explorers_lam1.json"
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    config["paths"]["repo_root"] = str(repo_root)
-    config["paths"]["outdir"] = str(tmp_path / "campaign")
-    config["runtime"]["python_exe"] = sys.executable
-    config["supervisor"]["max_rounds"] = 1
-    config["supervisor"]["rebuild_telemetry"] = True
-    return config
-
 
 
 
@@ -289,31 +277,3 @@ def test_supervisor_smoke_creates_operator_artifacts(tmp_path: Path, capsys: pyt
     assert "Alerts:          1 active alerts" in captured.out
     assert "[INFO] plateau_warning" in captured.out
     assert "[INFO] plateau_warning" in captured.err
-
-
-@pytest.mark.skipif(
-    os.environ.get("DIHIGGS_E2E_TEST") != "1",
-    reason="Supervisor E2E requires DIHIGGS_E2E_TEST=1 and real prerequisites",
-)
-def test_supervisor_smoke_gated_real_backend(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    config = _load_lam1_supervisor_config(tmp_path)
-    outdir = Path(config["paths"]["outdir"])
-
-    supervisor = CampaignSupervisor(config, outdir=outdir)
-    terminal = supervisor.run()
-
-    assert terminal in {"COMPLETED", "CONVERGED"}
-    assert (outdir / "campaign_manifest.json").exists()
-    assert (outdir / "campaign_state.json").exists()
-    assert (outdir / "campaign_status.json").exists()
-    assert (outdir / "supervisor_events.jsonl").exists()
-    assert (outdir / "telemetry.db").exists()
-
-    print_cli_status(outdir)
-    captured = capsys.readouterr()
-    assert "Campaign Status:" in captured.out
-    assert "Metrics:" in captured.out
-
-
-
-

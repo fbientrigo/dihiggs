@@ -5,8 +5,8 @@
 # versions each repo builds against, so version drift is detectable instead of
 # hidden in directory names and build scripts. The declared versions must AGREE
 # across the three manifests -- that agreement is the cross-repo "version pin".
-# tests/test_external_tools.py enforces the versions and the authoritative
-# conventions SHA-256.
+# ../scripts/check_workspace.py (root) enforces the versions across repos;
+# tests/test_external_tools.py guards the authoritative conventions SHA-256.
 #
 # NOTE: the 2HDMC tree in THIS repo is a PATCHED FORK, not stock v1.8 (see
 # local_patches). It cannot be replaced by an upstream submodule without losing

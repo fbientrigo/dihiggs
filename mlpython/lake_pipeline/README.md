@@ -144,13 +144,6 @@ python ctau_vs_br_multislice_patched.py \
 
 ---
 
-### Python Utilities
-
-| File | Purpose |
-|------|---------|
-| `test_nulls.py` | Check for null values in flags |
-
----
 
 ## 📊 Output Directories
 

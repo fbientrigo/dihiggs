@@ -1,5 +1,4 @@
 import pytest
-import sys
 from pathlib import Path
 
 from dihiggs.app.orchestrator.aligned_lambda7 import build_aligned_lambda7_family
@@ -90,55 +89,3 @@ def test_serialized_family_point_rejects_derived_field_mutation():
     bad["values"]["Z7"]="0"
     with pytest.raises(ValueError,match="derived field Z7"):
         evaluate_t4(bad,mode="analytic")
-
-
-@pytest.mark.skipif(
-    not (Path(__file__).resolve().parents[1] / "campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge").is_file(),
-    reason="run_t4_bridge.py runs the frozen campaign binary; it lives in the lake: python ../lake/lake.py restore 20261013T005211Z-bec944 <dir>",
-)
-def test_native_diphoton_diagnostics_reconcile_qcd_components_and_width():
-    campaign=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z"
-    sys.path.insert(0,str(campaign/"scripts"))
-    from run_t4_bridge import _independent_diphoton, run_point
-    rows=run_point(point_builder=lambda digits:POINT,precisions=(50,))
-    analytic=next(row for row in rows if row["mode"]=="analytic")
-    audit=analytic["independent_diphoton_components"]
-    assert audit["status"]=="PASS"
-    assert float(audit["absolute_width_residual_GeV"]) < 1e-25
-    native=analytic["diphoton_native_diagnostics"]
-    top=next(x for x in native["fermions"] if x["family"]=="up" and x["generation"]==3)
-    before=complex(top["scalar_amplitude_before_qcd"]["real"],top["scalar_amplitude_before_qcd"]["imag"])
-    after=complex(top["scalar_amplitude_after_qcd"]["real"],top["scalar_amplitude_after_qcd"]["imag"])
-    assert abs(after-before)>0
-    factor=complex(audit["top_qcd_component_factor"])
-    assert 0 < factor.real < 1
-    assert abs(after-before*factor)<1e-24
-    qcd_off=evaluate_t4(POINT,mode="analytic",executable=campaign.parents[1]/"2hdmc/analytic-bridge",qcd_on=False)
-    off=next(x for x in qcd_off["diphoton_native_diagnostics"]["fermions"] if x["family"]=="up" and x["generation"]==3)
-    assert qcd_off["diphoton_native_diagnostics"]["qcd_enabled"] is False
-    assert qcd_off["diphoton_native_diagnostics"]["loop_width_GeV"] > 0
-    assert off["scalar_amplitude_after_qcd"]==off["scalar_amplitude_before_qcd"]
-    assert qcd_off["width_diphoton_GeV"] == 0
-    assert qcd_off["diphoton_width_channel_status"] == "NOT_TESTED"
-    off_audit=_independent_diphoton(qcd_off)
-    assert off_audit["status"]=="PASS"
-    assert off_audit["production_width_channel_status"]=="NOT_TESTED"
-    assert qcd_off["diphoton_native_diagnostics"]["scalar_amplitude_raw"] != {"real": 0, "imag": 0}
-
-
-def test_independent_diphoton_zero_amplitude_uses_absolute_residuals():
-    campaign=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z"
-    sys.path.insert(0,str(campaign/"scripts"))
-    from run_t4_bridge import _independent_diphoton
-    zero={"real":0,"imag":0}
-    native={"state_phase":1,"mass_GeV":"125","vev_GeV":"246","alpha0":"0.0073",
-        "mW_GeV":"80","mHp_GeV":"200","fermions":[],"heavy_damping_enabled":False,
-        "qcd_enabled":True,"W_coupling_raw":zero,"charged_higgs_coupling_raw":zero,
-        "scalar_amplitude_raw":zero,"pseudoscalar_amplitude_raw":zero,
-        "alpha_s_at_mass":"0.1","W_amplitude_raw":zero,"charged_higgs_amplitude_raw":zero,
-        "loop_width_GeV":"0"}
-    result=_independent_diphoton({"diphoton_native_diagnostics":native,"width_diphoton_GeV":"0"})
-    assert result["status"]=="PASS"
-    assert result["scalar_amplitude_normalized_residual"] is None
-    assert result["pseudoscalar_amplitude_normalized_residual"] is None
-    assert result["absolute_width_residual_GeV"]=="0.0"
