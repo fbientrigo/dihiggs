@@ -5,10 +5,7 @@ Run bounded, evidence-gated DiHiggs/2HDMC sensitivity probes to improve ctau_m s
 
 ## 2) Current architecture
 - Backend execution: `dihiggs/app/orchestrate_scans.py`
-- Safety gates: `autoresearch/harness/safe_automation_layer.py` (v1.1 fail-closed)
-- Adaptive runner: `autoresearch/harness/bounded_adaptive_search.py`
-- Decision helpers: `autoresearch/harness/decision_layer.py`
-- Worker loop wrapper: `scripts/gemini_worker_loop.py`
+- Campaign driver: `autoresearch/run_supervisor.py` (journal + budgets + policy chain; see `autoresearch/README.md`)
 - Progress artifacts: `progress.jsonl`, `progress.md`, `attempts.jsonl`, `commands.jsonl`
 
 ## 2.1) Roles

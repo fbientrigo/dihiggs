@@ -112,8 +112,8 @@ def convention_provenance(
         # until the point schema is versioned, while new consumers use m_h_GeV.
         "mh_GeV": active_mass,
         "m_h_GeV_text": active["value_GeV"],
-        "source": "PDG 2026 Higgs-boson listing",
-        "source_url": active["external_source"]["url"],
+        "source": active.get("source_label", "project physics authority"),
+        "source_url": active.get("source_url", authority.get("decision_issue")),
         "schema_version": contract["schema_version"],
         "source_repository": authority["repository"],
         "source_commit": source_commit,

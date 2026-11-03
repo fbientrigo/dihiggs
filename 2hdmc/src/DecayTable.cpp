@@ -438,6 +438,10 @@ double DecayTable::get_gamma_hgaga(int h) {
   return gamma_hgaga[h];
 }
 
+void DecayTable::get_hgaga_diagnostics(int h, HgammaDiagnostics &diagnostics) {
+  hgaga(h,&diagnostics);
+}
+
 
 double DecayTable::get_gamma_hZga(int h) {
 
@@ -1483,7 +1487,7 @@ double DecayTable::htb_offshell(double M, double m1, double m1run, double m2, do
   return G;
 }
 
-double DecayTable::hgaga(int h) {
+double DecayTable::hgaga(int h, HgammaDiagnostics *diagnostics) {
 
   complex <double> I(0.,1);
 
@@ -1496,6 +1500,25 @@ double DecayTable::hgaga(int h) {
   double M2 		= M*M;  
 
   double mHp 		= model.get_hmass(4);
+
+  if (diagnostics) {
+    diagnostics->mass_GeV=M;
+    diagnostics->vev_GeV=v;
+    diagnostics->alpha0=alpha;
+    diagnostics->mW_GeV=mW;
+    diagnostics->mHp_GeV=mHp;
+    diagnostics->alpha_s_at_mass=0.;
+    diagnostics->loop_width_GeV=0.;
+    diagnostics->qcd_enabled=qcd_on;
+    diagnostics->heavy_damping_enabled=SM::b_HD;
+    diagnostics->W_amplitude=0.;
+    diagnostics->charged_higgs_amplitude=0.;
+    diagnostics->W_coupling_raw=0.;
+    diagnostics->charged_higgs_coupling_raw=0.;
+    diagnostics->scalar_amplitude=0.;
+    diagnostics->pseudoscalar_amplitude=0.;
+    diagnostics->fermions.clear();
+  }
 
   double tau_W   = M2/(4.*mW*mW);
   double tau_Hp  = M2/(4.*mHp*mHp);
@@ -1515,13 +1538,38 @@ double DecayTable::hgaga(int h) {
       double Qinit = m;
       if(sm.b_HD) Qinit = SM::Q_HD;
 
-      double m_HD = sm.run_qmass_MSbar(m,Qinit,M/2.,sm.get_qmass_pole(6),sm.get_qmass_pole(5))*mp/sm.run_qmass_MSbar(m,Qinit,mp,sm.get_qmass_pole(6),sm.get_qmass_pole(5));      
+      double m_half = sm.run_qmass_MSbar(m,Qinit,M/2.,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
+      double m_at_pole = sm.run_qmass_MSbar(m,Qinit,mp,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
+      double m_HD = m_half*mp/m_at_pole;
       double tau = M2/(4.*m_HD*m_HD);
       double mrun = sm.run_qmass_MSbar(m,Qinit,M,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
       complex <double> Sd = 2.*Nc*pow(-1./3,2)*gS*v/mrun*F_sf(tau);
       complex <double> Pd = 2.*Nc*pow(-1./3,2)*gP*v/mrun*F_pf(tau);
       S_sum = S_sum + Sd;
       P_sum = P_sum + Pd;
+      if (diagnostics) {
+        HgammaFermionDiagnostic entry;
+        entry.family="down"; entry.generation=i; entry.msbar_mass_GeV=m;
+        entry.pole_mass_GeV=mp; entry.heavy_damping_mass_GeV=m_HD;
+        entry.vertex_running_mass_GeV=mrun; entry.tau=tau;
+        entry.q_init_GeV=Qinit; entry.running_mass_at_half_scale_GeV=m_half;
+        entry.running_mass_at_pole_scale_GeV=m_at_pole;
+        entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+        entry.scalar_amplitude_before_qcd=Sd; entry.pseudoscalar_amplitude_before_qcd=Pd;
+        entry.scalar_amplitude_after_qcd=Sd; entry.pseudoscalar_amplitude_after_qcd=Pd;
+        entry.alpha_s=0.; entry.included=true; diagnostics->fermions.push_back(entry);
+      }
+    } else if (diagnostics) {
+      HgammaFermionDiagnostic entry;
+      entry.family="down"; entry.generation=i; entry.msbar_mass_GeV=m;
+      entry.pole_mass_GeV=mp; entry.heavy_damping_mass_GeV=0.;
+      entry.vertex_running_mass_GeV=0.; entry.tau=0.;
+      entry.q_init_GeV=0.; entry.running_mass_at_half_scale_GeV=0.;
+      entry.running_mass_at_pole_scale_GeV=0.;
+      entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+      entry.scalar_amplitude_before_qcd=0.; entry.pseudoscalar_amplitude_before_qcd=0.;
+      entry.scalar_amplitude_after_qcd=0.; entry.pseudoscalar_amplitude_after_qcd=0.;
+      entry.alpha_s=0.; entry.included=false; diagnostics->fermions.push_back(entry);
     }
   }
   
@@ -1534,19 +1582,47 @@ double DecayTable::hgaga(int h) {
     if (m > 0) {
       double Qinit = m;
       if(sm.b_HD) Qinit = SM::Q_HD;
-      double m_HD = sm.run_qmass_MSbar(m,Qinit,M/2.,sm.get_qmass_pole(6),sm.get_qmass_pole(5))*mp/sm.run_qmass_MSbar(m,Qinit,mp,sm.get_qmass_pole(6),sm.get_qmass_pole(5));      
+      double m_half = sm.run_qmass_MSbar(m,Qinit,M/2.,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
+      double m_at_pole = sm.run_qmass_MSbar(m,Qinit,mp,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
+      double m_HD = m_half*mp/m_at_pole;
       double tau = M2/(4.*m_HD*m_HD);
       double mrun = sm.run_qmass_MSbar(m,Qinit,M,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
       complex <double> Sd = 2.*Nc*pow(2./3,2)*gS*v/mrun*F_sf(tau);
       complex <double> Pd = 2.*Nc*pow(2./3,2)*gP*v/mrun*F_pf(tau);
+      complex <double> Sd_before=Sd, Pd_before=Pd;
+      double as=0.;
 
 // QCD corrections in heavy quark limit for CP-even Higgs
       if ((!sm.b_HD) && (qcd_on) && (i==3)) {
-        double as = sm.run_alphas_MSbar(M,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
+        as = sm.run_alphas_MSbar(M,sm.get_qmass_pole(6),sm.get_qmass_pole(5));
         Sd=Sd*(1.-as/M_PI);
       }
       S_sum = S_sum + Sd;
       P_sum = P_sum + Pd;
+      if (diagnostics) {
+        HgammaFermionDiagnostic entry;
+        entry.family="up"; entry.generation=i; entry.msbar_mass_GeV=m;
+        entry.pole_mass_GeV=mp; entry.heavy_damping_mass_GeV=m_HD;
+        entry.vertex_running_mass_GeV=mrun; entry.tau=tau;
+        entry.q_init_GeV=Qinit; entry.running_mass_at_half_scale_GeV=m_half;
+        entry.running_mass_at_pole_scale_GeV=m_at_pole;
+        entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+        entry.scalar_amplitude_before_qcd=Sd_before; entry.pseudoscalar_amplitude_before_qcd=Pd_before;
+        entry.scalar_amplitude_after_qcd=Sd; entry.pseudoscalar_amplitude_after_qcd=Pd;
+        entry.alpha_s=as; entry.included=true; diagnostics->fermions.push_back(entry);
+        if (i==3) diagnostics->alpha_s_at_mass=as;
+      }
+    } else if (diagnostics) {
+      HgammaFermionDiagnostic entry;
+      entry.family="up"; entry.generation=i; entry.msbar_mass_GeV=m;
+      entry.pole_mass_GeV=mp; entry.heavy_damping_mass_GeV=0.;
+      entry.vertex_running_mass_GeV=0.; entry.tau=0.;
+      entry.q_init_GeV=0.; entry.running_mass_at_half_scale_GeV=0.;
+      entry.running_mass_at_pole_scale_GeV=0.;
+      entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+      entry.scalar_amplitude_before_qcd=0.; entry.pseudoscalar_amplitude_before_qcd=0.;
+      entry.scalar_amplitude_after_qcd=0.; entry.pseudoscalar_amplitude_after_qcd=0.;
+      entry.alpha_s=0.; entry.included=false; diagnostics->fermions.push_back(entry);
     }
   }
 
@@ -1561,6 +1637,29 @@ double DecayTable::hgaga(int h) {
       complex <double> Pd = 2.*pow(-1.,2)*gP*v/m*F_pf(tau);
       S_sum = S_sum + Sd;
       P_sum = P_sum + Pd;
+      if (diagnostics) {
+        HgammaFermionDiagnostic entry;
+        entry.family="lepton"; entry.generation=i; entry.msbar_mass_GeV=m;
+        entry.pole_mass_GeV=m; entry.heavy_damping_mass_GeV=m;
+        entry.vertex_running_mass_GeV=m; entry.tau=tau;
+        entry.q_init_GeV=m; entry.running_mass_at_half_scale_GeV=m;
+        entry.running_mass_at_pole_scale_GeV=m;
+        entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+        entry.scalar_amplitude_before_qcd=Sd; entry.pseudoscalar_amplitude_before_qcd=Pd;
+        entry.scalar_amplitude_after_qcd=Sd; entry.pseudoscalar_amplitude_after_qcd=Pd;
+        entry.alpha_s=0.; entry.included=true; diagnostics->fermions.push_back(entry);
+      }
+    } else if (diagnostics) {
+      HgammaFermionDiagnostic entry;
+      entry.family="lepton"; entry.generation=i; entry.msbar_mass_GeV=m;
+      entry.pole_mass_GeV=m; entry.heavy_damping_mass_GeV=0.;
+      entry.vertex_running_mass_GeV=0.; entry.tau=0.;
+      entry.q_init_GeV=0.; entry.running_mass_at_half_scale_GeV=0.;
+      entry.running_mass_at_pole_scale_GeV=0.;
+      entry.scalar_coupling=gS; entry.pseudoscalar_coupling=gP;
+      entry.scalar_amplitude_before_qcd=0.; entry.pseudoscalar_amplitude_before_qcd=0.;
+      entry.scalar_amplitude_after_qcd=0.; entry.pseudoscalar_amplitude_after_qcd=0.;
+      entry.alpha_s=0.; entry.included=false; diagnostics->fermions.push_back(entry);
     }
   }
 
@@ -1569,11 +1668,26 @@ double DecayTable::hgaga(int h) {
   model.get_coupling_vvh(3,3,h,g_hww);
   model.get_coupling_hhh(h,4,4,g_hhchc);
 
+  if (diagnostics) {
+    diagnostics->W_coupling_raw=g_hww;
+    diagnostics->charged_higgs_coupling_raw=g_hhchc;
+  }
   g_hww = g_hww*v/(2.*pow(mW,2));
   
-  S_sum = S_sum + g_hww*F_1(tau_W) + g_hhchc/v*v2/(2.*pow(mHp,2))*F_0(tau_Hp);
+  complex <double> W_term=g_hww*F_1(tau_W);
+  complex <double> Hp_term=g_hhchc/v*v2/(2.*pow(mHp,2))*F_0(tau_Hp);
+  S_sum = S_sum + W_term + Hp_term;
+
+  if (diagnostics) {
+    diagnostics->W_amplitude=W_term;
+    diagnostics->charged_higgs_amplitude=Hp_term;
+    diagnostics->scalar_amplitude=S_sum;
+    diagnostics->pseudoscalar_amplitude=P_sum;
+  }
     
   double G = pow(M,3)*pow(alpha,2)/(256.*pow(M_PI,3)*v2)*(pow(abs(S_sum),2)+pow(abs(P_sum),2));
+
+  if (diagnostics) diagnostics->loop_width_GeV=G;
 
   return G;
 }
@@ -1926,4 +2040,3 @@ double DecayTable::BHp(double ui, double uj, double xi, double xj, double sqL) {
 
 	return B;
 }
-

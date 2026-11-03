@@ -23,7 +23,7 @@ LIB=lib2HDMC.a
 LDFLAGS+=-L$(LIBDIR) -l2HDMC -lgsl -lgslcblas -lm
 #LDFLAGS+=-L$(LIBDIR) -l2HDMC
 LIBS=
-PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo CalcRoundTrip CalcLam1Scan CalcLam1ScanFromLake
+PROG=CalcPhys CalcGen CalcHiggs CalcHybrid CalcHMSSM CalcMSSM CalcInert CalcLH Demo CalcRoundTrip CalcLam1Scan CalcLam1ScanFromLake GeneralProbe
 INCLUDE=
 
 # To use HiggsBounds/HiggsSignals for Higgs constraints, set both of the
@@ -49,6 +49,11 @@ endif
 .PHONY: lib clean distclean
 
 all: lib $(PROG)
+
+# Additive analytic-mode bridge; normal `all` and legacy executables are unchanged.
+.PHONY: analytic-bridge
+analytic-bridge: lib
+	$(CC) src/AnalyticBridge.cpp -Isrc $(CFLAGS) $(LDFLAGS) -o analytic-bridge
 
 # Track transitive headers so a THDM layout change rebuilds every client.
 $(OBJDIR)/%.o : %.cpp

@@ -71,7 +71,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # -----------------------------------------------------------------------------
 # Defaults (safe + convenient for WSL + CERNBox Desktop on Windows)
 # -----------------------------------------------------------------------------
-DEFAULT_DATA_LAKE_DIR = "/mnt/c/Users/Asus/cern_db/dihiggs_lake"
+DEFAULT_DATA_LAKE_DIR = str(Path.home() / "cern_db/dihiggs_lake")  # override: project_config.json data_lake_dir
 PROJECT_CONFIG_FILE = "project_config.json"
 
 

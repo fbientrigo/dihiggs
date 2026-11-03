@@ -1,7 +1,6 @@
 {
   "campaign_id": "smoke-test-001",
   "paths": {
-    "repo_root": "{repo_root}",
     "lake_name": "events.jsonl"
   },
   "runtime": {
@@ -11,7 +10,7 @@
     "max_empty_rounds": 1
   },
   "dihiggs": {
-    "phys_exec": "{phys_scan_exec}",
+    "phys_exec": "{repo_root}/../dihiggs_boundary/build/bin/evaluate_point",
     "hb_dataset_env": "HB_DATASET",
     "hs_dataset_env": "HS_DATASET"
   },

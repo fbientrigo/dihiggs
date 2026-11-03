@@ -5,8 +5,8 @@
 # versions each repo builds against, so version drift is detectable instead of
 # hidden in directory names and build scripts. The declared versions must AGREE
 # across the three manifests -- that agreement is the cross-repo "version pin".
-# tests/test_external_tools.py enforces the versions and the authoritative
-# conventions SHA-256.
+# ../scripts/check_workspace.py (root) enforces the versions across repos;
+# tests/test_external_tools.py guards the authoritative conventions SHA-256.
 #
 # NOTE: the 2HDMC tree in THIS repo is a PATCHED FORK, not stock v1.8 (see
 # local_patches). It cannot be replaced by an upstream submodule without losing
@@ -20,7 +20,7 @@ conventions:
   authority_repository: fbientrigo/dihiggs
   authority: true
   schema_version: physics_conventions_v3
-  sha256: a807c979270587442cfb798806745c311b8f75091ec94f05429ac04e411327e7
+  sha256: 4f3a938ed54dbc779d25f691ce1dd06fe17af69751105dc3b69ccb6b7d92fff6
 
 tools:
   2HDMC:

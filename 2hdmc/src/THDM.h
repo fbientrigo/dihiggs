@@ -89,6 +89,12 @@ class THDM {
                      double lambda4, double lambda5, double lambda6,
                      double lambda7, double m12_2, double tan_beta);
 
+  // Opt-in generic-input path for decimal-conditioned analytic construction.
+  // The legacy set_param_gen/get_m12_2 round trip remains unchanged by default.
+  bool set_param_gen_exact(double lambda1, double lambda2, double lambda3,
+                           double lambda4, double lambda5, double lambda6,
+                           double lambda7, double m12_2, double tan_beta);
+
   /**
   * @brief Specifies 2HDM in the Higgs basis
   *
@@ -765,6 +771,16 @@ class THDM {
   double calc_unitarity();
 
   /**
+  * @brief Calculates and exports the complete tree-level scalar-scattering spectrum.
+  * @param s20 one eigenvalue of the (Y=2, sigma=0) block
+  * @param s21 three sorted eigenvalues of the (Y=2, sigma=1) block
+  * @param s01 four sorted eigenvalues of the (Y=0, sigma=1) block
+  * @param s00 four sorted eigenvalues of the (Y=0, sigma=0) block
+  * @returns Legacy largest absolute eigenvalue, using the same convention as calc_unitarity().
+  */
+  double calc_unitarity_spectrum(double s20[1], double s21[3], double s01[4], double s00[4]);
+
+  /**
   * @brief Checks tree-level unitarity constraints
   *
   * This method checks whether the parameters of the Higgs potential results
@@ -904,6 +920,8 @@ class THDM {
   // Exact physical-basis input, retained across a lossy generic conversion.
   bool        phys_cache_valid;
   double      phys_mh, phys_mH, phys_mA, phys_mHp, phys_m12_2, phys_tan_beta;
+  bool        gen_cache_valid;
+  double      gen_m12_2, gen_tan_beta;
   bool        lam1_validation_available;
   double      lam1_validation_input;
   double      lam1_validation_recomputed;

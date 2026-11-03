@@ -4,6 +4,8 @@
 #include "SM.h"
 #include "THDM.h"
 #include <complex>
+#include <string>
+#include <vector>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_integration.h>
 
@@ -20,6 +22,46 @@ using namespace std;
 class DecayTable {
 
  public: 
+
+  struct HgammaFermionDiagnostic {
+    std::string family;
+    int generation;
+    double msbar_mass_GeV;
+    double pole_mass_GeV;
+    double heavy_damping_mass_GeV;
+    double vertex_running_mass_GeV;
+    double q_init_GeV;
+    double running_mass_at_half_scale_GeV;
+    double running_mass_at_pole_scale_GeV;
+    double tau;
+    std::complex<double> scalar_coupling;
+    std::complex<double> pseudoscalar_coupling;
+    std::complex<double> scalar_amplitude_before_qcd;
+    std::complex<double> pseudoscalar_amplitude_before_qcd;
+    std::complex<double> scalar_amplitude_after_qcd;
+    std::complex<double> pseudoscalar_amplitude_after_qcd;
+    double alpha_s;
+    bool included;
+  };
+
+  struct HgammaDiagnostics {
+    double mass_GeV;
+    double vev_GeV;
+    double alpha0;
+    double mW_GeV;
+    double mHp_GeV;
+    double alpha_s_at_mass;
+    double loop_width_GeV;
+    bool qcd_enabled;
+    bool heavy_damping_enabled;
+    std::complex<double> W_amplitude;
+    std::complex<double> charged_higgs_amplitude;
+    std::complex<double> W_coupling_raw;
+    std::complex<double> charged_higgs_coupling_raw;
+    std::complex<double> scalar_amplitude;
+    std::complex<double> pseudoscalar_amplitude;
+    std::vector<HgammaFermionDiagnostic> fermions;
+  };
     
   /**
   * @brief Default constructor
@@ -196,6 +238,9 @@ class DecayTable {
   */
 	double  get_gamma_hgaga(int h);
 
+  /** Return the components used by the same implementation as get_gamma_hgaga. */
+  void get_hgaga_diagnostics(int h, HgammaDiagnostics &diagnostics);
+
   /**
   * @brief Decay width \f$ \Gamma(h\to Z\gamma) \f$
   * 
@@ -368,7 +413,7 @@ class DecayTable {
   double  hvh_onshell(int H, int V, int h, double M);
   double  hvh_offshell(int H, int V, int h, double M);
   double  hdu_offshell(int h, int d, int u, double M);
-  double  hgaga(int h);
+  double  hgaga(int h, HgammaDiagnostics *diagnostics=0);
   double  hZga(int h);
   double  hgg(int h);
   double  PS2(double M, double m1, double m2);

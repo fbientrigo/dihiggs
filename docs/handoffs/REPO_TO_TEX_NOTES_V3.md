@@ -34,7 +34,7 @@ not edit or authorize edits to `/home/fabi/atlas_dihiggs/paper`.
 - M² and `m12_sq` are distinct, with
   `m12_sq = M² * sin(beta) * cos(beta)`.
 - The direct M² evaluator requires `--mh`; the Python M² orchestrator resolves
-  an omitted wrapper argument from `mh_125p13_pdg_2026` and writes v3 provenance.
+  an omitted wrapper argument from `mh_125p20_active_2026` and writes v3 provenance.
 - Lambda1 v2 receives `mh` explicitly in its input CSV.
 
 ## Mandatory TeX non-claims

@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import time
 import tempfile
-import tempfile
 from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass
@@ -18,6 +17,7 @@ from autoresearch.harness.campaign_manifest import validate_manifest, write_mani
 from autoresearch.harness.convergence import ConvergenceDetector
 from autoresearch.harness.dihiggs_preflight import run_all_preflight_checks
 from autoresearch.harness.dihiggs_runner import DiHiggsRunner
+from autoresearch.harness.journal import BudgetExhausted
 from autoresearch.harness.round_snapshots import project_round_snapshot
 from autoresearch.harness.status_dashboard import write_status_html, write_status_json
 from autoresearch.harness.telemetry_ingest import ingest_artifact_metadata
@@ -227,6 +227,12 @@ class CampaignSupervisor:
 
             try:
                 result = self.runner.run_adaptation_round()
+            except BudgetExhausted as exc:  # the next reservation does not fit: clean stop, nothing launched
+                state["stop_reason"] = f"budget_exhausted: {exc}"
+                current_state = "COMPLETED"
+                state["campaign_state"] = current_state
+                self._persist_state(state)
+                break
             except Exception as exc:
                 state["last_error"] = str(exc)
                 current_state = self._transition(current_state, {"round_exception": True})

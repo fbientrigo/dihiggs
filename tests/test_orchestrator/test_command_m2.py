@@ -23,7 +23,7 @@ def test_m2_command_matches_real_named_cli():
     )
     assert command[0].endswith("DihiggsPointV2Evaluator")
     assert pairs(command) == {
-        "--campaign-id": "campaign-17", "--run-id": "run-4", "--mh": "125.13",
+        "--campaign-id": "campaign-17", "--run-id": "run-4", "--mh": "125.2",
         "--mH-min": "125.13", "--mH-max": "500", "--n-mH": "7",
         "--mA": "510", "--mHp": "510", "--yukawa-type": "1",
         "--sin-ba": "0.999", "--tan-beta": "50", "--M2-min": "0",
@@ -37,8 +37,8 @@ def test_m2_engine_metadata_and_columns_are_canonical():
     metadata = engine.axis_metadata()
     assert engine.executable_basename == "DihiggsPointV2Evaluator"
     assert metadata["schema_version"] == "dihiggs.point.v2"
-    assert metadata["mass_convention"]["mh_GeV"] == 125.13
-    assert metadata["mass_convention"]["convention_id"] == "mh_125p13_pdg_2026"
+    assert metadata["mass_convention"]["mh_GeV"] == 125.20
+    assert metadata["mass_convention"]["convention_id"] == "mh_125p20_active_2026"
     assert metadata["mass_convention"]["schema_version"] == "physics_conventions_v3"
     assert len(metadata["mass_convention"]["source_sha256"]) == 64
     assert "m12_sq /" in metadata["axis_description"]
@@ -48,7 +48,7 @@ def test_m2_engine_metadata_and_columns_are_canonical():
 
 def test_new_production_rejects_an_unlabelled_mass_override():
     with pytest.raises(RuntimeError, match="active v3 Higgs-mass convention"):
-        convention_provenance(source_commit="test", requested_mass_gev=125.20)
+        convention_provenance(source_commit="test", requested_mass_gev=125.13)
 
 
 def test_m2_target_is_buildable():

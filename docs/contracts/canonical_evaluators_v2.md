@@ -66,7 +66,7 @@ m12_sq = M² * sin(beta) * cos(beta)
 `lambda1` is reconstructed output, never a fixed input. The direct C++
 evaluator requires named `--mh`; it has no implicit Higgs-mass default. The
 Python M2 orchestrator resolves an omitted wrapper argument from
-`mh_125p13_pdg_2026` (`"125.13"` GeV), then records the convention ID, decimal
+`mh_125p20_active_2026` (`"125.20"` GeV), then records the convention ID, decimal
 mass text, schema, source repository, commit, path, and SHA-256 in the new
 run manifest. A different mass is rejected by this new-production interface;
 historical replay needs an explicit historical interface. `mHp` and Yukawa

@@ -36,7 +36,7 @@ All have units of GeV^2, but they are not aliases.
 
 New point-v2 production resolves the active Higgs-mass convention from the
 project physics authority and records provenance in `run_manifest.json`.
-The active convention is `mh_125p13_pdg_2026`, decimal text `"125.13"`.
+The active convention is `mh_125p20_active_2026`, decimal text `"125.20"`.
 
 Historical artifacts keep their original convention ID and value.
 

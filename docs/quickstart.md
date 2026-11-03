@@ -6,20 +6,26 @@ The current maintained core has two canonical production paths:
 - `DihiggsPointV2Evaluator`: rectangular `(mH, M2)` inputs with reconstructed
   `lambda1`.
 
-The active SM-like Higgs-mass convention for new production is **125.13 GeV**.
-Do not silently reuse older 125.20, 125.09, or 125.0 conventions.
+The active SM-like Higgs-mass convention for new production is **125.20 GeV**.
+Do not silently reuse historical 125.13, 125.09, or 125.0 conventions.
 
 ## Build
 
-From the repository root:
+From the repository root, build only the library and two maintained evaluators
+first. This avoids the separate HiggsTools path required by legacy/HBHS
+executables and does not remove or clean existing build outputs.
 
 ```bash
-make -C 2hdmc -j2
-make -C dihiggs clean
-make -C dihiggs -j2
+make -C 2hdmc lib -j2
+make -C dihiggs app/Lambda1EvaluatorV2 app/DihiggsPointV2Evaluator -j2
 ```
 
 The canonical binaries are written under `dihiggs/app/`.
+
+The full `make -C dihiggs -j2` target builds all configured executables and
+may require the separately installed HiggsTools library. Use it only when
+those legacy/HBHS programs are needed; no clean target is required for the
+canonical evaluator workflow.
 
 ## Lambda1 v2 through the orchestrator
 
@@ -31,7 +37,7 @@ python -m dihiggs.app.orchestrator \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --axis-min 1.0 --axis-max 1.0 --n-axis 1 \
   --mA 300 --mHp 300 \
-  --mh 125.13 \
+  --mh 125.20 \
   --sin-ba 0.995 \
   --lambda6 0.1 --lambda7 0.0 \
   --tanbeta 50
@@ -48,7 +54,7 @@ python -m dihiggs.app.orchestrator \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --axis-min 15000 --axis-max 15000 --n-axis 1 \
   --mA 300 --mHp 300 \
-  --mh 125.13 \
+  --mh 125.20 \
   --yukawa-type 1 \
   --sin-ba 0.995 \
   --lambda6 0.1 --lambda7 0.0 \
@@ -61,7 +67,7 @@ python -m dihiggs.app.orchestrator \
 dihiggs/app/DihiggsPointV2Evaluator \
   --campaign-id smoke \
   --run-id m2 \
-  --mh 125.13 \
+  --mh 125.20 \
   --mH-min 130 --mH-max 130 --n-mH 1 \
   --mA 300 --mHp 300 \
   --yukawa-type 1 \

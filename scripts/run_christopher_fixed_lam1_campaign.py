@@ -141,7 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--force", action="store_true")
     p.add_argument("--threads", type=int, default=None)
-    p.add_argument("--outdir", type=str, default="/mnt/c/Users/Asus/cern_db")
+    p.add_argument("--outdir", type=str, default=str(Path.home() / "cern_db"))
     p.add_argument("--lake-name", type=str, default="dihiggs_lake")
 
     repo_root = Path(__file__).resolve().parents[1]

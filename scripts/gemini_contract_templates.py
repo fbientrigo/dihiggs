@@ -4,6 +4,18 @@ from dataclasses import dataclass
 import hashlib
 import json
 from typing import Any
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = REPO_ROOT.parent
+RUNS_ROOT = WORKSPACE_ROOT / "runs"
+
+# Canonical fallback anchors, used whenever a config/worker_state does not carry its
+# own tan_beta_center/lambda6_center (e.g. a fresh baseline state or a caller that
+# does not track them). Single source of truth for all worker/decision callers.
+DEFAULT_TAN_BETA_CENTER = 124416.0
+DEFAULT_LAMBDA6_CENTER = 0.0019683
+
 
 
 @dataclass
@@ -108,8 +120,8 @@ def materialize_template(
     max_points: int,
     iteration: int,
     max_total_points: int,
-    tan_beta_center_default: float,
-    lambda6_center_default: float,
+    tan_beta_center_default: float = DEFAULT_TAN_BETA_CENTER,
+    lambda6_center_default: float = DEFAULT_LAMBDA6_CENTER,
     cycle_id: str | None = None,
     iteration_id: str | None = None,
 ) -> TemplateMaterialization:
@@ -287,8 +299,8 @@ def materialize_template(
             "operational_smoke": False,
         },
         "runtime": {
-            "exec_path": "/home/fabi/dihiggs/dihiggs/app/PhysScanWithFixings",
-            "outdir": "/home/fabi/dihiggs/scripts/out",
+            "exec_path": str(REPO_ROOT / "dihiggs" / "app" / "PhysScanWithFixings"),
+            "outdir": str(RUNS_ROOT),
             "lake_name": "dihiggs_lake",
             "campaign": f"gemini_worker_iter{iteration:02d}",
         },

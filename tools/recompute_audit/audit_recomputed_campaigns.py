@@ -47,7 +47,7 @@ class FileAudit:
 
 def parse_args():
     p = argparse.ArgumentParser(description="Audit recomputed campaigns.")
-    p.add_argument("--recomputed-root", type=Path, default=Path("/mnt/c/Users/Asus/cern_db/dihiggs_lake/recomputed"))
+    p.add_argument("--recomputed-root", type=Path, default=Path.home() / "cern_db/dihiggs_lake/recomputed")
     p.add_argument("--campaign", action="append", default=[])
     p.add_argument("--ignore-campaign", action="append", default=[])
     p.add_argument("--output-dir", type=Path, default=Path("artifacts/recompute_audit"))

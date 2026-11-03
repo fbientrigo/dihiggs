@@ -6,7 +6,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Static, Label, Button
 from textual.reactive import reactive
 
-from ..services.monitor import CampaignStatus
+from ..services.monitor import CampaignStatus, journal_text
 
 
 class MetricCard(Static):
@@ -123,6 +123,7 @@ class OverviewScreen(Container):
         with Container(classes="info-section"):
             yield Static("[b]Campaign Info[/]", classes="section-title")
             yield Static("No campaign selected. Go to [b]Run[/] to start a campaign.", id="campaign-info")
+            yield Static("", id="journal-info")
         
         # Quick actions
         with Horizontal(classes="actions-row"):
@@ -137,6 +138,7 @@ class OverviewScreen(Container):
     def _update_cards(self, status: CampaignStatus):
         """Update all metric cards with new status."""
         try:
+            self.query_one("#journal-info", Static).update(journal_text(status.journal))
             # State card with styling
             state_card = self.query_one("#state-card", MetricCard)
             state_card.update_value(f"{status.state_emoji} {status.state}")

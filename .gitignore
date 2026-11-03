@@ -38,11 +38,11 @@ plots/
 outputs/
 results/
 graphify-out/
-docs/_build/
 
 *.csv
 !docs/pilots/dihiggs_point_v2_v1/*.csv
 !docs/pilots/high_mass_h2_v1/*.csv
+!tests/bfb_negative_trilinear_audit/*.csv
 *.parquet
 *.pdf
 *.joblib
@@ -73,7 +73,6 @@ mlpython/img/
 mlpython/branching_ratio_plots/
 mlpython/graphing/*.png
 mlpython/outs/
-mlpython/docs/_build/
 mlpython/presentaciones/
 mlpython/lake_pipeline/outputs/
 mlpython/lake_pipeline/ctau_plots/
@@ -102,6 +101,7 @@ mlpython/lake_pipeline/parallel_plots/
 2hdmc/CalcRoundTrip
 2hdmc/CalcLam1Scan
 2hdmc/CalcLam1ScanFromLake
+2hdmc/GeneralProbe
 2hdmc/working/ParamScan*
 2hdmc/working/paralelscan
 
@@ -163,3 +163,15 @@ scripts/out/
 /chris/chris_points_to_bronze
 /chris/chris_points_to_hybrid
 /chris/diag_roundtrip
+
+# campaigns: bulk data/binaries live in the lake (dihiggs/campaigns/* rows of lake/sources.tsv); track only code and status docs
+campaigns/*
+!campaigns/t2_t4_20261008T043858Z/
+campaigns/t2_t4_20261008T043858Z/*
+!campaigns/t2_t4_20261008T043858Z/*.md
+!campaigns/t2_t4_20261008T043858Z/scripts/
+campaigns/t2_t4_20261008T043858Z/scripts/*
+!campaigns/t2_t4_20261008T043858Z/scripts/*.py
+!campaigns/t2_t4_20261008T043858Z/scripts/*.cpp
+# compiled analytic bridge (source: 2hdmc/src/AnalyticBridge.cpp)
+2hdmc/analytic-bridge

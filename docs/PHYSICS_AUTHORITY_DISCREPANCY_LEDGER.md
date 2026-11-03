@@ -1,131 +1,40 @@
-# Physics authority discrepancy and supersession ledger
+# Physics authority and downstream migration ledger
 
-Audit date: 2026-09-07  
+Status date: 2026-10-21
 Authority: [`conventions/physics_conventions.yaml`](../conventions/physics_conventions.yaml)  
-Scope: the five active repositories at the audited `main` commits below
+Authority snapshot: `dihiggs@087ba246e9a9fa34b16249b52629a62703893b5c`, SHA-256 `4f3a938ed54dbc779d25f691ce1dd06fe17af69751105dc3b69ccb6b7d92fff6`.
 
-This ledger records disagreement; it does not rewrite frozen artifacts. A row
-marked `superseded_for_new_production` remains valid for exact historical replay
-when its original convention and provenance are retained.
+The canonical YAML is owned by `dihiggs`. Downstream repositories carry byte-identical caches and `conventions/physics_conventions.lock.yaml` provenance sidecars. A cache cannot become authoritative because it is newer or locally edited. This ledger tracks migration status and historical conflicts; it does not authorize changing frozen outputs.
 
-## Status vocabulary
+## Current convention
 
-| Status | Meaning |
-|---|---|
-| `authoritative` | Governs new production after merge |
-| `aligned_non_authoritative` | Semantically agrees but does not own the quantity |
-| `superseded_for_new_production` | Retained for replay; cannot govern a new run |
-| `migration_required` | Active code/document must be updated before producing under v3 |
-| `incorrect_claim` | Statement is factually wrong and must not be propagated |
+The active v3 value for new production is the decimal string `m_h = "125.20"` GeV, convention ID `mh_125p20_active_2026`. This is an adopted project convention, not an external measurement attribution. The source repository's committed YAML bytes are the checksum authority. The current workspace pins that source commit.
 
-## `fbientrigo/dihiggs`
+The `physical_2HDM` trilinear is signed. A v3 consumer uses `g_physical_hphiphi_GeV`, verifies consistency with the raw 2HDMC fields and magnitude compatibility field, and maps `GHphiphi = -g_physical_hphiphi_GeV`. The two effective prescriptions have unresolved UFO mappings and remain unsupported in sign-sensitive production. Missing or inconsistent metadata fails closed.
 
-Audited `main`: `2264ffe1b8d8f59bec69341d6aa1a917396ccb2b`
+## Migration status
 
-| File | Observation | Status under v3 | Required migration |
-|---|---|---|---|
-| `conventions/physics_conventions.yaml` | v1 omits `m_h`, uses ambiguous `H` for PDG 35, and describes three byte-identical copies as co-authorities | `authoritative` after this change | Replace with v3; `dihiggs` becomes the only owner |
-| `external_tools.lock.yaml` | Pins the v1 MD5 and byte-identical-copy model | `migration_required` | Pin canonical v3 with SHA-256; downstream provenance moves to sidecars |
-| `tests/test_external_tools.py` | Enforces the obsolete MD5/co-authority policy | `migration_required` | Test v3 authority and SHA-256 instead |
-| `tests/test_physics_conventions.py` | Parses constants but does not test schema or physics semantics | `migration_required` | Add v3 schema and semantic invariants |
-| `docs/inter_repo_communication_assessment.md` | Records the former three-copy/MD5 design as current | `superseded_for_new_production` | Add an authority notice; retain the assessment as design history |
-| `README.md` | Smoke/orchestrator examples now name the v3 authority and distinguish direct-evaluator `--mh` from wrapper resolution | `aligned_non_authoritative` | Keep historical examples labelled if added |
-| `docs/contracts/canonical_evaluators_v2.md` | Describes direct `--mh` requirement and manifest provenance for both canonical orchestrators | `aligned_non_authoritative` | Preserve explicit historical replay interface when introduced |
-| `docs/HIGH_MASS_H2_CONTRACT.md` and high-mass templates | Uses v3 125.13 provenance; correctly labels Z2 semantics and campaign choices | `aligned_non_authoritative` | Preserve pilot bytes and keep future campaign manifests provenance-complete |
-| `dihiggs/app/orchestrator/physics_authority.py`, `cli.py`, `manifest.py`, `engines/m2.py`, `engines/m2_tracker.py` | v3 producer path reads the active contract, records ID/schema/repository/commit/path/SHA-256, and rejects an unlabelled mass override | `aligned_non_authoritative` | Keep explicit historical replay separate from this new-production path |
-| `docs/campaigns/high_mass_h2_physical_point_scan_v2_mh12520/` | A 125.20 recalculation exists in repository history but is not present at audited `main` | non-authoritative evidence | Do not infer authority from an unmerged/newer artifact; promote only through normal review |
+| Repository | Current status | Remaining boundary |
+|---|---|---|
+| `dihiggs` | Authority owner; v3 canonical YAML and evaluator provenance | Preserve the canonical file and its attestation; reconcile further changes only through its owner. |
+| `dihiggs_boundary` | v3 controlled cache, sidecar, and checksum lock; new adaptive/profiled handoffs use core provenance | The `evaluate_point_v1` / Atlas v0 runner and its 125.09 HiggsSignals reference are replay-only. Do not change its golden outputs. |
+| `dihiggs_hep_cross` | v3 cache and sidecar; constants loader fails closed; driver/banner use signed physical mapping for provenance-bearing v3 points | Effective prescriptions remain unsupported; no MadGraph results are promoted. |
+| `dihiggs_ufo` | v3 controlled cache and provenance sidecar | Frozen Pack B builders remain historical; add no v3/effective mapping claim without a separately validated UFO change. |
+| `dihiggs_llp_recast` | v3 controlled cache and provenance sidecar | New sample manifests must retain incoming point convention provenance; frozen response results remain historical. |
 
-## `fbientrigo/dihiggs_ufo`
+## Historical preservation
 
-Audited `main`: `7dd02c14e2314f9d172a0782d7860826a52600d6`
+The old migration inventories below were generated against earlier branch snapshots and must not be treated as current instructions. They are retained in Git history only; their assertions that the authority should return to 125.13 or that 125.20 was a PDG measurement are superseded.
 
-| File | Observation | Status under v3 | Required migration |
-|---|---|---|---|
-| `docs/PHYSICAL_POINT_UFO_HANDOFF.md` | Correctly assigns stage ownership, but says `125.20` is the PDG 2026 value and claims byte-identical v2 copies in three repos | `incorrect_claim` plus `migration_required` | Cite the adopted PDG 2026 `125.13` convention, consume v3 provenance, and remove co-authority wording |
-| `README.md` | Describes the repository as owning MadGraph integration and reports `Recast: NOT_RUN`, which is only local Pack status and can be mistaken for project-wide state | `migration_required` | Narrow the repository role to UFO/model implementation; link external stage authorities rather than restating them |
-| `CURRENT_STATE.md` | Local Pack/recast status can be read as ecosystem status | `superseded_for_new_production` outside local Pack scope | Retain as local history/status; add scope and authority links |
-| `pack_b/operator/build_model_derived.py` | Frozen builder uses historical `125.13` and labels it historical | `superseded_for_new_production` | Preserve bytes/behavior for replay; do not turn it into the generic point interface |
-| repository root | No canonical convention cache/lock pair exists | `migration_required` | Either consume point-level v3 provenance or add a byte-identical cache plus lock sidecar |
+| Convention ID | Value | Scope |
+|---|---:|---|
+| `mh_125p13_pdg_2026_historical_replay` | 125.13 | Completed adaptive M2 campaign and explicit replay fixtures |
+| `mh_125p13_high_mass_v1` | 125.13 | Historical high-mass and 150 GeV benchmark chain |
+| `mh_125p09_lambda1_boundary_legacy` | 125.09 | Legacy Boundary characterization/replay |
+| `mh_125p0_ufo_autoresearch_legacy` | 125.0 | Frozen upstream UFO and autoresearch replay paths |
 
-## `fbientrigo/dihiggs_hep_cross`
+These values keep their original bytes, hashes, and labels. Boundary v0 and old UFO builder paths are not silently migrated to v3. The current MadGraph result registry remains empty until validation and explicit human promotion.
 
-Audited `main`: `be331768ab644dc71fa4e8c46703a9fc3f567696`
+## Acceptance rule for future migrations
 
-| File | Observation | Status under v3 | Required migration |
-|---|---|---|---|
-| `conventions/physics_conventions.yaml` | v2 contains `125.20` but presents itself as a source of truth, retains `H/35`, and falsely attributes `125.20` to the PDG 2026 listing | `incorrect_claim` and `migration_required` | Replace with byte-identical v3 cache carrying the adopted `125.13` convention and provenance sidecar |
-| `docs/MH_CONVENTION.md` | Repeats the false `125.20` PDG attribution and three-copy authority model | `incorrect_claim` | Cite the adopted `125.13` PDG value and v3 single authority |
-| `docs/CURRENT_DATA_AUTHORITY.md` | Correctly owns current-result promotion, but falsely says `dihiggs/main` already establishes `125.20` and blurs data authority with physics authority | `migration_required` | Keep result authority local; defer physics semantics to v3 and classify 125.20 results as replay-only |
-| `state/CURRENT_CAMPAIGN.yaml` | Serializes a current campaign at `125.20` as a YAML number, cites the wrong authority chain, and registers only two of the three comparison prescriptions | `migration_required` | Classify it as frozen `mh_125p20_project_pre_v3` or regenerate as a new decimal-text 125.13 campaign with v3 provenance |
-| `src/llp_recast/constants.py`, `scripts/run_mass_jet_control_campaign.py`, and three regression tests | Encode or assert active-looking `125.20` defaults/fixtures | `migration_required` | Update code and tests together; do not rewrite frozen MadGraph results |
-| `scripts/run_physical_point_madgraph.py` | Correctly refuses a missing point mass; current coupling handoff uses the magnitude compatibility field | `aligned_non_authoritative` with pending sign gap | Preserve fail-closed mass behavior; signed physical vertex waits for issue #85 |
-
-### Exact `125.20` migration queue
-
-The following is the closed inventory of **exact convention-token** uses found
-on the audited `main` branches. No entry authorizes a new calculation at
-`125.20`; it identifies the work that must be completed before a downstream
-consumer can claim v3 new-production compatibility. The same machine-readable
-queue is `migration.pending_125p20_uses` in the canonical YAML.
-
-| Repository | Path | Classification | Required action |
-|---|---|---|---|
-| `dihiggs_ufo` | `docs/PHYSICAL_POINT_UFO_HANDOFF.md` | false PDG attribution | Replace with the adopted PDG 2026 `125.13` convention and v3 provenance |
-| `dihiggs_ufo` | `pack_b/operator/build_model_derived.py` | historical-builder comment | Preserve its 125.13 artifact; remove the obsolete active-125.20 reference |
-| `dihiggs_hep_cross` | `conventions/physics_conventions.yaml` | controlled cache | Replace with a byte-identical v3 cache and sidecar |
-| `dihiggs_hep_cross` | `src/llp_recast/constants.py` | active code default | Change the pinned text and loader together |
-| `dihiggs_hep_cross` | `scripts/run_mass_jet_control_campaign.py` | active campaign script | Parameterize or adopt 125.13 with explicit point provenance |
-| `dihiggs_hep_cross` | `state/CURRENT_CAMPAIGN.yaml` | current campaign state | Freeze under `mh_125p20_project_pre_v3`, or regenerate a distinct 125.13 campaign |
-| `dihiggs_hep_cross` | `docs/MH_CONVENTION.md` | false PDG attribution | Correct the external reference and authority chain |
-| `dihiggs_hep_cross` | `docs/CURRENT_DATA_AUTHORITY.md` | mixed authority claim | Separate current-result authority from physics-convention authority |
-| `dihiggs_hep_cross` | `tests/test_constants.py` | regression test | Update only with its constants migration |
-| `dihiggs_hep_cross` | `tests/test_run_physical_point_madgraph.py` | regression test | Mark 125.20 fixtures historical or migrate new-production fixtures |
-| `dihiggs_hep_cross` | `tests/test_madgraph_banner_verification.py` | regression test | Mark 125.20 fixtures historical or migrate new-production fixtures |
-
-`dihiggs_llp_recast/results/r8_h2_model_derived_4b/run_01/geometry.csv` is
-explicitly excluded: values beginning `125.20` there are geometry numbers, not
-the exact Higgs-mass convention token. The frozen result must not be edited.
-
-## `fbientrigo/dihiggs_llp_recast`
-
-Audited `main`: `72b8638671b788c35260491c06b3ab406775b5ae`
-
-| File | Observation | Status under v3 | Required migration |
-|---|---|---|---|
-| `README.md` | Correctly owns cutflow/acceptance/efficiency and rejects production-normalization inference; its 150 GeV benchmark uses historical upstream quantities | `aligned_non_authoritative` | Label incoming physics convention IDs and retain the benchmark as historical response evidence |
-| repository root | No canonical convention cache/lock pair and no v3 point-provenance requirement were found | `migration_required` | Validate convention schema/commit/checksum on new sample manifests |
-| `results/` and benchmark documentation | Frozen response artifacts must not become model-point or cross-section authority | `superseded_for_new_production` when reused outside their frozen sample | Preserve hashes; compose only with explicitly compatible upstream provenance |
-
-## `fbientrigo/dihiggs_boundary`
-
-Audited `main`: `32dd9df533cd4b4d613daaf516b6b25254bdaf25`
-
-| File | Observation | Status under v3 | Required migration |
-|---|---|---|---|
-| `conventions/physics_conventions.yaml` | v1 omits `m_h`, uses `H/35`, and presents a byte-identical copy as authority | `migration_required` | Replace with byte-identical v3 cache and provenance sidecar |
-| `docs/model_contract.md` | Presents `125.09`, exact alignment, `lambda7=0`, and `mHp=mA` as the active model contract | `superseded_for_new_production` | Preserve as legacy contract or revise to require explicit campaign values |
-| `docs/evaluate_point_contract.md` | Hard-codes `125.09` and exact alignment | `superseded_for_new_production` | Restrict to legacy replay; new composition consumes v3-bearing inputs |
-| `docs/hbhs_contract.md`, `python/dhb/runner.py` | Use a `125.09` HiggsSignals reference | `migration_required` for new production; historical for exact regression | Separate the statistical reference mass from model-point `m_h` and record both explicitly |
-| `docs/atlas_schema.md` | Freezes `125.09`, exact alignment, `mHp=mA`, and `lambda7=0` as Atlas-v0 values | `superseded_for_new_production` | Keep v0 replayable; v3-aware schemas must carry explicit campaign choices |
-| `README.md` | Current composition role is substantially aligned and correctly requires direct per-point MadGraph results | `aligned_non_authoritative` | Add v3 provenance checks during the downstream migration |
-
-## Supersession rules
-
-1. This v3 contract supersedes semantic claims, not artifact bytes.
-2. `125.20`, `125.13` (when under its historical ID), `125.09`, and `125.0`
-   remain reproducible only under their named convention IDs.
-3. A file timestamp, branch name, local copy, or later commit cannot supersede
-   the authority automatically.
-4. `dihiggs_hep_cross` may be authoritative for current MadGraph results while
-   remaining non-authoritative for the model convention; authority is per
-   stage, not per repository age.
-5. An aligned downstream statement still requires canonical commit and
-   checksum provenance before it can govern a new handoff.
-6. Any conflict not listed here is rejected and added to this ledger before a
-   migration proceeds.
-
-## Review boundary
-
-No appendix material or appendix branch was inspected or modified for this
-ledger. No evaluator, scan, generated dataset, benchmark, MadGraph run, recast
-run, or limit calculation was changed.
+Every downstream cache must hash to the exact canonical source bytes and have a sidecar naming the source repository, full commit, path, checksum, schema, and copy date. Point handoffs must include the v3 schema, source commit, and source SHA-256. Consumers reject missing, stale, or inconsistent provenance. New campaign assumptions such as alignment, `lambda7`, and mass degeneracy remain explicit inputs.

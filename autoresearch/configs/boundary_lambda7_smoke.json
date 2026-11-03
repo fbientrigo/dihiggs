@@ -1,0 +1,22 @@
+{
+  "campaign_id": "boundary-lambda7-smoke",
+  "paths": {"lake_name": "events.jsonl"},
+  "runtime": {
+    "python_exe": "{sys_executable}",
+    "threads": 2,
+    "timeout_sec": 900,
+    "max_rounds": 1,
+    "boundary_overrides": {
+      "mesh": {"root_cells": 1, "max_depth": 1, "max_cells_per_axis": 2, "new_evaluation_cap": 256},
+      "slice_batch_quotas": [2, 2, 2, 2, 2, 2, 2, 2]
+    }
+  },
+  "dihiggs": {
+    "phys_exec": "{repo_root}/../dihiggs_boundary/build/bin/evaluate_point",
+    "hb_dataset_env": "HB_DATASET",
+    "hs_dataset_env": "HS_DATASET"
+  },
+  "arms": [
+    {"id": "survivor-tb1e7-l7", "action": "survivor_v2|tb=10000000.0|l7_0p01_mh125p20"}
+  ]
+}

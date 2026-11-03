@@ -1,12 +1,17 @@
 from __future__ import annotations
 # pyright: reportImplicitRelativeImport=false, reportUnannotatedClassAttribute=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownMemberType=false, reportAttributeAccessIssue=false, reportArgumentType=false, reportUnusedCallResult=false, reportAny=false, reportUnnecessaryIsInstance=false
 
+import csv
 import hashlib
 import json
 import logging
+import math
 import os
+import signal
 import subprocess
 import sys
+import time
+import yaml
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +22,8 @@ from autoresearch.benchmarks.score import (
     compute_diversity,
     compute_metrics,
 )
+from autoresearch.harness import boundary_actions, policy
+from autoresearch.harness.journal import BudgetExhausted, Journal
 from autoresearch.harness.dihiggs_adaptation import (
     BanditState,
     compute_arm_reward,
@@ -37,6 +44,20 @@ from autoresearch.harness.dihiggs_preflight import run_all_preflight_checks
 logger = logging.getLogger(__name__)
 
 
+def _alive(pid: int, marker: str) -> bool:
+    """The recorded boundary process still runs (its cmdline carries our config path, so a reused pid is not it)."""
+    try:
+        return marker.encode() in Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return False
+
+
+def budget_limits(budget: Mapping[str, object]) -> dict[str, int]:
+    """--cpu-hours/--disk-gb/--wall-hours as the journal's integer units."""
+    scale = {"cpu_hours": ("cpu_core_s", 3600), "wall_hours": ("wall_s", 3600), "disk_gb": ("disk_mb", 1024)}
+    return {scale[k][0]: int(float(v) * scale[k][1]) for k, v in budget.items() if k in scale and v is not None}
+
+
 class DiHiggsRunner:
     def __init__(self, config: dict[str, object], outdir: str):
         self.config = config
@@ -50,6 +71,20 @@ class DiHiggsRunner:
 
         self._ensure_outdir_layout()
         self._load_existing_state()
+        self.menu: list[dict] = []
+        arms = self.config.get("arms")
+        action_keys = [arm["action"] for arm in arms if isinstance(arm, Mapping) and "action" in arm] if isinstance(arms, list) else []
+        if action_keys:
+            self.boundary_root = Path(str(paths_cfg.get("boundary_root") or Path(str(paths_cfg.get("repo_root", "."))).parent / "dihiggs_boundary"))
+            self.menu = boundary_actions.build_menu(self.boundary_root)
+            self.menu_digest = boundary_actions.register(Path(outdir) / "action_menu.json", self.menu)
+            self.lake = [sys.executable, str(paths_cfg.get("lake") or self.boundary_root.parent / "lake" / "lake.py")]
+            for key in action_keys:  # an arm outside the menu is refused before anything runs
+                boundary_actions.lookup(self.menu, str(key))
+            self.journal = Journal(Path(outdir) / "journal.db")
+            self.limits = budget_limits(self._mapping(self.config.get("budget"), "budget"))
+            # the TUI shows remaining = limits - ledger; a changed limit is a new event, the latest one wins
+            self.journal.append("limits:" + hashlib.sha256(json.dumps(self.limits, sort_keys=True).encode()).hexdigest()[:12], "limits", self.limits)
 
     def _ensure_outdir_layout(self) -> None:
         Path(self.outdir).mkdir(parents=True, exist_ok=True)
@@ -216,6 +251,8 @@ class DiHiggsRunner:
             }
 
         arm_cfg, runtime_ctx, _ = self._resolve_arm(arm_id)
+        if "action" in arm_cfg:
+            return {**self._run_action(arm_id, arm_cfg, update_bandit), "preflight": preflight}
 
         cmd_raw = arm_cfg.get("cmd", [])
         if not isinstance(cmd_raw, list):
@@ -328,6 +365,106 @@ class DiHiggsRunner:
             "subprocess_status": subprocess_status,
         }
 
+    def _run_action(self, arm_id: str, arm_cfg: Mapping[str, object], update_bandit: bool) -> dict[str, object]:
+        """One menu action: lake explored -> boundary --explored -> lake commit; boundary computes every number.
+
+        Write-ahead: the intent (with its cost reservation) is journaled before launch and `started` (pid) right after,
+        so a kill -9 anywhere leaves an open attempt that `_settle` reconciles on restart instead of relaunching it."""
+        action = boundary_actions.lookup(self.menu, str(arm_cfg["action"]))
+        if boundary_actions.STRATEGIES[action["strategy"]]["table"] is None:
+            raise ValueError(f"{action['strategy']} cannot read --explored: launching it would repeat lake points")
+        runtime_cfg = self._mapping(self.config.get("runtime"), "runtime")
+        attempt = self._next_attempt()
+        work = Path(self.outdir) / "actions" / attempt
+        timeout_sec = int(arm_cfg.get("timeout_sec", runtime_cfg.get("timeout_sec", 3600)))
+        threads = int(runtime_cfg.get("threads", 1))
+        reserved = {"cpu_core_s": threads * timeout_sec, "wall_s": timeout_sec, "disk_mb": int(runtime_cfg.get("disk_mb_per_action", 1024))}
+        self.journal.reserve(attempt, reserved, self.limits, {"arm_id": arm_id, "action": action["key"], "work": str(work),
+                                                               "threads": threads, "timeout_sec": timeout_sec})
+        work.mkdir(parents=True, exist_ok=True)
+        cfg = boundary_actions.boundary_config(action, self.boundary_root, runtime_cfg.get("boundary_overrides"))
+        cfg_path = work / "boundary_config.yaml"
+        cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+        cmd = boundary_actions.command(action, cfg_path, work / "out", sys.executable)
+        if boundary_actions.explored_export(self.lake, action["regime"], work / "explored.csv"):
+            cmd += ["--explored", str(work / "explored.csv")]
+        with (work / "stdout.txt").open("w") as out, (work / "stderr.txt").open("w") as err:
+            proc = subprocess.Popen(cmd, cwd=self.boundary_root, stdout=out, stderr=err, start_new_session=True)
+        t0 = time.time()
+        self.journal.append(f"started:{attempt}", "started", {"pid": proc.pid, "t0": t0, "marker": str(cfg_path)})
+        try:
+            status = "success" if proc.wait(timeout=timeout_sec) == 0 else "nonzero_exit"
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait()
+            status = "timeout"
+        self.journal.append(f"exited:{attempt}", "exited", {"status": status, "wall_s": min(timeout_sec, math.ceil(time.time() - t0))})
+        return self._settle(attempt, update_bandit)
+
+    def _next_attempt(self) -> str:
+        return f"a{len(self.journal.events('intent')):04d}"
+
+    def _settle(self, attempt: str, update_bandit: bool, reconcile: bool = False) -> dict[str, object]:
+        """Close an attempt exactly once from what the journal and the work dir show; safe to re-run after any crash."""
+        intent = self.journal.get(f"intent:{attempt}")
+        arm_id, work, timeout_sec = intent["arm_id"], Path(intent["work"]), intent["timeout_sec"]
+        action = boundary_actions.lookup(self.menu, intent["action"])
+        started = self.journal.get(f"started:{attempt}")
+        if started is None:  # died before launch: nothing ran, the reservation is released
+            self.journal.close(attempt, {}, {"status": "not_executed", "arm_id": arm_id, "action": action["key"]})
+            return {"discoveries": 0, "events_emitted": 0, "subprocess_status": "not_executed", "action": action["key"], "attempt": attempt,
+                    "fresh_rows": 0, "valid_rows": 0, "seeded_rows": 0, "lake_commit": None, "reconciled": reconcile}
+        exited = self.journal.get(f"exited:{attempt}")
+        if exited is None:  # the daemon died while boundary ran: wait out the orphan (never relaunch), then read its output
+            deadline = started["t0"] + timeout_sec
+            while _alive(started["pid"], started["marker"]) and time.time() < deadline:
+                time.sleep(1)
+            killed = _alive(started["pid"], started["marker"])
+            if killed:
+                os.killpg(started["pid"], signal.SIGKILL)
+            done = (work / "out").glob("*/manifest.json")
+            end = max([f.stat().st_mtime for f in work.rglob("*") if f.is_file()] + [started["t0"]])
+            status = "timeout" if killed else ("success" if any(done) else "died_without_manifest")
+            exited = self.journal.append(f"exited:{attempt}", "exited", {"status": status, "reconciled": True,
+                                                                          "wall_s": min(timeout_sec, math.ceil(end - started["t0"]))})
+        status = exited["status"]
+        cfg = yaml.safe_load((work / "boundary_config.yaml").read_text(encoding="utf-8"))
+        manifest_path = work / "out" / str(cfg["campaign_id"]) / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        fresh = int(manifest.get("budget", {}).get("fresh_rows", 0))
+        valid = sum(row.get("theory_ok_v1") == "1" for raw in manifest_path.parent.glob("raw_*points.csv")
+                    for row in csv.DictReader(raw.open(encoding="utf-8"))) if fresh else 0
+        tag = f"{self.config.get('campaign_id', '')}/{attempt}"
+        committed = self.journal.get(f"committed:{attempt}")
+        if committed is None and status == "success" and fresh:
+            # a daemon killed during `lake commit` leaves the commit running (or done) with the tag: wait it out, then find it
+            running = self.journal.get(f"committing:{attempt}")
+            while running and _alive(running["pid"], tag):
+                time.sleep(1)
+            cid = (boundary_actions.find_commit(self.lake, tag) if reconcile else None) or boundary_actions.lake_commit(
+                self.lake, manifest_path.parent, action, tag,
+                lambda pid: self.journal.append(f"committing:{attempt}", "committing", {"pid": pid}))
+            committed = self.journal.append(f"committed:{attempt}", "committed", {"lake_commit": cid})
+        lake_commit = committed["lake_commit"] if committed else None
+        axes = {"tb": action["tan_beta"] or 0}
+        scores = {"yield": valid / fresh if fresh else 0.0, "coverage": 0.0, "diversity": 0.0}
+        attempt_id = self.make_attempt_id(str(self.config.get("campaign_id", "")), arm_id, action["key"], str(work))
+        emitted = self.emit_attempt_event(attempt_id=attempt_id, arm_id=arm_id, cell_id=action["key"], eval_status=status,
+                                          scores=scores, axes_binned=axes, axes_raw=axes)
+        if emitted and update_bandit:
+            attempt_data = {"cell_id": action["key"], "axes_binned": axes, "axes_raw": axes, **scores}
+            update_state(self.bandit_state, arm_id, compute_arm_reward([attempt_data], self.config), attempt_data)
+        disk_mb = math.ceil(sum(f.stat().st_size for f in work.rglob("*") if f.is_file()) / 2**20)
+        actual = {"cpu_core_s": intent["threads"] * exited["wall_s"], "wall_s": exited["wall_s"], "disk_mb": disk_mb}
+        result = {"discoveries": fresh, "events_emitted": int(emitted), "subprocess_status": status, "action": action["key"],
+                  "attempt": attempt, "menu_digest": self.menu_digest, "fresh_rows": fresh, "valid_rows": valid,
+                  "seeded_rows": int((manifest.get("explored_seed") or {}).get("seeded_attempts", 0)), "lake_commit": lake_commit,
+                  "reconciled": reconcile}
+        self.journal.close(attempt, actual, {"arm_id": arm_id, "status": status, **{k: v for k, v in result.items() if k not in ("events_emitted", "menu_digest")}})
+        if disk_mb > intent["reserved"]["disk_mb"]:  # timeout bounds cpu and wall; disk is only measured, so an overrun stops the daemon
+            raise BudgetExhausted(f"{attempt} used {disk_mb} MB > reserved {intent['reserved']['disk_mb']} MB (raise runtime.disk_mb_per_action)")
+        return result
+
     def evaluate_run_dir(self, run_dir: str, axes_binned: Mapping[str, object]) -> dict[str, float]:
         metrics_result = compute_metrics(run_dir, axes_binned, self.config)
         yield_val = metrics_result["yield_val"]
@@ -383,15 +520,21 @@ class DiHiggsRunner:
         return True
 
     def run_adaptation_round(self) -> dict[str, object]:
-        arm_id = select_arm_ucb1(self.bandit_state, self.config)
-        
-        result = self.run_single_round(arm_id, update_bandit=True)
-        
-        return {
-            "arm_id": arm_id,
-            "discoveries": result["discoveries"],
-            "events_emitted": result["events_emitted"],
-            "preflight": result.get("preflight"),
-            "subprocess_status": result.get("subprocess_status"),
-        }
+        open_attempts = self.journal.open_attempts() if self.menu else []
+        if open_attempts:  # a previous daemon died mid-action: this round is its reconciliation, not a new launch
+            attempt = open_attempts[0]
+            arm_id = self.journal.get(f"intent:{attempt}")["arm_id"]
+            result = self._settle(attempt, update_bandit=True, reconcile=True)
+        elif self.menu:  # one journaled decision per attempt; a crash before its intent reuses it (no second agy call)
+            attempt = self._next_attempt()
+            decision = self.journal.get(f"decision:{attempt}") or self.journal.append(f"decision:{attempt}", "decision", policy.choose(
+                self.config, self.bandit_state, [c for _, _, c in self.journal.events("closed")],
+                policy.agy_calls([d for _, _, d in self.journal.events("decision")])))
+            arm_id = decision["arm_id"]
+            result = self.run_single_round(arm_id, update_bandit=True)
+        else:
+            arm_id = select_arm_ucb1(self.bandit_state, self.config)
+            result = self.run_single_round(arm_id, update_bandit=True)
+        # lake_commit / seeded_rows / fresh_rows of an action ride along so the supervisor's round result keeps them
+        return {"arm_id": arm_id, **{k: v for k, v in result.items() if k != "discoveries"}, "discoveries": result["discoveries"]}
 
