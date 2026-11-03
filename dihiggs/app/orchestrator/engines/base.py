@@ -2,16 +2,15 @@
 engines/base.py — EngineAdapter protocol and ScanAxis enum.
 
 Any C++ backend is represented by a class that satisfies the EngineAdapter
-Protocol.  The two concrete implementations are:
+Protocol.  The concrete implementations are:
 
-  Lambda1Engine  →  PhysScanWithFixings   (second axis = lambda_1)
-  M2Engine       →  Phys_M2BoundaryScan   (second axis = M^2 in GeV^2)
+  M2Engine         →  DihiggsPointV2Evaluator  (second axis = M^2 in GeV^2)
+  M2TrackerEngine  →  Phys_M2BandTracker       (experimental)
 
 Axis semantics contract
 -----------------------
 The distinction between lambda1, M2, m12, and m12_sq is critical:
 
-  ScanAxis.LAMBDA1  — axis is lambda_1 (dimensionless quartic coupling).
   ScanAxis.M2       — axis is M^2 = m12^2/(sin(beta)cos(beta)) (GeV^2).
                       Historical CSVs sometimes call this column "m12"
                       while storing GeV^2 values (i.e. m12_sq).
@@ -38,16 +37,12 @@ class ScanAxis(Enum):
 
     Values
     ------
-    LAMBDA1:
-        Axis is lambda_1 (dimensionless).  Used by PhysScanWithFixings.
     M2:
         Axis is M^2 = m12_sq/(sin(beta)cos(beta)), in GeV^2.
         Note: some historical CSV column names say "m12" but store GeV^2.
     """
 
-    LAMBDA1 = "lambda1"
     M2 = "M2"
-    GEN_FIXINGS = "gen_fixings"
 
 
 @runtime_checkable
@@ -55,7 +50,7 @@ class EngineAdapter(Protocol):
     """
     Protocol satisfied by each physics engine adapter.
 
-    Concrete implementations: Lambda1Engine, M2Engine.
+    Concrete implementations: M2Engine, M2TrackerEngine.
     """
 
     @property
@@ -64,7 +59,7 @@ class EngineAdapter(Protocol):
         Canonical, stable identifier for this engine.
 
         Used as part of the grid signature to prevent resume collisions.
-        Examples: ``"lambda1"``, ``"m2"``.
+        Examples: ``"m2"``, ``"m2_tracker"``.
         """
         ...
 
@@ -78,7 +73,7 @@ class EngineAdapter(Protocol):
         """
         Default basename of the compiled C++ binary.
 
-        Examples: ``"PhysScanWithFixings"``, ``"Phys_M2BoundaryScan"``.
+        Examples: ``"DihiggsPointV2Evaluator"``, ``"Phys_M2BandTracker"``.
         """
         ...
 
@@ -116,7 +111,7 @@ class EngineAdapter(Protocol):
 
         The returned dict MUST include at least:
           - ``"engine_name"``   : str
-          - ``"scan_axis"``     : str (``"lambda1"`` or ``"M2"``)
+          - ``"scan_axis"``     : str (e.g. ``"M2"``)
           - ``"axis_units"``    : str (e.g. ``"dimensionless"`` or ``"GeV^2"``)
           - ``"axis_label"``    : str (e.g. ``"lambda_1"`` or ``"M2 (m12_sq)"``).
           - ``"csv_column_note"``: str explaining any historical name ambiguity.

@@ -320,7 +320,7 @@ stage_build_dihiggs() {
   make -C "$REPO_ROOT/dihiggs"
 
   [[ -f "$REPO_ROOT/dihiggs/lib/libdihiggs.a" ]] || die "dihiggs library was not created"
-  [[ -x "$REPO_ROOT/dihiggs/app/PhysLam1Scan" ]] || die "PhysLam1Scan executable was not created"
+  [[ -x "$REPO_ROOT/dihiggs/app/DihiggsPointV2Evaluator" ]] || die "DihiggsPointV2Evaluator executable was not created"
 }
 
 main() {

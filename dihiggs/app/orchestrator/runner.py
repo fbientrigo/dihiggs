@@ -59,7 +59,7 @@ class ScanRunner:
     Parameters
     ----------
     engine:
-        Engine adapter (Lambda1Engine or M2Engine).
+        Engine adapter (M2Engine or M2TrackerEngine).
     executable:
         Path to the compiled C++ binary.
     grid:
@@ -143,10 +143,6 @@ class ScanRunner:
             lambda6=self.fixed_base.lambda6,
             lambda7=self.fixed_base.lambda7,
             lambda1=self.fixed_base.lambda1,
-            bronze_shard_csv=self.fixed_base.bronze_shard_csv,
-            calibration_n=self.fixed_base.calibration_n,
-            calibration_frac=self.fixed_base.calibration_frac,
-            rng_seed=self.fixed_base.rng_seed,
             mh=self.fixed_base.mh,
             mHp=self.fixed_base.mHp,
             yukawa_type=self.fixed_base.yukawa_type,
@@ -234,10 +230,6 @@ class ScanRunner:
                 lambda6=self.fixed_base.lambda6,
                 lambda7=self.fixed_base.lambda7,
                 lambda1=self.fixed_base.lambda1,
-                bronze_shard_csv=self.fixed_base.bronze_shard_csv,
-                calibration_n=self.fixed_base.calibration_n,
-                calibration_frac=self.fixed_base.calibration_frac,
-                rng_seed=self.fixed_base.rng_seed,
                 mh=self.fixed_base.mh,
                 mHp=self.fixed_base.mHp,
                 yukawa_type=self.fixed_base.yukawa_type,

@@ -2,11 +2,8 @@ from __future__ import annotations
 # pyright: reportImplicitRelativeImport=false, reportAny=false
 
 import json
-import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
-from autoresearch.harness.dihiggs_parsers import AdaptiveDiscovery
 from autoresearch.harness.dihiggs_runner import DiHiggsRunner
 
 
@@ -42,21 +39,9 @@ def _base_config(tmp_path: Path) -> dict[str, object]:
             "ucb1_exploration_constant": 2.0,
         },
         "arms": [
-            {
-                "id": "adaptive-v1",
-                "explorer": "adaptive",
-                "timeout_sec": 30,
-                "cmd": ["{python}", "tool.py", "--iter", "{iter}"],
-                "env": {"OMP_NUM_THREADS": "{threads}"},
-            }
+            {"id": "adaptive-v1"}
         ],
     }
-
-
-def _create_mock_results_csv(run_dir: Path) -> None:
-    run_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = run_dir / "results.csv"
-    csv_path.write_text("success,total_events\ntrue,100\nfalse,100\n", encoding="utf-8")
 
 
 def test_load_existing_state_empty_log(tmp_path: Path) -> None:
@@ -284,8 +269,6 @@ def test_restart_preserves_known_run_dirs(tmp_path: Path) -> None:
     config = _base_config(tmp_path)
     
     runner1 = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
-    runner1.known_run_dirs.add("/runs/0001")
-    runner1.known_run_dirs.add("/runs/0002")
     
     runner1.emit_attempt_event(
         attempt_id="run0001",
@@ -302,181 +285,3 @@ def test_restart_preserves_known_run_dirs(tmp_path: Path) -> None:
     runner2 = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
     
     assert "run0001" in runner2.known_attempt_ids
-
-
-def test_checkpoint_stability_integration(tmp_path: Path) -> None:
-    config = _base_config(tmp_path)
-    runner = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
-    
-    checkpoint_root = tmp_path / "out" / "checkpoints" / "adaptive-v1"
-    iter_dir = checkpoint_root / "iter_0000"
-    iter_dir.mkdir(parents=True, exist_ok=True)
-    
-    state_file = iter_dir / "adaptive_state.json"
-    state_data = {
-        "proposals": [
-            {
-                "run_dir": str(tmp_path / "runs" / "0001"),
-                "bin_index": 10000,
-                "lam1_min": -12.5,
-            }
-        ]
-    }
-    state_file.write_text(json.dumps(state_data), encoding="utf-8")
-    
-    _create_mock_results_csv(tmp_path / "runs" / "0001")
-    
-    fake_discoveries = [
-        AdaptiveDiscovery(
-            run_dir=str(tmp_path / "runs" / "0001"),
-            tb=10000,
-            lam1_raw=-12.5,
-            lam1_bin=7,
-            iter_index=0,
-            proposal_index=0,
-        )
-    ]
-    
-    with (
-        patch("autoresearch.harness.dihiggs_runner.run_all_preflight_checks", return_value={"overall": "pass", "checks": []}),
-        patch("autoresearch.harness.dihiggs_runner.parse_adaptive_checkpoint", return_value=fake_discoveries),
-        patch("autoresearch.harness.dihiggs_runner.subprocess.run") as run_mock,
-    ):
-        run_mock.return_value = subprocess.CompletedProcess(
-            args=["python", "tool.py"],
-            returncode=0,
-            stdout=b"",
-            stderr=b"",
-        )
-        
-        runner.run_single_round("adaptive-v1")
-
-
-def test_subprocess_logging_integration(tmp_path: Path) -> None:
-    config = _base_config(tmp_path)
-    runner = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
-    
-    fake_discoveries = [
-        AdaptiveDiscovery(
-            run_dir=str(tmp_path / "runs" / "0001"),
-            tb=10000,
-            lam1_raw=-12.5,
-            lam1_bin=7,
-            iter_index=0,
-            proposal_index=0,
-        )
-    ]
-    
-    _create_mock_results_csv(tmp_path / "runs" / "0001")
-    
-    with (
-        patch("autoresearch.harness.dihiggs_runner.run_all_preflight_checks", return_value={"overall": "pass", "checks": []}),
-        patch("autoresearch.harness.dihiggs_runner.parse_adaptive_checkpoint", return_value=fake_discoveries),
-        patch("autoresearch.harness.dihiggs_runner.subprocess.run") as run_mock,
-    ):
-        run_mock.return_value = subprocess.CompletedProcess(
-            args=["python", "tool.py"],
-            returncode=0,
-            stdout=b"subprocess stdout output",
-            stderr=b"subprocess stderr output",
-        )
-        
-        runner.run_single_round("adaptive-v1")
-    
-    stdout_log = tmp_path / "out" / "adaptive-v1_round_0.stdout.txt"
-    stderr_log = tmp_path / "out" / "adaptive-v1_round_0.stderr.txt"
-    
-    assert stdout_log.exists()
-    assert stderr_log.exists()
-    assert "subprocess stdout output" in stdout_log.read_text(encoding="utf-8")
-    assert "subprocess stderr output" in stderr_log.read_text(encoding="utf-8")
-
-
-def test_full_resume_cycle(tmp_path: Path) -> None:
-    config = _base_config(tmp_path)
-    
-    runner1 = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
-    
-    _create_mock_results_csv(tmp_path / "runs" / "0001")
-    _create_mock_results_csv(tmp_path / "runs" / "0002")
-    
-    fake_discoveries_1 = [
-        AdaptiveDiscovery(
-            run_dir=str(tmp_path / "runs" / "0001"),
-            tb=10000,
-            lam1_raw=-12.5,
-            lam1_bin=7,
-            iter_index=0,
-            proposal_index=0,
-        )
-    ]
-    
-    with (
-        patch("autoresearch.harness.dihiggs_runner.run_all_preflight_checks", return_value={"overall": "pass", "checks": []}),
-        patch("autoresearch.harness.dihiggs_runner.parse_adaptive_checkpoint", return_value=fake_discoveries_1),
-        patch("autoresearch.harness.dihiggs_runner.subprocess.run") as run_mock,
-    ):
-        run_mock.return_value = subprocess.CompletedProcess(
-            args=["python", "tool.py"],
-            returncode=0,
-            stdout=b"",
-            stderr=b"",
-        )
-        
-        result1 = runner1.run_single_round("adaptive-v1")
-    
-    assert result1["discoveries"] == 1
-    assert result1["events_emitted"] == 1
-    
-    event_log = tmp_path / "out" / "events.jsonl"
-    events_after_first = event_log.read_text(encoding="utf-8").splitlines()
-    assert len(events_after_first) == 1
-    
-    del runner1
-    
-    runner2 = DiHiggsRunner(config=config, outdir=str(tmp_path / "out"))
-    
-    fake_discoveries_2 = [
-        AdaptiveDiscovery(
-            run_dir=str(tmp_path / "runs" / "0001"),
-            tb=10000,
-            lam1_raw=-12.5,
-            lam1_bin=7,
-            iter_index=0,
-            proposal_index=0,
-        ),
-        AdaptiveDiscovery(
-            run_dir=str(tmp_path / "runs" / "0002"),
-            tb=10000,
-            lam1_raw=-15.0,
-            lam1_bin=5,
-            iter_index=0,
-            proposal_index=1,
-        ),
-    ]
-    
-    with (
-        patch("autoresearch.harness.dihiggs_runner.run_all_preflight_checks", return_value={"overall": "pass", "checks": []}),
-        patch("autoresearch.harness.dihiggs_runner.parse_adaptive_checkpoint", return_value=fake_discoveries_2),
-        patch("autoresearch.harness.dihiggs_runner.subprocess.run") as run_mock,
-    ):
-        run_mock.return_value = subprocess.CompletedProcess(
-            args=["python", "tool.py"],
-            returncode=0,
-            stdout=b"",
-            stderr=b"",
-        )
-        
-        result2 = runner2.run_single_round("adaptive-v1")
-    
-    assert result2["discoveries"] == 2
-    
-    events_after_restart = event_log.read_text(encoding="utf-8").splitlines()
-    
-    attempt_ids = []
-    for line in events_after_restart:
-        event = json.loads(line)
-        attempt_ids.append(event["payload"]["attempt_id"])
-    
-    assert len(attempt_ids) == len(set(attempt_ids)), "Found duplicate attempt_ids"
-    assert len(events_after_restart) == 2

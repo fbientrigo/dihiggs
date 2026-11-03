@@ -149,33 +149,6 @@ class ConfigScreen(Container):
                         yield Static("Evals/Round:", classes="form-label")
                         yield Input(value="100", id="input-evals", classes="form-input", type="integer")
             
-            # Physics parameters
-            with Collapsible(title="Physics Parameters (Lambda1 Explorer)", collapsed=False):
-                with Container(classes="form-section"):
-                    with Horizontal(classes="form-row"):
-                        yield Static("m_phi (GeV):", classes="form-label")
-                        yield Input(value="130", id="input-mphi", classes="form-input", type="number")
-                    
-                    with Horizontal(classes="form-row"):
-                        yield Static("tan(beta):", classes="form-label")
-                        yield Input(value="1000", id="input-tanbeta", classes="form-input", type="number")
-                    
-                    with Horizontal(classes="form-row"):
-                        yield Static("λ₁ min:", classes="form-label")
-                        yield Input(value="0", id="input-lam1-min", classes="form-input", type="number")
-                    
-                    with Horizontal(classes="form-row"):
-                        yield Static("λ₁ max:", classes="form-label")
-                        yield Input(value="12", id="input-lam1-max", classes="form-input", type="number")
-                    
-                    with Horizontal(classes="form-row"):
-                        yield Static("λ₁ bins:", classes="form-label")
-                        yield Input(value="2000", id="input-lam1-bins", classes="form-input", type="integer")
-                    
-                    with Horizontal(classes="form-row"):
-                        yield Static("Proposals/round:", classes="form-label")
-                        yield Input(value="100", id="input-proposals", classes="form-input", type="integer")
-            
             # Actions
             with Horizontal(classes="actions-row"):
                 yield Button("💾 Save Config", id="btn-save", variant="primary")
@@ -214,14 +187,6 @@ class ConfigScreen(Container):
             timeout = int(self.query_one("#input-timeout", Input).value or "300")
             evals = int(self.query_one("#input-evals", Input).value or "100")
             
-            # Physics
-            mphi = float(self.query_one("#input-mphi", Input).value or "130")
-            tanbeta = float(self.query_one("#input-tanbeta", Input).value or "1000")
-            lam1_min = float(self.query_one("#input-lam1-min", Input).value or "0")
-            lam1_max = float(self.query_one("#input-lam1-max", Input).value or "12")
-            lam1_bins = int(self.query_one("#input-lam1-bins", Input).value or "2000")
-            proposals = int(self.query_one("#input-proposals", Input).value or "100")
-            
             self._config = {
                 "supervisor": {
                     "max_rounds": max_rounds,
@@ -243,30 +208,7 @@ class ConfigScreen(Container):
                     "max_empty_rounds": 2,
                 },
                 "autoscaling": {"enabled": True},
-                "orchestrator": {
-                    "arms": [{
-                        "name": "adaptive-smoke",
-                        "command": [
-                            "{python}",
-                            "{repo_root}/dihiggs/app/adaptive_explorer_lam1.py",
-                            "--m-phi", str(mphi),
-                            "--m-A", "300",
-                            "--m-Hp", "300",
-                            "--tan-beta", str(tanbeta),
-                            "--lambda6", "0.001",
-                            "--lambda7", "0",
-                            "--sin-ba", "1.0",
-                            "--lam1-min", str(lam1_min),
-                            "--lam1-max", str(lam1_max),
-                            "--lam1-bins", str(lam1_bins),
-                            "--hb-dataset", "{hb_dataset}",
-                            "--hs-dataset", "{hs_dataset}",
-                            "--n-proposals", str(proposals),
-                            "--output-dir", "{checkpoint_root}/{arm_name}/iter_{iter:04d}"
-                        ],
-                        "env": {}
-                    }]
-                }
+                "orchestrator": {"arms": []},  # add boundary action arms; see autoresearch/README.md
             }
             
         except (ValueError, TypeError):
@@ -363,12 +305,6 @@ class ConfigScreen(Container):
             self.query_one("#input-threads", Input).value = "4"
             self.query_one("#input-timeout", Input).value = "300"
             self.query_one("#input-evals", Input).value = "100"
-            self.query_one("#input-mphi", Input).value = "130"
-            self.query_one("#input-tanbeta", Input).value = "1000"
-            self.query_one("#input-lam1-min", Input).value = "0"
-            self.query_one("#input-lam1-max", Input).value = "12"
-            self.query_one("#input-lam1-bins", Input).value = "2000"
-            self.query_one("#input-proposals", Input).value = "100"
             self._update_config_from_form()
             self._update_preview()
             self.app.notify("Form reset to defaults", title="Info")

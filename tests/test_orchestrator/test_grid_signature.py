@@ -15,7 +15,7 @@ import pytest
 
 from dihiggs.app.orchestrator.grid import ScanGrid, grid_signature
 from dihiggs.app.orchestrator.models import FixedParams
-from tests.test_orchestrator.conftest import make_fixed_lam1, make_fixed_m2, make_grid
+from tests.test_orchestrator.conftest import make_fixed, make_fixed_m2, make_grid
 
 
 class TestGridSignature:
@@ -30,7 +30,7 @@ class TestGridSignature:
         )
 
     def _fixed_lam1(self) -> FixedParams:
-        return make_fixed_lam1(
+        return make_fixed(
             mA=500.0, sin_ba=1.0, tan_beta=50.0, lambda6=0.001, lambda7=0.0
         )
 
@@ -49,7 +49,7 @@ class TestGridSignature:
         """
         grid = self._grid()
         # Use the same numeric fixed params (excluding lambda1 field)
-        fixed_lam1 = make_fixed_lam1(mA=500.0, sin_ba=1.0, tan_beta=50.0,
+        fixed_lam1 = make_fixed(mA=500.0, sin_ba=1.0, tan_beta=50.0,
                                       lambda6=0.001, lambda7=0.0)
         fixed_m2 = make_fixed_m2(mA=500.0, sin_ba=1.0, tan_beta=50.0,
                                    lambda6=0.001, lambda7=0.0, lambda1=1.0)
@@ -104,8 +104,8 @@ class TestGridSignature:
     def test_different_tan_beta_produces_different_signatures(self):
         """Per-task signatures differ by tan_beta."""
         grid = self._grid()
-        fixed_a = make_fixed_lam1(tan_beta=10000.0)
-        fixed_b = make_fixed_lam1(tan_beta=20000.0)
+        fixed_a = make_fixed(tan_beta=10000.0)
+        fixed_b = make_fixed(tan_beta=20000.0)
 
         assert grid_signature("lambda1", grid, fixed_a) != \
                grid_signature("lambda1", grid, fixed_b)

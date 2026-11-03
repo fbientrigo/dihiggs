@@ -6,7 +6,7 @@ Provides:
 - fake_success_exe  : path to a bash script that simulates a successful C++ scan
 - fake_failure_exe  : path to a bash script that simulates a failing C++ scan
 - make_grid         : factory for ScanGrid instances
-- make_fixed_lam1   : factory for FixedParams (lambda1 engine)
+- make_fixed        : factory for FixedParams (no lambda1 reference)
 - make_fixed_m2     : factory for FixedParams (m2 engine, includes lambda1)
 """
 
@@ -110,7 +110,7 @@ def make_grid(
     )
 
 
-def make_fixed_lam1(
+def make_fixed(
     *,
     mA: float = 500.0,
     sin_ba: float = 1.0,
@@ -118,14 +118,13 @@ def make_fixed_lam1(
     lambda6: float = 0.001,
     lambda7: float = 0.0,
 ) -> FixedParams:
-    """Factory for FixedParams for the lambda1 engine (no lambda1 in fixed)."""
+    """Factory for FixedParams without a lambda1 reference value."""
     return FixedParams(
         mA=mA,
         sin_ba=sin_ba,
         tan_beta=tan_beta,
         lambda6=lambda6,
         lambda7=lambda7,
-        lambda1=None,  # lambda1 is the scan axis
     )
 
 

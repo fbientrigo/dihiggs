@@ -6,7 +6,7 @@ Invocation examples
 
 Canonical lambda1 v2 scan (row-preserving):
     python -m dihiggs.app.orchestrator \\
-        --engine lambda1_legacy --exec ./PhysScanWithFixings \\
+        --engine lambda1_v2 --exec ./dihiggs/app/Lambda1EvaluatorV2 \\
         --campaign scan_999 \\
         --sin-ba 0.995 --lambda6 0.10 --lambda7 0.00 --mA 300 \\
         --tanbeta 10000,15000,20000 \\
@@ -31,12 +31,10 @@ Force overwrite:
 from __future__ import annotations
 
 import argparse
-import csv
 import os
 import sys
 from pathlib import Path
 
-from dihiggs.app.orchestrator.engines.lambda1 import Lambda1Engine
 from dihiggs.app.orchestrator.engines.m2 import M2Engine
 from dihiggs.app.orchestrator.grid import ScanGrid
 from dihiggs.app.orchestrator.io_utils import parse_csv_floats
@@ -52,13 +50,13 @@ from dihiggs.app.orchestrator.physics_authority import active_mass_gev
 from dihiggs.app.orchestrator.runner import ScanRunner
 
 # ---------------------------------------------------------------------------
-# Defaults (same as legacy orchestrate_scans.py for backward compat)
+# Defaults
 # ---------------------------------------------------------------------------
 _DEFAULT_MPHI_MIN = 130.0
 _DEFAULT_MPHI_MAX = 290.0
 _DEFAULT_N_MPHI = 15
 
-# Lambda1 defaults (preserved from legacy)
+# lambda1_v2 axis defaults
 _DEFAULT_LAM1_MIN = 0.0
 _DEFAULT_LAM1_MAX = 12.0
 _DEFAULT_N_LAM1 = 666
@@ -113,39 +111,12 @@ _DEFAULT_L7 = 0.0
 _DEFAULT_TANBETA = "10000,15000,20000"
 
 
-def _read_bronze_fixing(bronze_csv: str) -> dict:
-    """
-    Read (tan_beta, m_A, lambda6, lambda7, sin_ba) from the first data row of
-    a chris/CalcLambda1ScanFixings bronze shard CSV.
-
-    A bronze shard is one fixing tuple, so these columns are constant across
-    all rows; the first row is authoritative.
-    """
-    with open(bronze_csv, newline="") as fh:
-        reader = csv.DictReader(fh)
-        row = next(reader, None)
-    if row is None:
-        raise ValueError(f"Bronze CSV has no data rows: {bronze_csv}")
-    try:
-        return {
-            "tan_beta": float(row["tan_beta"]),
-            "mA": float(row["m_A"]),
-            "lambda6": float(row["lambda6"]),
-            "lambda7": float(row["lambda7"]),
-            "sin_ba": float(row["sin_ba"]),
-        }
-    except KeyError as exc:
-        raise ValueError(
-            f"Bronze CSV missing expected column {exc}: {bronze_csv}"
-        ) from exc
-
-
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m dihiggs.app.orchestrator",
         description=(
             "Executable 2HDMC orchestrator: lambda1_v2 and m2 are canonical; "
-            "lambda1_legacy and m2_tracker are compatibility/experimental paths."
+            "m2_tracker is experimental."
         ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -155,14 +126,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--engine",
         type=str,
         default="lambda1_v2",
-        choices=["lambda1_v2", "lambda1_legacy", "lambda1", "m2", "m2_tracker", "gen_fixings", "t4"],
+        choices=["lambda1_v2", "m2", "m2_tracker", "t4"],
         help=(
             "Canonical 'lambda1_v2' → Lambda1EvaluatorV2 (explicit lambda1_target); "
-            "legacy 'lambda1_legacy'/'lambda1' → PhysScanWithFixings; "
             "canonical 'm2' → DihiggsPointV2Evaluator (reconstructed lambda1); "
-            "experimental 'm2_tracker' → bounded-pilot Phys_M2BandTracker; "
-            "'gen_fixings' → GenScanWithFixings (Stage 2: calibrates/validates a "
-            "chris/CalcLambda1ScanFixings bronze shard against 2HDMC). "
+            "experimental 'm2_tracker' → bounded-pilot Phys_M2BandTracker. "
         ),
     )
     p.add_argument("--t4-mode", choices=["legacy","explicit","analytic"], default="legacy",
@@ -297,8 +265,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help=(
-            "Legacy fixed lambda_1 compatibility option. Rejected for canonical "
-            "m2 because lambda1 is reconstructed output, not an input."
+            "Rejected by every engine: lambda1 is the lambda1_v2 grid axis and "
+            "reconstructed output for m2."
         ),
     )
 
@@ -317,7 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Second axis scan min. "
-            "For lambda1 engine: lambda_1 min (dimensionless). "
+            "For lambda1_v2: lambda_1 min (dimensionless). "
             "For m2 engine: M^2 min (GeV^2)."
         ),
     )
@@ -334,16 +302,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of second-axis grid points.",
     )
 
-    # Legacy lambda1 aliases (backward compatible)
+    # lambda1 axis aliases (lambda1_v2)
     p.add_argument("--lam1-min", "--lam1_min", dest="lam1_min",
                    type=float, default=None,
-                   help="[lambda1 engine] Alias for --axis-min.")
+                   help="[lambda1_v2] Alias for --axis-min.")
     p.add_argument("--lam1-max", "--lam1_max", dest="lam1_max",
                    type=float, default=None,
-                   help="[lambda1 engine] Alias for --axis-max.")
+                   help="[lambda1_v2] Alias for --axis-max.")
     p.add_argument("--n-lam1", "--N-lam1", dest="n_lam1",
                    type=int, default=None,
-                   help="[lambda1 engine] Alias for --n-axis.")
+                   help="[lambda1_v2] Alias for --n-axis.")
 
     # tan(beta) list
     p.add_argument(
@@ -351,46 +319,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=_DEFAULT_TANBETA,
         help="Comma-separated tan(beta) values, e.g. '10000,15000,20000'.",
-    )
-
-    # gen_fixings (Stage 2) options
-    p.add_argument(
-        "--bronze-csv",
-        type=str,
-        default=None,
-        help=(
-            "[gen_fixings engine] Path to a chris/CalcLambda1ScanFixings "
-            "bronze shard CSV to calibrate/validate. Required for "
-            "--engine gen_fixings."
-        ),
-    )
-    p.add_argument(
-        "--calibration-n",
-        type=int,
-        default=None,
-        help=(
-            "[gen_fixings engine] Number of calibration candidates (N) for "
-            "the +/-frac random search. Omit to use the C++ binary's default (50)."
-        ),
-    )
-    p.add_argument(
-        "--calibration-frac",
-        type=float,
-        default=None,
-        help=(
-            "[gen_fixings engine] Fractional jitter half-width for the "
-            "calibration random search (e.g. 0.10 = +/-10%%). Omit to use "
-            "the C++ binary's default (0.10)."
-        ),
-    )
-    p.add_argument(
-        "--rng-seed",
-        type=int,
-        default=None,
-        help=(
-            "[gen_fixings engine] Base RNG seed for the calibration random "
-            "search. Omit to use the C++ binary's default (0)."
-        ),
     )
 
     return p
@@ -494,16 +422,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # ---- select engine -------------------------------------------------------
-    if args.engine in ("lambda1", "lambda1_legacy"):
-        engine = Lambda1Engine()
-    elif args.engine == "m2":
+    if args.engine == "m2":
         engine = M2Engine()
     elif args.engine == "m2_tracker":
         from dihiggs.app.orchestrator.engines.m2_tracker import M2TrackerEngine
         engine = M2TrackerEngine()
-    elif args.engine == "gen_fixings":
-        from dihiggs.app.orchestrator.engines.gen_fixings import GenFixingsEngine
-        engine = GenFixingsEngine()
     else:
         print(f"[ERROR] Unknown engine: {args.engine}", file=sys.stderr)
         return 2
@@ -518,91 +441,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[ERROR] Executable not found: {exec_path}", file=sys.stderr)
         return 2
 
-    # ---- resolve second axis -------------------------------------------------
-    # Priority: --axis-{min,max}, then legacy --lam1-{min,max}
-    axis_min = args.axis_min
-    axis_max = args.axis_max
-    n_axis = args.n_axis
-
-    # mA/sin_ba/lambda6/lambda7/tan_beta: normally taken from CLI flags, but
-    # for gen_fixings these are derived from the bronze shard itself (below)
-    # to avoid silently writing mismatched provenance into the run_dir name.
-    mA_val = args.mA
-    sin_ba_val = args.sin_ba
-    lambda6_val = args.lambda6
-    lambda7_val = args.lambda7
-    tanbeta_override = None
-
-    if args.engine in ("lambda1", "lambda1_legacy"):
-        axis_min = axis_min if axis_min is not None else (
-            args.lam1_min if args.lam1_min is not None else _DEFAULT_LAM1_MIN
-        )
-        axis_max = axis_max if axis_max is not None else (
-            args.lam1_max if args.lam1_max is not None else _DEFAULT_LAM1_MAX
-        )
-        n_axis = n_axis if n_axis is not None else (
-            args.n_lam1 if args.n_lam1 is not None else _DEFAULT_N_LAM1
-        )
-        # lambda1 must NOT be in fixed for this engine
-        if args.lambda1 is not None:
-            print(
-                f"[ERROR] --lambda1 is not allowed for --engine {args.engine} "
-                "(lambda1 is the scan axis). Omit --lambda1.",
-                file=sys.stderr,
-            )
-            return 2
-        fixed_lambda1 = None
-
-    elif args.engine == "gen_fixings":
-        if not args.bronze_csv:
-            print(
-                "[ERROR] --bronze-csv is required for --engine gen_fixings.",
-                file=sys.stderr,
-            )
-            return 2
-        # No generated grid for this engine; ScanGrid is a required-but-unused
-        # placeholder (see GenFixingsEngine.build_command docstring).
-        axis_min = axis_min if axis_min is not None else 0.0
-        axis_max = axis_max if axis_max is not None else 0.0
-        n_axis = n_axis if n_axis is not None else 1
-        fixed_lambda1 = args.lambda1
-
-        # GenScanWithFixings reads (tan_beta, m_A, lambda6, lambda7, sin_ba)
-        # per-row from the bronze shard itself, not from --mA/--sin-ba/etc.
-        # Derive run-dir/grid-signature provenance from the shard so it can't
-        # silently diverge from the data being processed.
-        try:
-            bronze_fixing = _read_bronze_fixing(args.bronze_csv)
-        except (OSError, ValueError) as exc:
-            print(f"[ERROR] {exc}", file=sys.stderr)
-            return 2
-        mA_val = bronze_fixing["mA"]
-        sin_ba_val = bronze_fixing["sin_ba"]
-        lambda6_val = bronze_fixing["lambda6"]
-        lambda7_val = bronze_fixing["lambda7"]
-        tanbeta_override = [bronze_fixing["tan_beta"]]
+    # ---- resolve second axis (m2 or experimental m2_tracker) ----------------
+    axis_min = args.axis_min if args.axis_min is not None else _DEFAULT_M2_MIN
+    axis_max = args.axis_max if args.axis_max is not None else _DEFAULT_M2_MAX
+    n_axis = args.n_axis if args.n_axis is not None else _DEFAULT_N_M2
+    if args.lambda1 is not None:
         print(
-            f"[gen_fixings] Derived fixed params from bronze shard "
-            f"{args.bronze_csv}: mA={mA_val}, sin_ba={sin_ba_val}, "
-            f"lambda6={lambda6_val}, lambda7={lambda7_val}, "
-            f"tan_beta={tanbeta_override[0]} "
-            f"(--mA/--sin-ba/--lambda6/--lambda7/--tanbeta are ignored "
-            f"for this engine)."
+            f"[ERROR] --lambda1 is rejected for --engine {args.engine}: "
+            "lambda1 is reconstructed output, not a fixed input.",
+            file=sys.stderr,
         )
-
-    else:  # m2 or experimental m2_tracker
-        axis_min = axis_min if axis_min is not None else _DEFAULT_M2_MIN
-        axis_max = axis_max if axis_max is not None else _DEFAULT_M2_MAX
-        n_axis = n_axis if n_axis is not None else _DEFAULT_N_M2
-        if args.lambda1 is not None:
-            label = "m2_tracker" if args.engine == "m2_tracker" else "m2"
-            print(
-                f"[ERROR] --lambda1 is rejected for --engine {label}: "
-                "lambda1 is reconstructed output, not a fixed input.",
-                file=sys.stderr,
-            )
-            return 2
-        fixed_lambda1 = None
+        return 2
 
     # ---- build grid and fixed ------------------------------------------------
     grid = ScanGrid(
@@ -613,28 +462,20 @@ def main(argv: list[str] | None = None) -> int:
         axis_max=axis_max,
         n_axis=n_axis,
     )
-    if tanbeta_override is not None:
-        tanbeta_list = tanbeta_override
-    else:
-        tanbeta_list = parse_csv_floats(args.tanbeta)
+    tanbeta_list = parse_csv_floats(args.tanbeta)
     if not tanbeta_list:
         print("[ERROR] --tanbeta list is empty.", file=sys.stderr)
         return 2
 
     # fixed_base.tan_beta is overridden per-task inside ScanRunner; 0.0 here.
     fixed_base = FixedParams(
-        mA=mA_val,
-        sin_ba=sin_ba_val,
+        mA=args.mA,
+        sin_ba=args.sin_ba,
         tan_beta=0.0,
-        lambda6=lambda6_val,
-        lambda7=lambda7_val,
-        lambda1=fixed_lambda1,
-        bronze_shard_csv=args.bronze_csv if args.engine == "gen_fixings" else None,
-        calibration_n=args.calibration_n if args.engine == "gen_fixings" else None,
-        calibration_frac=args.calibration_frac if args.engine == "gen_fixings" else None,
-        rng_seed=args.rng_seed if args.engine == "gen_fixings" else None,
-        mh=args.mh if args.engine in ("m2", "m2_tracker") else None,
-        mHp=(args.mA if args.mHp is None else args.mHp) if args.engine in ("m2", "m2_tracker") else None,
+        lambda6=args.lambda6,
+        lambda7=args.lambda7,
+        mh=args.mh,
+        mHp=args.mA if args.mHp is None else args.mHp,
         yukawa_type=args.yukawa_type if args.engine == "m2" else None,
     )
 
