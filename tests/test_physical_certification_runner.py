@@ -9,6 +9,11 @@ CAMPAIGN = Path(__file__).resolve().parents[1] / "campaigns/t2_t4_20261008T04385
 sys.path.insert(0, str(CAMPAIGN / "scripts"))
 import run_physical_certification as runner
 
+needs_campaign_data = pytest.mark.skipif(
+    not (CAMPAIGN / "t2_lightweight/trajectory_points.jsonl").is_file() or not (CAMPAIGN / "pilot_scan_tables_mh125_20.csv").is_file(),
+    reason="campaign data lives in the lake: python ../lake/lake.py restore 20261013T005211Z-bec944 <dir>, then copy into campaigns/t2_t4_20261008T043858Z",
+)
+
 
 @pytest.fixture(scope="module")
 def complete_point():
@@ -52,6 +57,7 @@ def _mutate_rounded_screen(record):
         path["evidence"]["all_lambdas"]["lambda2"] = "1"
 
 
+@needs_campaign_data
 def test_exact_xstar_uses_trajectory_definition_not_rounded_evaluated_x():
     row = next(r for r in runner._source_rows() if r["trajectory"] == "Xstar")
     _potential, coefficients = runner.exact_target_model(row)
@@ -61,6 +67,7 @@ def test_exact_xstar_uses_trajectory_definition_not_rounded_evaluated_x():
     assert coefficients["X_lambda6_tanbeta"] != str(runner.q(row["evaluated_X"]))
 
 
+@needs_campaign_data
 def test_source_grid_join_and_sm_probe_are_frozen_separately():
     rows = runner._source_rows()
     assert len(rows) == 390
@@ -77,6 +84,7 @@ def test_source_grid_join_and_sm_probe_are_frozen_separately():
         runner._run_sm_probe(rows)
 
 
+@needs_campaign_data
 def test_strict_replay_accepts_complete_real_point(complete_point, tmp_path, monkeypatch):
     rows, t4_records, _row, _key, identity, _record = complete_point
     _install_replay_files(tmp_path, monkeypatch, complete_point)
@@ -88,6 +96,9 @@ def test_strict_replay_accepts_complete_real_point(complete_point, tmp_path, mon
         *(f"lambda{i}" for i in range(1, 8)), *(f"Z{i}" for i in range(1, 8))}
 
 
+@needs_campaign_data
+@needs_campaign_data
+@needs_campaign_data
 @pytest.mark.parametrize("mutation,reason", [
     (lambda r: r["constraints"].pop("target.BFB_general"), "required physics constraint set"),
     (lambda r: r["source_decimal80_lambda_Z"].pop("lambda7"), "source decimal80 lambda/Z"),

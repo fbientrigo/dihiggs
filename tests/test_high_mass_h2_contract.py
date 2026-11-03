@@ -122,7 +122,7 @@ def test_hierarchy_holds_for_all_pilot_anchors(tmp_path):
 
 def test_pilot_script_regenerates_and_all_checks_pass(tmp_path):
     completed = subprocess.run(
-        [sys.executable, str(PILOT_SCRIPT)], cwd=ROOT, check=True, text=True, capture_output=True,
+        [sys.executable, str(PILOT_SCRIPT), str(tmp_path)], cwd=ROOT, check=True, text=True, capture_output=True,
     )
     aggregate = json.loads(completed.stdout)
     assert aggregate["all_points_construction_ok"] is True
@@ -130,7 +130,12 @@ def test_pilot_script_regenerates_and_all_checks_pass(tmp_path):
     assert aggregate["reproducibility_ok"] is True
     assert aggregate["gate_a_evidence_ok"] is True
 
-    validation_path = ROOT / "docs/pilots/high_mass_h2_v1/pilot_validation.json"
-    payload = json.loads(validation_path.read_text())
+    payload = json.loads((tmp_path / "pilot_validation.json").read_text())
     assert len(payload["pilots"]) == 8
     assert payload["aggregate"] == aggregate
+
+    # The tracked pilot must be what the evaluator gives today (only the producer stamp may differ).
+    def rows(path):
+        with path.open(newline="", encoding="utf-8") as handle:
+            return [{k: v for k, v in r.items() if k != "producer_commit"} for r in csv.DictReader(handle)]
+    assert rows(tmp_path / "pilot_points.csv") == rows(ROOT / "docs/pilots/high_mass_h2_v1/pilot_points.csv")

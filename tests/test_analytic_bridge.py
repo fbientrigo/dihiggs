@@ -23,7 +23,7 @@ def test_analytic_reordered_cp_even_state_is_inconclusive_without_downstream_cal
     point = build_aligned_lambda7_family(tan_beta="100",lambda1_ref="1.2",
         mh_GeV="125.13",mphi_GeV="100",mA_GeV="200",mHp_GeV="200",
         v_GeV="246",X_lambda6_tanbeta="1")
-    bridge=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge"
+    bridge=Path(__file__).resolve().parents[1]/"2hdmc/analytic-bridge"
     result = evaluate_t4(point, mode="analytic", executable=bridge)
     assert result["constructor_status"] == "INCONCLUSIVE"
     assert result["backend_constructor_status"] == "PASS"
@@ -46,7 +46,7 @@ def test_bridge_reports_missing_executable_with_build_command(tmp_path):
         evaluate_t4(POINT, mode="analytic", executable=tmp_path/"missing")
 
 def test_backend_spectrum_is_exported_from_calc_unitarity():
-    campaign=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge"
+    campaign=Path(__file__).resolve().parents[1]/"2hdmc/analytic-bridge"
     result=evaluate_t4(POINT,mode="analytic",executable=campaign)
     lambdas={f"lambda{i}":str(result[f"lambda{i}"]) for i in range(1,8)}
     independent=unitarity(lambdas,precision=80)
@@ -61,7 +61,7 @@ def test_analytic_reordered_state_mapping_preserves_t1_signed_conventions():
     point=build_aligned_lambda7_family(tan_beta="100",lambda1_ref="1.2",
         mh_GeV="125.13",mphi_GeV="100",mA_GeV="200",mHp_GeV="200",
         v_GeV="246",X_lambda6_tanbeta="1")
-    bridge=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge"
+    bridge=Path(__file__).resolve().parents[1]/"2hdmc/analytic-bridge"
     result=evaluate_t4(point,mode="analytic",executable=bridge)
     assert result["physical_state_ordering"]=="MAPPED"
     assert result["requested_h_index_backend"]==2
@@ -92,6 +92,10 @@ def test_serialized_family_point_rejects_derived_field_mutation():
         evaluate_t4(bad,mode="analytic")
 
 
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parents[1] / "campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge").is_file(),
+    reason="run_t4_bridge.py runs the frozen campaign binary; it lives in the lake: python ../lake/lake.py restore 20261013T005211Z-bec944 <dir>",
+)
 def test_native_diphoton_diagnostics_reconcile_qcd_components_and_width():
     campaign=Path(__file__).resolve().parents[1]/"campaigns/t2_t4_20261008T043858Z"
     sys.path.insert(0,str(campaign/"scripts"))
@@ -109,7 +113,7 @@ def test_native_diphoton_diagnostics_reconcile_qcd_components_and_width():
     factor=complex(audit["top_qcd_component_factor"])
     assert 0 < factor.real < 1
     assert abs(after-before*factor)<1e-24
-    qcd_off=evaluate_t4(POINT,mode="analytic",executable=campaign/"scripts/analytic_bridge",qcd_on=False)
+    qcd_off=evaluate_t4(POINT,mode="analytic",executable=campaign.parents[1]/"2hdmc/analytic-bridge",qcd_on=False)
     off=next(x for x in qcd_off["diphoton_native_diagnostics"]["fermions"] if x["family"]=="up" and x["generation"]==3)
     assert qcd_off["diphoton_native_diagnostics"]["qcd_enabled"] is False
     assert qcd_off["diphoton_native_diagnostics"]["loop_width_GeV"] > 0

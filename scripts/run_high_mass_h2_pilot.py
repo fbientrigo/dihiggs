@@ -12,11 +12,12 @@ import json
 import math
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BINARY = ROOT / "dihiggs/app/DihiggsPointV2Evaluator"
-OUT_DIR = ROOT / "docs/pilots/high_mass_h2_v1"
+OUT_DIR = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "docs/pilots/high_mass_h2_v1"  # arg: write elsewhere (tests)
 POINTS_CSV = OUT_DIR / "pilot_points.csv"
 VALIDATION_JSON = OUT_DIR / "pilot_validation.json"
 
@@ -202,7 +203,7 @@ def main() -> None:
         ).stdout.strip(),
         "scope": "bounded engineering pilot for the high-mass H2 point factory contract; "
                  "no campaign-level scientific conclusion; no MadGraph production",
-        "points_csv": str(POINTS_CSV.relative_to(ROOT)),
+        "points_csv": os.path.relpath(POINTS_CSV, ROOT),
         "points_csv_sha256": hashlib.sha256(POINTS_CSV.read_bytes()).hexdigest(),
         "pilots": validations,
         "reproducibility": reproducibility,

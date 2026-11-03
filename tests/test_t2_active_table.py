@@ -3,9 +3,15 @@ from decimal import Decimal, localcontext
 import json
 from pathlib import Path
 
+import pytest
+
 CAMPAIGN = Path(__file__).resolve().parents[1] / "campaigns/t2_t4_20261008T043858Z"
 
 
+@pytest.mark.skipif(
+    not (CAMPAIGN / "pilot_scan_tables_mh125_20.csv").is_file(),
+    reason="campaign data lives in the lake: python ../lake/lake.py restore 20261013T005211Z-bec944 <dir>, then copy into campaigns/t2_t4_20261008T043858Z",
+)
 def test_active_mass_table_rebuilds_quartics_and_recomputes_xstar():
     with (CAMPAIGN / "pilot_scan_tables_mh125_20.csv").open(newline="") as handle:
         rows = list(csv.DictReader(handle))

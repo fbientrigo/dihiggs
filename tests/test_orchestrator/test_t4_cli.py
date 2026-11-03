@@ -59,7 +59,7 @@ def test_t4_cli_dry_run_still_rejects_tampered_point(tmp_path, capsys):
 def test_t4_cli_dispatches_validated_analytic_point_to_backend(tmp_path):
     point = _point_file(tmp_path)
     output = tmp_path / "out/result.json"
-    bridge = Path(__file__).resolve().parents[2] / "campaigns/t2_t4_20261008T043858Z/scripts/analytic_bridge"
+    bridge = Path(__file__).resolve().parents[2] / "2hdmc/analytic-bridge"
     assert main(["--engine", "t4", "--t4-mode", "analytic", "--point-json", str(point),
                  "--output", str(output), "--exec", str(bridge)]) == 0
     result = json.loads(output.read_text())
