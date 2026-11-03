@@ -16,26 +16,25 @@ from pathlib import Path
 
 import pytest
 
-from dihiggs.app.orchestrator.engines.lambda1 import Lambda1Engine
 from dihiggs.app.orchestrator.engines.m2 import M2Engine
 from dihiggs.app.orchestrator.runner import ScanRunner
 from tests.test_orchestrator.conftest import (
-    make_fixed_lam1,
+    make_fixed,
     make_fixed_m2,
     make_grid,
 )
 
 
-class TestDryRunLambda1:
-    """Dry-run with Lambda1Engine."""
+class TestDryRunLifecycle:
+    """Dry-run runner lifecycle (M2Engine)."""
 
     def test_manifest_written(self, tmp_outdir, fake_success_exe):
         """run_manifest.json must be created even in dry-run."""
         runner = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,  # won't be called
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[10000.0, 20000.0],
             campaign="test_dry",
             outdir=tmp_outdir,
@@ -51,19 +50,19 @@ class TestDryRunLambda1:
 
         manifest = json.loads(manifests[0].read_text())
         assert manifest["runtime"]["dry_run"] is True
-        assert manifest["runtime"]["engine_name"] == "lambda1"
+        assert manifest["runtime"]["engine_name"] == "m2"
         # axis_metadata must be present
         assert "axis_metadata" in manifest
-        assert manifest["axis_metadata"]["scan_axis"] == "lambda1"
+        assert manifest["axis_metadata"]["scan_axis"] == "M2"
 
     def test_task_summary_written_with_dry_run_events(self, tmp_outdir, fake_success_exe):
         """task_summary.jsonl must have one dry_run event per tan(beta)."""
         tanbeta_list = [10000.0, 20000.0, 50000.0]
         runner = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=tanbeta_list,
             campaign="test_dry",
             outdir=tmp_outdir,
@@ -91,10 +90,10 @@ class TestDryRunLambda1:
     def test_scan_meta_written_per_task(self, tmp_outdir, fake_success_exe):
         """Each task must have a scan_meta.json with event=dry_run."""
         runner = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[10000.0],
             campaign="test_dry",
             outdir=tmp_outdir,
@@ -116,10 +115,10 @@ class TestDryRunLambda1:
     def test_no_csv_created_in_dry_run(self, tmp_outdir, fake_success_exe):
         """No CSV output files must be created in dry-run mode."""
         runner = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[10000.0, 20000.0],
             campaign="test_dry",
             outdir=tmp_outdir,
@@ -135,10 +134,10 @@ class TestDryRunLambda1:
     def test_results_have_dry_run_status(self, tmp_outdir, fake_success_exe):
         """ScanRunner.run() must return TaskResults with status=dry_run."""
         runner = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[10000.0, 20000.0],
             campaign="test_dry",
             outdir=tmp_outdir,

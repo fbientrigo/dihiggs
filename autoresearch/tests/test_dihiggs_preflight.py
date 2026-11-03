@@ -17,7 +17,7 @@ def _base_config() -> dict[str, object]:
     return {
         "paths": {"repo_root": "/repo"},
         "dihiggs": {
-            "phys_exec": "/repo/dihiggs/app/PhysScanWithFixings",
+            "phys_exec": "/repo/dihiggs_boundary/build/bin/evaluate_point",
             "hb_dataset_env": "HB_DATASET",
             "hs_dataset_env": "HS_DATASET",
         },
@@ -42,7 +42,7 @@ def test_check_phys_exec_fail_when_binary_missing() -> None:
     assert result == {
         "check": "phys_exec",
         "status": "fail",
-        "message": "evaluator (dihiggs_boundary evaluate_point) not found at /repo/dihiggs/app/PhysScanWithFixings",
+        "message": "evaluator (dihiggs_boundary evaluate_point) not found at /repo/dihiggs_boundary/build/bin/evaluate_point",
     }
 
 
@@ -185,7 +185,7 @@ def test_run_all_preflight_checks_pass_when_all_checks_pass(monkeypatch: MonkeyP
         if not isinstance(path, str):
             return False
         return path in {
-            "/repo/dihiggs/app/PhysScanWithFixings",
+            "/repo/dihiggs_boundary/build/bin/evaluate_point",
             "/datasets/HBDataset",
             "/datasets/HSDataset",
             "/repo/2hdmc/lib/lib2HDMC.a",

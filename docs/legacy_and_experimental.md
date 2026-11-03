@@ -18,11 +18,17 @@ canonical for new production.
 
 ## Replay or compatibility only
 
-- `PhysScanWithFixings`;
-- `lambda1_legacy` and compatibility alias `lambda1`;
-- adaptive/ML workflows that predate the v2 closure;
+- `PhysLam1Scan`: frozen oracle behind `tests/test_golden_lambda1.py`;
+- ML workflows that predate the v2 closure;
 - frozen `autoresearch/` components;
 - historical campaigns and quarantine scripts.
+
+## Removed
+
+`PhysScanWithFixings`, `PhysParamScan`, `GenScanWithFixings`, the
+`lambda1_legacy`/`gen_fixings` orchestrator engines, `orchestrate_scans.py`,
+the adaptive explorers and the christopher campaign scripts were removed.
+Reproduce old campaigns with `git checkout legacy-lambda1-final`.
 
 Do not use legacy artifacts to make new production claims unless a current
 contract explicitly promotes that path.

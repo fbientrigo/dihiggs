@@ -11,8 +11,7 @@ REPO_ROOT_ABS := $(abspath $(REPO_ROOT))
 
 # Include paths (Core Src + Dependencies headers)
 INCLUDES := -I$(REPO_ROOT)/dihiggs/src \
-            -I$(REPO_ROOT)/2hdmc/src \
-            -I$(REPO_ROOT)/higgstools/installation/include
+            -I$(REPO_ROOT)/2hdmc/src
 
 # Compilation Flags (Must match Core flags essentially)
 CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g $(INCLUDES)
@@ -24,14 +23,11 @@ CXXFLAGS += -DPHYSLAM1SCAN_BINARY_PATH=\"$(REPO_ROOT_ABS)/dihiggs/app/PhysLam1Sc
 # Library Paths
 LIB_CORE      := $(REPO_ROOT)/dihiggs/lib
 LIB_2HDMC     := $(REPO_ROOT)/2hdmc/lib
-LIB_HIGGSTOOLS:= $(REPO_ROOT)/higgstools/installation/lib
 
 # Link against the Core Static Library
 LDFLAGS  := -L$(LIB_CORE) -ldihiggs \
             -L$(LIB_2HDMC) -l2HDMC \
-            -L$(LIB_HIGGSTOOLS) -lHiggsTools \
-            -lgsl -lgslcblas -lm \
-            -Wl,-rpath,$(LIB_HIGGSTOOLS)
+            -lgsl -lgslcblas -lm
 
 # Sources
 TEST_SRCS := test_main.cpp test_ParamUtils.cpp test_PhysLam1Scan.cpp

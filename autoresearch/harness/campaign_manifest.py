@@ -11,7 +11,7 @@ Manifest Fields:
 - config_hash: SHA256 of sorted JSON config subset
 - runtime_ceilings: Timeout, max_empty_rounds limits
 - datasets: Env var names + resolved paths for HB/HS datasets
-- executable_path: PhysLam1Scan or PhysScanWithFixings binary path
+- executable_path: evaluator path from dihiggs.phys_exec (boundary evaluate_point)
 - metric_schema_version: Version 1 (yield/coverage/diversity/composite)
 - telemetry_schema_version: Version 1 (events.jsonl schema)
 - supervisor: supervisor config block
@@ -122,7 +122,7 @@ def _resolve_phys_executable(config: Mapping[str, object]) -> str:
         config: Configuration dictionary
         
     Returns:
-        Resolved absolute path to PhysLam1Scan or PhysScanWithFixings
+        Resolved absolute path of dihiggs.phys_exec (boundary evaluate_point)
     """
     dihiggs_cfg = config.get("dihiggs", {})
     if not isinstance(dihiggs_cfg, dict):

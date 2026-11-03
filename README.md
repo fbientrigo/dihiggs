@@ -73,8 +73,8 @@ Canonical M2 orchestration uses named flags and reconstructs lambda1:
     python -m dihiggs.app.orchestrator --engine m2 --exec ./dihiggs/app/DihiggsPointV2Evaluator --outdir /tmp/dihiggs_output --mH-min 130 --mH-max 290 --n-mH 3 --axis-min 15000 --axis-max 18000 --n-axis 4 --mA 300 --mHp 300 --mh 125.20 --yukawa-type 1 --sin-ba 0.995 --lambda6 0.1 --lambda7 0 --tanbeta 50
 
 m2_tracker is explicitly experimental and bounded-pilot only.
-lambda1_legacy (or the compatibility alias lambda1) invokes
-PhysScanWithFixings; it is replay-only and not an LLP production path.
+The legacy lambda1_legacy / PhysScanWithFixings path was removed; reproduce
+old campaigns with `git checkout legacy-lambda1-final`.
 
 ## Output interpretation and lifetime units
 
@@ -90,9 +90,12 @@ evidence, and it does not provide a fixed-input-lambda1 evaluation.
 
 ## Legacy and frozen components
 
-PhysScanWithFixings, the autoresearch/ tree, ML notebooks, historical
-campaigns, and quarantine/replay scripts remain available only where their
-historical or compatibility role is explicit. Autoresearch is frozen and no
+The autoresearch/ tree, ML notebooks, historical campaigns, and
+quarantine/replay scripts remain available only where their historical or
+compatibility role is explicit. The legacy lambda1 subsystem
+(PhysScanWithFixings, PhysParamScan, GenScanWithFixings, orchestrate_scans,
+the adaptive explorers and the christopher campaign scripts) lives at tag
+`legacy-lambda1-final`. Autoresearch is frozen and no
 canonical code imports it.
 
 ## Tests

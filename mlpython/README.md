@@ -48,7 +48,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "..", "..")))
 from lib.oracle import run_oracle, OracleExecutor
 ```
 
-Requisito previo: compilar el Oracle (`cd dihiggs && make`, o `./install.sh` en la raíz). `lib.oracle.EXECUTABLE_PATH` apunta a `<repo>/dihiggs/app/Oracle` automáticamente.
+Requisito previo: el binario `Oracle` fue eliminado de `main`; para usar esta capa haga `git checkout legacy-lambda1-final` y compile el Oracle ahí (`cd dihiggs && make`). `lib.oracle.EXECUTABLE_PATH` apunta a `<repo>/dihiggs/app/Oracle` automáticamente.
 
 ## Convenciones del Oracle
 

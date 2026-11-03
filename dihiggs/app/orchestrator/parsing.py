@@ -7,8 +7,7 @@ Handles two output tokens that the C++ executables may print:
   TRIPLE_OK_POINTS <int_or_str>
 
 These are optional: if the binary does not emit them, the parser returns
-None.  Both PhysScanWithFixings and Phys_M2BoundaryScan share the same
-output format for these two tokens.
+None.
 """
 
 from __future__ import annotations
@@ -37,8 +36,7 @@ def parse_cpp_stats(stdout: str) -> Tuple[Optional[int], Optional[Union[int, str
     -----
     * Lines are matched by substring containment, not strict regex, to
       tolerate minor formatting variation between binary versions.
-    * Only the last occurrence of each token is kept (matching legacy
-      behaviour in orchestrate_scans.py L649–678).
+    * Only the last occurrence of each token is kept.
     """
     total_attempts: Optional[int] = None
     triple_ok_points: Optional[Union[int, str]] = None

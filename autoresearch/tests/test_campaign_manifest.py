@@ -23,7 +23,7 @@ def _base_config() -> dict[str, object]:
             "outdir": "/tmp/test-outdir",
         },
         "dihiggs": {
-            "phys_exec": "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan",
+            "phys_exec": "/repo/dihiggs_boundary/build/bin/evaluate_point",
             "hb_dataset_env": "HB_DATASET",
             "hs_dataset_env": "HS_DATASET",
         },
@@ -84,7 +84,7 @@ def test_write_manifest_creates_file_with_all_required_fields() -> None:
         assert manifest["campaign_id"] == "test-campaign-001"
         assert manifest["metric_schema_version"] == 1
         assert manifest["telemetry_schema_version"] == 1
-        assert manifest["executable_path"] == "/home/fabi/dihiggs/dihiggs/app/PhysLam1Scan"
+        assert manifest["executable_path"] == "/repo/dihiggs_boundary/build/bin/evaluate_point"
 
 
 def test_write_manifest_returns_created_path() -> None:

@@ -2,7 +2,9 @@
 
 ## PhysLam1Scan Executable Usage
 
-`PhysLam1Scan` is a parameter scanning tool for Two-Higgs-Doublet Model (THDM) physics calculations. It performs a two-dimensional scan over m_φ and λ₁ parameters, evaluating physics constraints (positivity, unitarity, perturbativity) and computing decay widths and branching ratios.
+`PhysLam1Scan` is the frozen legacy lambda1 oracle characterized by
+`tests/test_golden_lambda1.py` (canonical production uses `Lambda1EvaluatorV2`).
+It is a parameter scanning tool for Two-Higgs-Doublet Model (THDM) physics calculations. It performs a two-dimensional scan over m_φ and λ₁ parameters, evaluating physics constraints (positivity, unitarity, perturbativity) and computing decay widths and branching ratios.
 
 ### Prerequisites
 
@@ -10,15 +12,14 @@ Before building, ensure you have:
 - **C++ compiler**: g++ with C++17 support
 - **Build tool**: GNU make
 - **2HDMC library**: Installed and accessible (typically in system library paths)
-- **HiggsTools**: Required physics calculation library
 - **Standard libraries**: Boost (optional, for advanced features)
 
 ### Build Command
 
-Build the entire project, including `PhysLam1Scan`:
+`PhysLam1Scan` is not part of `make -C dihiggs all`; build it explicitly:
 
 ```bash
-make -C dihiggs
+make -C dihiggs app/PhysLam1Scan
 ```
 
 This produces the executable at `dihiggs/app/PhysLam1Scan`.
@@ -141,29 +142,8 @@ TRIPLE_OK_POINTS 15
 
 **Output file:** 15 CSV rows, one for each parameter combination, all passing physics constraints.
 
-## Lam1 Adaptive Backend Usage
+## Removed legacy backends
 
-The lam1 adaptive backend is configured in:
-
-- `autoresearch/configs/dihiggs_explorers_lam1.json`
-- `dihiggs/app/adaptive_explorer_lam1.py`
-
-This backend delegates each proposal to `dihiggs/app/PhysLam1Scan` and writes:
-
-- `events.jsonl` in the selected output directory
-- `checkpoints/<arm-id>/adaptive_state.json`
-- `checkpoints/<arm-id>/run_*/results.csv`
-
-### Backend preflight check
-
-```bash
-python3 -c "import json,sys; sys.path.insert(0,'autoresearch'); from harness.dihiggs_preflight import run_all_preflight_checks; cfg=json.load(open('autoresearch/configs/dihiggs_explorers_lam1.json')); print(run_all_preflight_checks(cfg))"
-```
-
-### One-round adaptive smoke run
-
-```bash
-python3 -c "import json,sys; sys.path.insert(0,'autoresearch'); from harness.dihiggs_runner import DiHiggsRunner; cfg=json.load(open('autoresearch/configs/dihiggs_explorers_lam1.json')); out='/tmp/physlam1_backend_readme_smoke'; r=DiHiggsRunner(config=cfg,outdir=out); print(r.run_single_round('adaptive-smoke'))"
-```
-
-Use `OMP_NUM_THREADS=1` for deterministic and thread-safe execution of this backend.
+The lam1 adaptive explorers, `PhysScanWithFixings`, `GenScanWithFixings` and
+the other legacy scan binaries were removed. Reproduce old campaigns with
+`git checkout legacy-lambda1-final`.

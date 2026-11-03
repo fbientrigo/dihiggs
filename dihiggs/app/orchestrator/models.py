@@ -9,10 +9,8 @@ FixedParams
     Physics parameters that are held constant across the scan grid.
     Includes mA, sin_ba, tan_beta, lambda6, lambda7.
 
-    NOTE: lambda1 is *not* here because for PhysScanWithFixings it is a
-    scanned axis.  For Phys_M2BoundaryScan, lambda1 is a fixed scalar and
-    therefore *is* included here (field ``lambda1``).  Use the appropriate
-    engine's ``FixedParams`` factory helpers to build this correctly.
+    ``lambda1`` is an optional reference value only; the canonical engines
+    treat it as reconstructed output (m2) or as the grid axis (lambda1_v2).
 
 TaskSpec
     Everything needed to execute one C++ scan task.
@@ -44,29 +42,14 @@ class FixedParams:
     sin_ba:
         sin(beta - alpha), alignment parameter.
     tan_beta:
-        tan(beta), ratio of Higgs doublet VEVs.  For PhysScanWithFixings
-        this is typically a *scan* dimension iterated externally; for
-        Phys_M2BoundaryScan it is fixed per task.
+        tan(beta), ratio of Higgs doublet VEVs; fixed per task.
     lambda6:
         Quartic coupling lambda_6 (dimensionless).
     lambda7:
         Quartic coupling lambda_7 (dimensionless).  Almost always 0.
     lambda1:
-        Quartic coupling lambda_1. For PhysScanWithFixings this is the scan axis
-        (leave as None). For Phys_M2BoundaryScan, it is a derived output and not
-        a physical fixed input, but can be provided as an optional reference value.
-    bronze_shard_csv:
-        ``gen_fixings``-only. Path to a chris/CalcLambda1ScanFixings bronze shard
-        CSV consumed by GenScanWithFixings. None for all other engines.
-    calibration_n:
-        ``gen_fixings``-only. Number of calibration candidates (N) for the
-        ±10% random search. None means use the C++ binary's default.
-    calibration_frac:
-        ``gen_fixings``-only. Fractional jitter half-width for the calibration
-        random search (e.g. 0.10 = ±10%). None means use the C++ binary's default.
-    rng_seed:
-        ``gen_fixings``-only. Base RNG seed for the calibration random search.
-        None means use the C++ binary's default.
+        Quartic coupling lambda_1. For the M2 engines it is a derived output and
+        not a physical fixed input, but can be provided as an optional reference value.
 
     Semantics note
     --------------
@@ -83,14 +66,10 @@ class FixedParams:
     tan_beta: float
     lambda6: float
     lambda7: float
-    lambda1: Optional[float] = None  # None for lambda1-engine tasks
+    lambda1: Optional[float] = None  # optional reference value
     mh: Optional[float] = None
     mHp: Optional[float] = None
     yukawa_type: Optional[int] = None
-    bronze_shard_csv: Optional[str] = None  # gen_fixings-only
-    calibration_n: Optional[int] = None  # gen_fixings-only
-    calibration_frac: Optional[float] = None  # gen_fixings-only
-    rng_seed: Optional[int] = None  # gen_fixings-only
 
     def as_dict(self) -> Dict[str, Any]:
         """Serialise to a plain dictionary (suitable for JSON)."""
@@ -109,14 +88,6 @@ class FixedParams:
             d["mHp"] = self.mHp
         if self.yukawa_type is not None:
             d["yukawa_type"] = self.yukawa_type
-        if self.bronze_shard_csv is not None:
-            d["bronze_shard_csv"] = self.bronze_shard_csv
-        if self.calibration_n is not None:
-            d["calibration_n"] = self.calibration_n
-        if self.calibration_frac is not None:
-            d["calibration_frac"] = self.calibration_frac
-        if self.rng_seed is not None:
-            d["rng_seed"] = self.rng_seed
         return d
 
 
