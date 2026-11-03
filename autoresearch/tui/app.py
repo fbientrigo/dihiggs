@@ -505,7 +505,7 @@ class AutoresearchApp(App):
         monitor.status = status
         
         # Check if campaign completed
-        if self.campaign_service and status.state in ("COMPLETED", "CONVERGED", "FAILED"):
+        if self.campaign_service and status.state in ("COMPLETED", "CONVERGED", "FAILED", "SATURATED"):
             if self._monitor_timer:
                 self._monitor_timer.pause()
             

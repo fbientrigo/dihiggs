@@ -22,6 +22,9 @@ STRATEGIES = {
     "profiled_m2": {"module": "dhb.profiled_m2_scan", "config": "configs/profiled_m2_boundary_v1.yaml", "slices": True, "table": None},
     "survivor_v2": {"module": "dhb.survivor_adaptive_campaign", "config": "campaigns/survivor_adaptive_12520_tanbeta_v2/campaign.yaml",
                     "slices": True, "table": "survivor_points=raw_fresh_12520_tanbeta_v2_points.csv@compact"},
+    # MH-MCMC / PSO: fresh continuous points every attempt (seeded per attempt), so a repeat never returns 0 rows
+    **{sampler: {"module": "dhb.stochastic_search", "config": "campaigns/stochastic_12520_v1/campaign.yaml", "slices": True,
+                 "table": "stochastic_points=raw_stochastic_points.csv@compact", "sampler": sampler} for sampler in ("mh", "pso")},
 }
 # lambda7 = 0 is superseded: the default menu offers lambda7 != 0 only
 REGIMES = {
@@ -89,9 +92,16 @@ def boundary_config(action: dict, boundary_root: str | Path, overrides: dict | N
     return cfg
 
 
-def command(action: dict, config_path: str | Path, output_dir: str | Path, python: str) -> list[str]:
-    cmd = [python, "-m", STRATEGIES[action["strategy"]]["module"], "--config", str(config_path), "--output-dir", str(output_dir)]
-    return cmd + (["--tan-beta", repr(float(action["tan_beta"]))] if action["tan_beta"] is not None else [])
+def attempt_seed(tag: str) -> int:
+    """The sampler seed of an attempt (`campaign/attempt`): a retry of the same attempt repeats it, the next one differs."""
+    return int(hashlib.sha256(tag.encode()).hexdigest()[:8], 16)
+
+
+def command(action: dict, config_path: str | Path, output_dir: str | Path, python: str, seed: int = 0) -> list[str]:
+    spec = STRATEGIES[action["strategy"]]
+    cmd = [python, "-m", spec["module"], "--config", str(config_path), "--output-dir", str(output_dir)]
+    cmd += ["--tan-beta", repr(float(action["tan_beta"]))] if action["tan_beta"] is not None else []
+    return cmd + (["--sampler", spec["sampler"], "--seed", str(seed)] if "sampler" in spec else [])
 
 
 def explored_export(lake: list[str], regime: dict, path: str | Path) -> bool:
@@ -116,6 +126,22 @@ def lake_commit(lake: list[str], run_dir: str | Path, action: dict, tag: str, on
     if proc.returncode:
         raise subprocess.CalledProcessError(proc.returncode, proc.args, out, err)
     return out.split()[1].rstrip(":")  # "committed <cid>: ..."
+
+
+def cleanup(lake: list[str], cid: str | None, work: str | Path) -> int:
+    """The lake as pipeline: once `lake verify` confirms commit `cid` remotely, delete the action's outputs under work/out
+    except its manifest.json files (logs, boundary config and explored.csv are outside out/ and stay). Returns bytes freed;
+    0 and nothing deleted without a verified commit."""
+    if not cid or subprocess.run([*lake, "verify", cid], capture_output=True, text=True, check=False).stdout.strip() != "ok":
+        return 0
+    freed, out = 0, Path(work) / "out"
+    for path in sorted(out.rglob("*"), reverse=True):  # children before their directory
+        if path.is_file() and path.name != "manifest.json":
+            freed += path.stat().st_size
+            path.unlink()
+        elif path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
+    return freed
 
 
 def find_commit(lake: list[str], tag: str) -> str | None:

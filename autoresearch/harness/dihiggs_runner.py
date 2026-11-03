@@ -212,14 +212,15 @@ class DiHiggsRunner:
         work = Path(self.outdir) / "actions" / attempt
         timeout_sec = int(arm_cfg.get("timeout_sec", runtime_cfg.get("timeout_sec", 3600)))
         threads = int(runtime_cfg.get("threads", 1))
-        reserved = {"cpu_core_s": threads * timeout_sec, "wall_s": timeout_sec, "disk_mb": int(runtime_cfg.get("disk_mb_per_action", 1024))}
-        self.journal.reserve(attempt, reserved, self.limits, {"arm_id": arm_id, "action": action["key"], "work": str(work),
-                                                               "threads": threads, "timeout_sec": timeout_sec})
+        reserved = {"cpu_core_s": threads * timeout_sec, "wall_s": timeout_sec, "disk_mb": int(arm_cfg.get("disk_mb_per_action", runtime_cfg.get("disk_mb_per_action", 1024)))}
+        seed = boundary_actions.attempt_seed(f"{self.config.get('campaign_id', '')}/{attempt}")
+        seed = self.journal.reserve(attempt, reserved, self.limits, {"arm_id": arm_id, "action": action["key"], "work": str(work),
+                                                                      "threads": threads, "timeout_sec": timeout_sec, "seed": seed})["seed"]
         work.mkdir(parents=True, exist_ok=True)
         cfg = boundary_actions.boundary_config(action, self.boundary_root, runtime_cfg.get("boundary_overrides"))
         cfg_path = work / "boundary_config.yaml"
         cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
-        cmd = boundary_actions.command(action, cfg_path, work / "out", sys.executable)
+        cmd = boundary_actions.command(action, cfg_path, work / "out", sys.executable, seed)
         if boundary_actions.explored_export(self.lake, action["regime"], work / "explored.csv"):
             cmd += ["--explored", str(work / "explored.csv")]
         with (work / "stdout.txt").open("w") as out, (work / "stderr.txt").open("w") as err:
@@ -266,7 +267,7 @@ class DiHiggsRunner:
         manifest_path = work / "out" / str(cfg["campaign_id"]) / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
         fresh = int(manifest.get("budget", {}).get("fresh_rows", 0))
-        valid = sum(row.get("theory_ok_v1") == "1" for raw in manifest_path.parent.glob("raw_*points.csv")
+        valid = sum(float(row.get("theory_ok_v1") or 0) == 1 for raw in manifest_path.parent.glob("raw_*points.csv")
                     for row in csv.DictReader(raw.open(encoding="utf-8"))) if fresh else 0
         tag = f"{self.config.get('campaign_id', '')}/{attempt}"
         committed = self.journal.get(f"committed:{attempt}")
@@ -295,6 +296,10 @@ class DiHiggsRunner:
                   "seeded_rows": int((manifest.get("explored_seed") or {}).get("seeded_attempts", 0)), "lake_commit": lake_commit,
                   "reconciled": reconcile}
         self.journal.close(attempt, actual, {"arm_id": arm_id, "status": status, **{k: v for k, v in result.items() if k not in ("events_emitted", "menu_digest")}})
+        if lake_commit and not self.journal.get(f"cleaned:{attempt}"):  # after close: a reconcile re-reads only the kept manifest
+            freed = boundary_actions.cleanup(self.lake, lake_commit, work)
+            if freed:
+                self.journal.append(f"cleaned:{attempt}", "cleaned", {"lake_commit": lake_commit, "freed_mb": round(freed / 2**20, 1)})
         if disk_mb > intent["reserved"]["disk_mb"]:  # timeout bounds cpu and wall; disk is only measured, so an overrun stops the daemon
             raise BudgetExhausted(f"{attempt} used {disk_mb} MB > reserved {intent['reserved']['disk_mb']} MB (raise runtime.disk_mb_per_action)")
         return result
@@ -349,6 +354,8 @@ class DiHiggsRunner:
             decision = self.journal.get(f"decision:{attempt}") or self.journal.append(f"decision:{attempt}", "decision", policy.choose(
                 self.config, self.bandit_state, [c for _, _, c in self.journal.events("closed")],
                 policy.agy_calls([d for _, _, d in self.journal.events("decision")])))
+            if decision.get("stop") == "saturated":
+                raise policy.Saturated(decision["hops"][-1]["reason"])
             arm_id = decision["arm_id"]
             result = self.run_single_round(arm_id, update_bandit=True)
         else:
