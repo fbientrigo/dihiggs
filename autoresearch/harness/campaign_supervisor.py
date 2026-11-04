@@ -379,6 +379,7 @@ class CampaignSupervisor:
             conn.close()
         snapshot["last_scaling_action"] = state.get("last_scaling_action", {})
         snapshot["manifest_compatibility"] = state.get("manifest_status", "unknown")
+        snapshot["fresh_rows"] = _as_int(_as_dict(state.get("last_round_result")).get("fresh_rows", 0))
 
         history = state.get("snapshot_history", [])
         last_success = -1
