@@ -65,3 +65,25 @@ def test_action_reads_the_lake_first_and_commits_only_fresh_points(tmp_path, mon
     assert ba.explored_export(fail("no point tables in the lake"), regime, tmp_path / "e.csv") is False
     with pytest.raises(RuntimeError, match="not launching"):
         ba.explored_export(fail("rclone: network down"), regime, tmp_path / "e.csv")
+
+
+def test_cleanup_deletes_outputs_only_after_a_verified_lake_commit(tmp_path, monkeypatch):
+    import subprocess
+    import sys
+    from pathlib import Path
+    lake_py = Path(ba.__file__).resolve().parents[3] / "lake" / "lake.py"
+    if not lake_py.exists():
+        pytest.skip("needs the workspace's lake/lake.py")
+    (tmp_path / "remote").mkdir()
+    monkeypatch.setenv("LAKE_REMOTE", str(tmp_path / "remote"))
+    monkeypatch.setenv("LAKE_CACHE", str(tmp_path / "cache"))
+    lake, work = [sys.executable, str(lake_py)], tmp_path / "work"
+    run = work / "out" / "c"
+    (run / "shards").mkdir(parents=True)
+    for name in ("raw_x_points.csv", "shards/s.csv", "manifest.json", "../../stdout.txt"):
+        (run / name).write_text("a\n1\n")
+    assert ba.cleanup(lake, None, work) == ba.cleanup(lake, "20990101T000000Z-000000", work) == 0  # unverified: nothing deleted
+    assert (run / "shards" / "s.csv").exists()
+    out = subprocess.run([*lake, "commit", str(run), "-m", "t", "--authority", "candidate"], capture_output=True, text=True, check=True).stdout
+    assert ba.cleanup(lake, out.split()[1].rstrip(":"), work) > 0
+    assert sorted(str(p.relative_to(work)) for p in work.rglob("*") if p.is_file()) == ["out/c/manifest.json", "stdout.txt"]

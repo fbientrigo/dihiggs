@@ -5,7 +5,9 @@ attempt brought zero fresh rows, so its rewards say nothing. Only then is the lo
 answer one offered menu key. Invalid output, a timeout, a failed call or a spent call budget fall through to rules
 (the least-pulled arm), which always answer. Every hop is recorded with its reason. The law is EXACT for UCB1 and rules
 (deterministic: the chosen arm has probability 1) and UNKNOWN for agy. Arms whose strategy cannot read --explored are
-masked (unavailable, not failed, never retried).
+masked (unavailable, not failed, never retried). An arm whose last 2 closed attempts had 0 fresh rows is masked as
+saturated; when every runnable arm is, the decision is `stop:saturated` (no agy call, nothing launched) and the campaign
+ends SATURATED.
 """
 from __future__ import annotations
 
@@ -21,6 +23,10 @@ its latest run found no new points. Answer with exactly one action key from this
 {actions}"""
 
 
+class Saturated(Exception):
+    """Every runnable arm's last 2 closed attempts had 0 fresh rows: a clean terminal stop."""
+
+
 def _runnable(arm: Mapping) -> bool:
     return "action" not in arm or boundary_actions.STRATEGIES[str(arm["action"]).split("|")[0]]["table"] is not None
 
@@ -32,6 +38,17 @@ def choose(config: Mapping, bandit_state, closed: list[dict], agy_calls: int) ->
     offered = [a for a in arms if _runnable(a)]
     if not offered:
         raise ValueError("no runnable arm: every arm's strategy cannot read --explored")
+
+    fresh = {}
+    for c in closed:
+        if c.get("status") != "not_executed":
+            fresh.setdefault(c["arm_id"], []).append(int(c.get("fresh_rows", 0)))
+    saturated = [a for a in offered if len(fresh.get(a["id"], [])) >= 2 and not any(fresh[a["id"]][-2:])]
+    hops += [{"hop": "masked", "arm_id": a["id"], "reason": "saturated:last_2_attempts_0_fresh_rows"} for a in saturated]
+    offered = [a for a in offered if a not in saturated]
+    if not offered:
+        hops.append({"hop": "stop:saturated", "reason": "every runnable arm's last 2 closed attempts had 0 fresh rows"})
+        return {"arm_id": None, "action": None, "law": "EXACT", "hops": hops, "stop": "saturated"}
 
     def done(arm, law, reason):
         hops.append({"hop": reason, "arm_id": arm["id"]})

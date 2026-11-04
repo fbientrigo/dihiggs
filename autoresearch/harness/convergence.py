@@ -225,6 +225,8 @@ class ConvergenceDetector:
         end_index: int,
     ) -> dict[str, float] | None:
         snapshot = snapshots[end_index]
+        if _as_int(snapshot.get("fresh_rows", 0)) > 0:  # boundary rounds still adding rows are not a plateau; Saturated stops the rest
+            return None
         rolling_deltas = _as_mapping(snapshot.get("rolling_deltas"))
         deltas: dict[str, float] = {}
         for metric in METRIC_NAMES:

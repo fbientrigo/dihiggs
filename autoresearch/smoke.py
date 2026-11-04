@@ -2,6 +2,7 @@
 
 1. build the evaluator  2. campaign runs boundary and commits to the lake  3. a second campaign repeats nothing
 4. kill -9 mid-action, restart reconciles: one commit, nothing lost  5. the TUI shows budget left, actions, coverage.
+6. an mh action brings fresh rows every attempt, so repeating it never ends the campaign SATURATED.
 Passing = TESTED (not VALIDATED). Nothing touches the real lake or any physics number.
 """
 from __future__ import annotations
@@ -32,8 +33,8 @@ def check(ok: bool, msg: str) -> None:
         raise SystemExit(1)
 
 
-def supervisor(work: Path, name: str, env: dict) -> subprocess.Popen:
-    cfg = {**CONFIG, "paths": {**CONFIG["paths"], "outdir": str(work / name)}}
+def supervisor(work: Path, name: str, env: dict, config: dict = CONFIG) -> subprocess.Popen:
+    cfg = {**config, "paths": {**config["paths"], "outdir": str(work / name)}}
     (work / f"{name}.json").write_text(json.dumps(cfg))
     return subprocess.Popen([sys.executable, "-m", "autoresearch.run_supervisor", str(work / f"{name}.json"), *BUDGET],
                             cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -62,6 +63,8 @@ def main() -> None:
         c1 = closed(work, "run1")
         check(len(c1) == 1 and c1[0]["fresh_rows"] == 32 and c1[0]["status"] == "success", f"2 {c1[0]['fresh_rows']} fresh points computed")
         check(len(commits(env)) == 1 and c1[0]["lake_commit"] in commits(env), "2 result uploaded to the lake (1 commit)")
+        kept = sorted(str(f.relative_to(work / "run1/actions/a0000")) for f in (work / "run1/actions/a0000/out").rglob("*") if f.is_file())
+        check(kept == ["out/survivor_adaptive_12520_tanbeta_v2/manifest.json"], f"2 verified commit -> local outputs deleted, kept {kept}")
 
         check(supervisor(work, "run2", env).wait(timeout=900) == 0, "3 second campaign (same lake, empty journal) ran")
         c2 = closed(work, "run2")
@@ -94,6 +97,14 @@ def main() -> None:
         text = asyncio.run(snapshot())
         check(text == journal_text(journal_view(work / "run3")) and "Budget remaining" in text and "Coverage: 1/" in text, "5 TUI shows budget, actions, coverage:")
         print("\n".join("     " + line for line in text.splitlines()))
+
+        runtime = {**CONFIG["runtime"], "max_rounds": 2, "boundary_overrides": {**CONFIG["runtime"]["boundary_overrides"],
+                                                                               "stochastic": {"evaluation_cap": 32, "epsilon": 0.05}}}
+        mh = {**CONFIG, "runtime": runtime, "arms": [{"id": "mh-tb1e7-l7", "action": "mh|tb=10000000.0|l7_0p01_mh125p20", "disk_mb_per_action": 32}]}
+        check(supervisor(work, "run4", env, mh).wait(timeout=900) == 0, "6 mh campaign ran")
+        c4 = closed(work, "run4")
+        state = json.loads((work / "run4" / "campaign_state.json").read_text())["campaign_state"]
+        check([c["fresh_rows"] for c in c4] == [32, 32] and state != "SATURATED", f"6 mh repeated: fresh_rows {[c['fresh_rows'] for c in c4]}, state {state}")
     print("autoresearch-smoke TESTED")
 
 

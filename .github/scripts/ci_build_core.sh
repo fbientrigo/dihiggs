@@ -44,11 +44,12 @@ fi
 
 cd ..
 
-# Step 4: Build dihiggs (includes PhysLam1Scan)
-echo -e "${BLUE}[BUILD] Building dihiggs (includes PhysLam1Scan)...${NC}"
+# Step 4: Build dihiggs + the PhysLam1Scan oracle used by tests/unit
+echo -e "${BLUE}[BUILD] Building dihiggs and PhysLam1Scan...${NC}"
 cd dihiggs
 make clean 2>/dev/null || true
 make
+make app/PhysLam1Scan
 if [ ! -f "app/PhysLam1Scan" ]; then
     echo -e "${RED}❌ PhysLam1Scan binary not built${NC}"
     exit 1

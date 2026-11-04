@@ -10,7 +10,7 @@ def test_parser_defaults_to_canonical_lambda1_v2_and_exposes_tracker() -> None:
     args = parser.parse_args([])
     assert args.engine == "lambda1_v2"
     assert set((parser._option_string_actions["--engine"].choices)) >= {
-        "lambda1_v2", "lambda1_legacy", "m2", "m2_tracker",
+        "lambda1_v2", "m2", "m2_tracker",
     }
 
 

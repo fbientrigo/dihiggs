@@ -4,7 +4,7 @@
 Run bounded, evidence-gated DiHiggs/2HDMC sensitivity probes to improve ctau_m safely and incrementally.
 
 ## 2) Current architecture
-- Backend execution: `dihiggs/app/orchestrate_scans.py`
+- Backend execution: `dihiggs_boundary` actions via `autoresearch/harness/boundary_actions.py` (the legacy `orchestrate_scans.py` path lives at tag `legacy-lambda1-final`)
 - Campaign driver: `autoresearch/run_supervisor.py` (journal + budgets + policy chain; see `autoresearch/README.md`)
 - Progress artifacts: `progress.jsonl`, `progress.md`, `attempts.jsonl`, `commands.jsonl`
 

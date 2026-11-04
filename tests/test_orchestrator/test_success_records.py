@@ -20,24 +20,23 @@ from pathlib import Path
 
 import pytest
 
-from dihiggs.app.orchestrator.engines.lambda1 import Lambda1Engine
 from dihiggs.app.orchestrator.engines.m2 import M2Engine
 from dihiggs.app.orchestrator.runner import ScanRunner
 from tests.test_orchestrator.conftest import (
-    make_fixed_lam1,
+    make_fixed,
     make_fixed_m2,
     make_grid,
 )
 
 
-class TestSuccessRecordsLambda1:
+class TestSuccessRecordsLifecycle:
 
     def _make_runner(self, tmp_outdir, fake_success_exe, tanbeta_list=None):
         return ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=tanbeta_list or [10000.0],
             campaign="test_success",
             outdir=tmp_outdir,
@@ -87,7 +86,7 @@ class TestSuccessRecordsLambda1:
         assert rec["total_attempts"] == 100
         assert rec["triple_ok_points"] == 42
         assert "grid_signature" in rec
-        assert rec["engine_name"] == "lambda1"
+        assert rec["engine_name"] == "m2"
 
     def test_scan_meta_has_done_event(self, tmp_outdir, fake_success_exe):
         runner = self._make_runner(tmp_outdir, fake_success_exe)
@@ -99,7 +98,7 @@ class TestSuccessRecordsLambda1:
         meta = json.loads(metas[0].read_text())
         assert meta["event"] == "done"
         assert "axis_metadata" in meta
-        assert meta["axis_metadata"]["scan_axis"] == "lambda1"
+        assert meta["axis_metadata"]["scan_axis"] == "M2"
         assert meta["total_attempts"] == 100
         assert meta["triple_ok_points"] == 42
 

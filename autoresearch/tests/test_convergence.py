@@ -151,3 +151,10 @@ def test_convergence_requires_every_arm_seen_before_converging() -> None:
 
     assert result["state"] == "warmup_incomplete"
     assert "missing pulls for branch-b" in str(result["reason"])
+
+
+def test_rounds_with_fresh_rows_never_confirm_a_plateau() -> None:
+    detector = ConvergenceDetector({"arms": [{"id": "a"}]})
+    snaps = [{**_snapshot(i, yield_value=0.0, coverage=0.0, diversity=0.0, composite=0.0), "fresh_rows": 512} for i in range(20)]
+    assert detector.evaluate(snaps, {"a": 20})["state"] == "running"
+    assert detector.evaluate([{**s, "fresh_rows": 0} for s in snaps], {"a": 20})["state"] == "converged_plateau"

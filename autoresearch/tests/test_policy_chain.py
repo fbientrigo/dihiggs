@@ -50,3 +50,14 @@ def test_valid_agy_answer_is_used_with_unknown_law_and_its_budget_is_kept(tmp_pa
     third = runner.journal.get("decision:a0002")
     assert _hops(runner, "a0002")[-2:] == ["abstain:no_support", "agy:selected"] and third["law"] == "UNKNOWN" and third["action"] == B
     assert _hops(runner, "a0003")[-2:] == ["agy:budget_exhausted", "rules:selected"]
+
+
+def test_every_arm_saturated_stops_without_agy_or_launch(tmp_path, monkeypatch):
+    runner = _daemon(tmp_path, monkeypatch, [sys.executable, *FAKE_AGY["valid"]], max_calls=0)
+    for _ in range(4):  # a, b, then one more 0-row attempt each: both arms' last 2 attempts are empty
+        runner.run_adaptation_round()
+    with pytest.raises(dihiggs_runner.policy.Saturated):
+        runner.run_adaptation_round()
+    hops = _hops(runner, "a0004")
+    assert hops[-1] == "stop:saturated" and not any(h.startswith("agy:") for h in hops) and launches(tmp_path) == 4
+    assert runner.journal.get("decision:a0004")["arm_id"] is None and not runner.journal.get("intent:a0004")

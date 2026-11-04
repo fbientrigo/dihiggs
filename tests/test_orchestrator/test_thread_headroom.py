@@ -52,10 +52,10 @@ class TestParserFlags:
     def test_threads_defaults_none_at_parse_time(self):
         """Parser keeps None; the safe default is applied in resolution, so the
         'explicit value' vs 'unset' distinction is preserved."""
-        args = build_parser().parse_args(["--engine", "lambda1"])
+        args = build_parser().parse_args(["--engine", "m2"])
         assert args.threads is None
         assert args.all_cores is False
 
     def test_all_cores_flag_present(self):
-        args = build_parser().parse_args(["--engine", "lambda1", "--all-cores"])
+        args = build_parser().parse_args(["--engine", "m2", "--all-cores"])
         assert args.all_cores is True

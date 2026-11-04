@@ -18,12 +18,13 @@ from autoresearch.harness.convergence import ConvergenceDetector
 from autoresearch.harness.dihiggs_preflight import run_all_preflight_checks
 from autoresearch.harness.dihiggs_runner import DiHiggsRunner
 from autoresearch.harness.journal import BudgetExhausted
+from autoresearch.harness.policy import Saturated
 from autoresearch.harness.round_snapshots import project_round_snapshot
 from autoresearch.harness.status_dashboard import write_status_html, write_status_json
 from autoresearch.harness.telemetry_ingest import ingest_artifact_metadata
 from autoresearch.harness.telemetry_store import init_db, replay_sources
 
-TERMINAL_STATES = {"COMPLETED", "CONVERGED", "FAILED", "PREFLIGHT_BLOCKED"}
+TERMINAL_STATES = {"COMPLETED", "CONVERGED", "FAILED", "PREFLIGHT_BLOCKED", "SATURATED"}
 
 
 def _as_dict(value: object) -> dict[str, object]:
@@ -227,6 +228,12 @@ class CampaignSupervisor:
 
             try:
                 result = self.runner.run_adaptation_round()
+            except Saturated as exc:  # every arm's last 2 attempts brought 0 fresh rows: nothing left to run
+                state["stop_reason"] = f"saturated: {exc}"
+                current_state = "SATURATED"
+                state["campaign_state"] = current_state
+                self._persist_state(state)
+                break
             except BudgetExhausted as exc:  # the next reservation does not fit: clean stop, nothing launched
                 state["stop_reason"] = f"budget_exhausted: {exc}"
                 current_state = "COMPLETED"
@@ -372,6 +379,7 @@ class CampaignSupervisor:
             conn.close()
         snapshot["last_scaling_action"] = state.get("last_scaling_action", {})
         snapshot["manifest_compatibility"] = state.get("manifest_status", "unknown")
+        snapshot["fresh_rows"] = _as_int(_as_dict(state.get("last_round_result")).get("fresh_rows", 0))
 
         history = state.get("snapshot_history", [])
         last_success = -1

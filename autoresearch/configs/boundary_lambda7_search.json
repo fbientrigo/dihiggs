@@ -1,0 +1,156 @@
+{
+ "campaign_id": "boundary-lambda7-search",
+ "paths": {
+  "lake_name": "events.jsonl"
+ },
+ "runtime": {
+  "python_exe": "{sys_executable}",
+  "threads": 4,
+  "timeout_sec": 3600,
+  "disk_mb_per_action": 200,
+  "max_rounds": 1000
+ },
+ "policy": {
+  "agy_cmd": [
+   "agy",
+   "-p"
+  ],
+  "agy_max_calls": 10,
+  "agy_timeout_sec": 120
+ },
+ "dihiggs": {
+  "phys_exec": "{repo_root}/../dihiggs_boundary/build/bin/evaluate_point",
+  "hb_dataset_env": "HB_DATASET",
+  "hs_dataset_env": "HS_DATASET"
+ },
+ "arms": [
+  {
+   "id": "survivor-tb1.0e+02",
+   "action": "survivor_v2|tb=100.0|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb5.2e+02",
+   "action": "survivor_v2|tb=517.9474679231213|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb2.7e+03",
+   "action": "survivor_v2|tb=2682.6957952797275|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb1.4e+04",
+   "action": "survivor_v2|tb=13894.95494373136|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb7.2e+04",
+   "action": "survivor_v2|tb=71968.56730011529|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb3.7e+05",
+   "action": "survivor_v2|tb=372759.3720314938|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb1.9e+06",
+   "action": "survivor_v2|tb=1930697.7288832497|l7_0p01_mh125p20"
+  },
+  {
+   "id": "survivor-tb1.0e+07",
+   "action": "survivor_v2|tb=10000000.0|l7_0p01_mh125p20"
+  },
+  {
+   "id": "mh-tb1.0e+02",
+   "action": "mh|tb=100.0|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb5.2e+02",
+   "action": "mh|tb=517.9474679231213|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb2.7e+03",
+   "action": "mh|tb=2682.6957952797275|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb1.4e+04",
+   "action": "mh|tb=13894.95494373136|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb7.2e+04",
+   "action": "mh|tb=71968.56730011529|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb3.7e+05",
+   "action": "mh|tb=372759.3720314938|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb1.9e+06",
+   "action": "mh|tb=1930697.7288832497|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "mh-tb1.0e+07",
+   "action": "mh|tb=10000000.0|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb1.0e+02",
+   "action": "pso|tb=100.0|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb5.2e+02",
+   "action": "pso|tb=517.9474679231213|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb2.7e+03",
+   "action": "pso|tb=2682.6957952797275|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb1.4e+04",
+   "action": "pso|tb=13894.95494373136|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb7.2e+04",
+   "action": "pso|tb=71968.56730011529|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb3.7e+05",
+   "action": "pso|tb=372759.3720314938|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb1.9e+06",
+   "action": "pso|tb=1930697.7288832497|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  },
+  {
+   "id": "pso-tb1.0e+07",
+   "action": "pso|tb=10000000.0|l7_0p01_mh125p20",
+   "timeout_sec": 300,
+   "disk_mb_per_action": 32
+  }
+ ]
+}

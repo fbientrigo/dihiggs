@@ -20,10 +20,10 @@ from pathlib import Path
 
 import pytest
 
-from dihiggs.app.orchestrator.engines.lambda1 import Lambda1Engine
+from dihiggs.app.orchestrator.engines.m2 import M2Engine
 from dihiggs.app.orchestrator.runner import ScanRunner
 from tests.test_orchestrator.conftest import (
-    make_fixed_lam1,
+    make_fixed,
     make_grid,
 )
 
@@ -32,10 +32,10 @@ class TestFailureRecords:
 
     def _make_runner(self, tmp_outdir, fake_failure_exe, tanbeta_list=None):
         return ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_failure_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=tanbeta_list or [10000.0],
             campaign="test_fail",
             outdir=tmp_outdir,
@@ -148,10 +148,10 @@ class TestFailureRecords:
         """
         # success runner: 1 task
         runner_ok = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_success_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[10000.0],
             campaign="test_mixed_ok",
             outdir=tmp_outdir / "ok",
@@ -163,10 +163,10 @@ class TestFailureRecords:
 
         # failure runner: 1 task
         runner_fail = ScanRunner(
-            engine=Lambda1Engine(),
+            engine=M2Engine(),
             executable=fake_failure_exe,
             grid=make_grid(),
-            fixed_base=make_fixed_lam1(tan_beta=0.0),
+            fixed_base=make_fixed(tan_beta=0.0),
             tanbeta_list=[20000.0],
             campaign="test_mixed_fail",
             outdir=tmp_outdir / "fail",

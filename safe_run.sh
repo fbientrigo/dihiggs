@@ -19,7 +19,7 @@
 #
 # Everything is tee'd to a timestamped log under DIHIGGS_RUN_LOGS.
 #
-# WHY THIS EXISTS: jun 2026 a `--threads 12` gen_fixings run on a 12-core host
+# WHY THIS EXISTS: jun 2026 a `--threads 12` scan on a 12-core host
 # pinned every core, starved sshd (port 22 timed out), stopped logging mid-run,
 # and the box had to be power-cycled. tmux did NOT help: tmux survives an SSH
 # *disconnect*, but the tmux server lives on the frozen host, so a hard CPU/IO
@@ -44,15 +44,9 @@
 #   -h | --help        this help
 #
 # EXAMPLES
-#   # A gen_fixings scan, then auto-build the comparison plots, all hard-capped:
-#   ./safe_run.sh --name lam1eq1_var1000 \
-#       --then "python scripts/compare_chris_vs_2hdmc_lam1eq1.py \
-#                 --silver-csv DATA/.../scan_tb_10.csv \
-#                 --outdir scripts/out/lam1eq1_var1000/comparison" \
-#       -- python -m dihiggs.app.orchestrator --engine gen_fixings \
-#            --exec dihiggs/app/GenScanWithFixings --campaign lam1eq1_var1000 \
-#            --bronze-csv DATA/.../bronze_all.csv --calibration-n 1000 \
-#            --tanbeta 10 --outdir data/lam1eq1_var1000/lake
+#   # An m2 scan, hard-capped:
+#   ./safe_run.sh --name m2_scan -- python -m dihiggs.app.orchestrator --engine m2 \
+#            --campaign m2_scan --tanbeta 50 --outdir data/m2_scan/lake
 #
 #   # Wrap any other runner politely:
 #   ./safe_run.sh --name nightscan -- bash run_quarantine_night.sh

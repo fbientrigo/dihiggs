@@ -299,7 +299,6 @@ def materialize_template(
             "operational_smoke": False,
         },
         "runtime": {
-            "exec_path": str(REPO_ROOT / "dihiggs" / "app" / "PhysScanWithFixings"),
             "outdir": str(RUNS_ROOT),
             "lake_name": "dihiggs_lake",
             "campaign": f"gemini_worker_iter{iteration:02d}",
